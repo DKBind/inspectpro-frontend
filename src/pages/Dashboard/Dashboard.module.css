@@ -1,0 +1,426 @@
+.dashboardPage {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Welcome Banner */
+.welcomeBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 32px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, hsla(221, 83%, 53%, 0.12) 0%, hsla(262, 83%, 58%, 0.08) 100%);
+  border: 1px solid hsla(221, 83%, 53%, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.welcomeBanner::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, hsla(221, 83%, 53%, 0.08), transparent 70%);
+  pointer-events: none;
+}
+
+.welcomeText h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: hsl(210, 40%, 95%);
+  margin-bottom: 4px;
+}
+
+.welcomeText p {
+  font-size: 14px;
+  color: hsl(215, 20%, 55%);
+}
+
+.welcomeDate {
+  font-size: 13px;
+  color: hsl(215, 20%, 50%);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.welcomeDate svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Stat Cards Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.statCard {
+  padding: 24px;
+  border-radius: 14px;
+  background: hsla(222, 47%, 8%, 0.6);
+  border: 1px solid hsl(217, 33%, 15%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.statCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+  transition: opacity 0.25s ease;
+  opacity: 0.7;
+}
+
+.statCard:hover {
+  border-color: hsl(217, 33%, 22%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.statCard:hover::before {
+  opacity: 1;
+}
+
+.statCardBlue::before {
+  background: linear-gradient(90deg, hsl(221, 83%, 53%), hsl(221, 83%, 63%));
+}
+
+.statCardGreen::before {
+  background: linear-gradient(90deg, hsl(142, 71%, 45%), hsl(142, 71%, 55%));
+}
+
+.statCardOrange::before {
+  background: linear-gradient(90deg, hsl(25, 95%, 53%), hsl(25, 95%, 63%));
+}
+
+.statCardPurple::before {
+  background: linear-gradient(90deg, hsl(262, 83%, 58%), hsl(262, 83%, 68%));
+}
+
+.statHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.statLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(215, 20%, 55%);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.statIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.statIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.statIconBlue {
+  background: hsla(221, 83%, 53%, 0.12);
+  color: hsl(221, 83%, 63%);
+}
+
+.statIconGreen {
+  background: hsla(142, 71%, 45%, 0.12);
+  color: hsl(142, 71%, 55%);
+}
+
+.statIconOrange {
+  background: hsla(25, 95%, 53%, 0.12);
+  color: hsl(25, 95%, 63%);
+}
+
+.statIconPurple {
+  background: hsla(262, 83%, 58%, 0.12);
+  color: hsl(262, 83%, 68%);
+}
+
+.statBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statValue {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  color: hsl(210, 40%, 98%);
+  letter-spacing: -0.02em;
+}
+
+.statTrend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statTrend svg {
+  width: 14px;
+  height: 14px;
+}
+
+.trendUp {
+  color: hsl(142, 71%, 55%);
+}
+
+.trendDown {
+  color: hsl(0, 84%, 60%);
+}
+
+/* Content Area */
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Panel / Card Style */
+.panel {
+  border-radius: 14px;
+  background: hsla(222, 47%, 8%, 0.6);
+  border: 1px solid hsl(217, 33%, 15%);
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid hsl(217, 33%, 13%);
+}
+
+.panelTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: hsl(210, 40%, 93%);
+}
+
+.panelAction {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: hsl(221, 83%, 63%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.panelAction:hover {
+  background: hsla(221, 83%, 53%, 0.1);
+}
+
+.panelBody {
+  padding: 0;
+}
+
+/* Table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 12px 24px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(215, 20%, 45%);
+  background: hsla(217, 33%, 10%, 0.5);
+  border-bottom: 1px solid hsl(217, 33%, 13%);
+}
+
+.table td {
+  padding: 14px 24px;
+  font-size: 13.5px;
+  color: hsl(215, 20%, 75%);
+  border-bottom: 1px solid hsl(217, 33%, 11%);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tr:hover td {
+  background: hsla(215, 25%, 27%, 0.1);
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.statusPassed {
+  background: hsla(142, 71%, 45%, 0.12);
+  color: hsl(142, 71%, 55%);
+}
+
+.statusFailed {
+  background: hsla(0, 84%, 60%, 0.12);
+  color: hsl(0, 84%, 60%);
+}
+
+.statusPending {
+  background: hsla(45, 93%, 47%, 0.12);
+  color: hsl(45, 93%, 57%);
+}
+
+.statusInProgress {
+  background: hsla(221, 83%, 53%, 0.12);
+  color: hsl(221, 83%, 63%);
+}
+
+/* Activity Feed */
+.activityList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.activityItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid hsl(217, 33%, 11%);
+  transition: background 0.15s ease;
+}
+
+.activityItem:last-child {
+  border-bottom: none;
+}
+
+.activityItem:hover {
+  background: hsla(215, 25%, 27%, 0.08);
+}
+
+.activityDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.dotBlue {
+  background: hsl(221, 83%, 53%);
+}
+
+.dotGreen {
+  background: hsl(142, 71%, 45%);
+}
+
+.dotOrange {
+  background: hsl(25, 95%, 53%);
+}
+
+.dotRed {
+  background: hsl(0, 84%, 60%);
+}
+
+.activityContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.activityText {
+  font-size: 13px;
+  color: hsl(215, 20%, 70%);
+  line-height: 1.4;
+}
+
+.activityText strong {
+  color: hsl(210, 40%, 90%);
+  font-weight: 600;
+}
+
+.activityTime {
+  font-size: 11.5px;
+  color: hsl(215, 20%, 45%);
+  margin-top: 2px;
+}
+
+/* Quick Actions */
+.quickActions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  padding: 20px 24px;
+}
+
+.quickActionBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid hsl(217, 33%, 17%);
+  background: hsla(217, 33%, 12%, 0.4);
+  color: hsl(215, 20%, 70%);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quickActionBtn:hover {
+  border-color: hsl(221, 83%, 53%);
+  background: hsla(221, 83%, 53%, 0.08);
+  color: hsl(221, 83%, 68%);
+  transform: translateY(-1px);
+}
+
+.quickActionBtn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Pagination wrapper */
+.paginationContainer {
+  padding: 0 24px 8px;
+}

@@ -1,0 +1,257 @@
+.orgPage {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pageTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: hsl(210, 40%, 95%);
+}
+
+.pageSubtitle {
+  font-size: 13.5px;
+  color: hsl(215, 20%, 55%);
+  margin-top: 4px;
+}
+
+/* Cards */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  border-radius: 14px;
+  background: hsla(222, 47%, 8%, 0.6);
+  border: 1px solid hsl(217, 33%, 15%);
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid hsl(217, 33%, 13%);
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: hsl(210, 40%, 93%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardTitle svg {
+  width: 18px;
+  height: 18px;
+  color: hsl(221, 83%, 63%);
+}
+
+.cardBody {
+  padding: 24px;
+}
+
+/* Info rows */
+.infoRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid hsl(217, 33%, 11%);
+}
+
+.infoRow:last-child {
+  border-bottom: none;
+}
+
+.infoLabel {
+  font-size: 13px;
+  color: hsl(215, 20%, 50%);
+  font-weight: 500;
+}
+
+.infoValue {
+  font-size: 13.5px;
+  color: hsl(210, 40%, 90%);
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Plan badge */
+.planBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.planEnterprise {
+  background: linear-gradient(135deg, hsla(262, 83%, 58%, 0.15), hsla(221, 83%, 53%, 0.15));
+  color: hsl(262, 83%, 70%);
+  border: 1px solid hsla(262, 83%, 58%, 0.25);
+}
+
+.planBadge svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Status indicators */
+.statusDot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dotActive {
+  color: hsl(142, 71%, 55%);
+}
+
+.dotActive::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(142, 71%, 45%);
+  display: inline-block;
+}
+
+.dotWarning {
+  color: hsl(45, 93%, 57%);
+}
+
+.dotWarning::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(45, 93%, 47%);
+  display: inline-block;
+}
+
+/* Renewal section */
+.renewalCard {
+  padding: 24px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, hsla(221, 83%, 53%, 0.08), hsla(262, 83%, 58%, 0.06));
+  border: 1px solid hsla(221, 83%, 53%, 0.15);
+}
+
+.renewalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.renewalTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: hsl(210, 40%, 93%);
+}
+
+.renewalPrice {
+  font-size: 28px;
+  font-weight: 800;
+  color: hsl(210, 40%, 98%);
+  letter-spacing: -0.02em;
+}
+
+.renewalPrice span {
+  font-size: 14px;
+  font-weight: 500;
+  color: hsl(215, 20%, 50%);
+}
+
+.renewalDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.renewalItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: hsl(215, 20%, 65%);
+}
+
+.renewalItem svg {
+  width: 16px;
+  height: 16px;
+  color: hsl(142, 71%, 55%);
+  flex-shrink: 0;
+}
+
+.renewBtn {
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(262, 83%, 58%));
+  color: white;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 16px hsla(221, 83%, 53%, 0.3);
+}
+
+.renewBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px hsla(221, 83%, 53%, 0.4);
+}
+
+/* Usage bar */
+.usageBar {
+  margin-top: 4px;
+}
+
+.usageTrack {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: hsl(217, 33%, 17%);
+  overflow: hidden;
+}
+
+.usageFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.usageFillGreen {
+  background: linear-gradient(90deg, hsl(142, 71%, 45%), hsl(142, 71%, 55%));
+}
+
+.usageFillOrange {
+  background: linear-gradient(90deg, hsl(25, 95%, 53%), hsl(25, 95%, 63%));
+}
+
+.usageLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: hsl(215, 20%, 50%);
+  margin-top: 6px;
+}

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @tailwind base;
@@ -77,7 +78,40 @@
     @apply border-border;
     outline-color: hsl(var(--ring) / 0.5);
   }
+
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
   }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(217, 33%, 20%);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(217, 33%, 28%);
+}
+
+/* Selection */
+::selection {
+  background: hsla(221, 83%, 53%, 0.25);
+  color: hsl(210, 40%, 98%);
 }

@@ -1,0 +1,204 @@
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(180deg, hsl(222, 47%, 8%) 0%, hsl(222, 47%, 11%) 100%);
+  border-right: 1px solid hsl(217, 33%, 17%);
+  overflow: hidden;
+}
+
+.sidebarCollapsed {
+  width: 72px;
+}
+
+/* Brand / Logo */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid hsl(217, 33%, 15%);
+  min-height: 64px;
+  flex-shrink: 0;
+}
+
+.logoIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(262, 83%, 58%));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px hsla(221, 83%, 53%, 0.3);
+}
+
+.logoIcon svg {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+
+.brandText h1 {
+  font-size: 16px;
+  font-weight: 700;
+  color: hsl(210, 40%, 98%);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.brandText span {
+  font-size: 11px;
+  color: hsl(215, 20%, 55%);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.hideBrandText {
+  opacity: 0;
+  width: 0;
+}
+
+/* Navigation */
+.nav {
+  flex: 1;
+  padding: 16px 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.navSection {
+  margin-bottom: 24px;
+}
+
+.navLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: hsl(215, 20%, 45%);
+  padding: 0 8px;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity 0.2s ease;
+}
+
+.navLabelHidden {
+  opacity: 0;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: hsl(215, 20%, 65%);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  position: relative;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.navItem:hover {
+  background: hsla(215, 25%, 27%, 0.35);
+  color: hsl(210, 40%, 90%);
+}
+
+.navItemActive {
+  background: hsla(221, 83%, 53%, 0.12);
+  color: hsl(221, 83%, 68%);
+}
+
+.navItemActive::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: hsl(221, 83%, 53%);
+  border-radius: 0 3px 3px 0;
+}
+
+.navIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.navText {
+  overflow: hidden;
+  transition: opacity 0.2s ease;
+}
+
+.navTextHidden {
+  opacity: 0;
+  width: 0;
+}
+
+.badge {
+  margin-left: auto;
+  background: hsl(0, 84%, 60%);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  line-height: 1.4;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+
+.badgeHidden {
+  opacity: 0;
+}
+
+
+
+/* Mobile overlay */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .sidebarMobileOpen {
+    transform: translateX(0);
+  }
+
+  .sidebarCollapsed {
+    width: 260px;
+  }
+}
