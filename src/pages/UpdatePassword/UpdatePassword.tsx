@@ -56,7 +56,7 @@ const UpdatePassword = () => {
           <div className={styles.logoIcon}>
             <Shield />
           </div>
-          <div className={styles.logoTitle}>InspectPro</div>
+          <div className={styles.logoTitle}>InspectWisePro</div>
         </div>
 
         {success ? (

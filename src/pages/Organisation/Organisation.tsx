@@ -33,7 +33,7 @@ const Organisation = () => {
           <div className={styles.cardBody}>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Organisation Name</span>
-              <span className={styles.infoValue}>InspectPro India Pvt. Ltd.</span>
+              <span className={styles.infoValue}>InspectWisePro India Pvt. Ltd.</span>
             </div>
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>Industry</span>

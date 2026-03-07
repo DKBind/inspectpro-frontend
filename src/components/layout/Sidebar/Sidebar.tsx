@@ -55,7 +55,7 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
           <Shield />
         </div>
         <div className={`${styles.brandText} ${collapsed ? styles.hideBrandText : ''}`}>
-          <h1>InspectPro</h1>
+          <h1>InspectWisePro</h1>
           <span>Admin Panel</span>
         </div>
       </div>
