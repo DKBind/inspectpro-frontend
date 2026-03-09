@@ -5,6 +5,7 @@ interface RequestConfig extends RequestInit {
 }
 
 class ApiClient {
+
   private baseUrl: string;
 
   constructor(baseUrl: string) {
