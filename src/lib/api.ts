@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/store/useAuthStore';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Helper to get fresh tokens
 const getTokens = () => {
@@ -50,7 +50,7 @@ export const fetchApi = async (
   const { accessToken } = getTokens();
 
   const headers = new Headers(customConfig.headers || {});
-  
+
   if (!headers.has('Content-Type') && !(customConfig.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
@@ -71,7 +71,7 @@ export const fetchApi = async (
 
     if (response.status === 401 && requireAuth) {
       const { refreshToken } = getTokens();
-      
+
       if (!refreshToken) {
         useAuthStore.getState().clearAuth();
         window.location.href = '/login';
@@ -111,21 +111,21 @@ export const fetchApi = async (
 
         const refreshData = await refreshResponse.json();
         const newAccessToken = refreshData.accessToken;
-        
+
         // Assuming refresh returns at least a new access token
         useAuthStore.getState().setAccessToken(newAccessToken);
-        
+
         processQueue(null, newAccessToken);
         isRefreshing = false;
 
         // Retry original request
         headers.set('Authorization', `Bearer ${newAccessToken}`);
         const retryResponse = await fetch(url, { ...config, headers });
-        
+
         if (!retryResponse.ok) {
-           throw new ApiError(retryResponse.status, 'API Error after retry');
+          throw new ApiError(retryResponse.status, 'API Error after retry');
         }
-        
+
         if (retryResponse.status === 204) return null;
         return await retryResponse.json();
 

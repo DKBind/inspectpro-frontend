@@ -8,6 +8,7 @@ import UpdatePassword from './pages/UpdatePassword/UpdatePassword';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Settings from './pages/Settings/Settings';
 import Organisation from './pages/Organisation/Organisation';
+import OrganisationOnboarding from './pages/OrganisationOnboarding';
 import NotFound from './components/ui/NotFound/NotFound';
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
             <Route path={ROUTES.REPORTS} element={<Dashboard />} />
             <Route path={ROUTES.SETTINGS} element={<Settings />} />
             <Route path={ROUTES.ORGANISATION} element={<Organisation />} />
+            <Route path={ROUTES.ORGANISATION_ONBOARDING} element={<OrganisationOnboarding />} />
             <Route path={ROUTES.PROFILE} element={<Settings />} />
           </Route>
         </Route>

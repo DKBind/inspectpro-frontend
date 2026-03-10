@@ -10,6 +10,7 @@ export const ROUTES = {
   REPORTS: '/reports',
   SETTINGS: '/settings',
   ORGANISATION: '/organisation',
+  ORGANISATION_ONBOARDING: '/organisation/onboarding',
   USERS: '/users',
   PROFILE: '/profile',
 } as const;
