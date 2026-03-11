@@ -1,15 +1,13 @@
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, useController } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export function OrgDetailsForm() {
+  const { control, formState: { errors } } = useFormContext();
 
-  const {
-    register,
-    formState: { errors },
-  } = useFormContext();
-
-
+  const { field: nameField } = useController({ name: 'name', control });
+  const { field: slugField } = useController({ name: 'slug', control });
+  const { field: domainField } = useController({ name: 'domain', control });
 
   return (
     <div className="space-y-6 rounded-lg border p-6">
@@ -26,7 +24,7 @@ export function OrgDetailsForm() {
           <Input
             id="name"
             placeholder="Acme Corp"
-            {...register('name')}
+            {...nameField}
             className={errors.name ? 'border-destructive' : ''}
           />
           {errors.name && (
@@ -41,7 +39,7 @@ export function OrgDetailsForm() {
           <Input
             id="slug"
             placeholder="acme-corp"
-            {...register('slug')}
+            {...slugField}
             className={errors.slug ? 'border-destructive' : ''}
           />
           {errors.slug && (
@@ -53,7 +51,7 @@ export function OrgDetailsForm() {
 
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="domain">Domain (Optional)</Label>
-          <Input id="domain" placeholder="acme.com" {...register('domain')} />
+          <Input id="domain" placeholder="acme.com" {...domainField} />
         </div>
       </div>
     </div>

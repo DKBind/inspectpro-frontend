@@ -11,6 +11,7 @@ export const ROUTES = {
   SETTINGS: '/settings',
   ORGANISATION: '/organisation',
   ORGANISATION_ONBOARDING: '/organisation/onboarding',
+  ORGANISATION_CREATE: '/organisation/create',
   USERS: '/users',
   PROFILE: '/profile',
 } as const;

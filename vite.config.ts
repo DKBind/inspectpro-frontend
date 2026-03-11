@@ -7,6 +7,13 @@ export default defineConfig({
   // Server Configuration default port 5173
   server: {
     port: 4200,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   plugins: [react()],
   resolve: {
@@ -14,4 +21,5 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+
 })

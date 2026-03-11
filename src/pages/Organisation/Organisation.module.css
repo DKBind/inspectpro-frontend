@@ -255,3 +255,23 @@
   color: hsl(215, 20%, 50%);
   margin-top: 6px;
 }
+
+/* Create Organisation button */
+.createBtn {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: none;
+  background: hsl(221, 83%, 53%);
+  color: white;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.createBtn:hover {
+  background: hsl(221, 83%, 45%);
+}

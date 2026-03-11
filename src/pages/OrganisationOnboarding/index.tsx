@@ -41,7 +41,7 @@ export default function OrganisationOnboarding() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const methods = useForm<OnboardingFormValues>({
-    // resolver: zodResolver(onboardingSchema),
+    resolver: zodResolver(onboardingSchema),
     defaultValues: {
       name: '',
       slug: '',
@@ -51,17 +51,9 @@ export default function OrganisationOnboarding() {
     },
   });
 
-
-  // remove
-  const currentValues = methods.watch();
-  console.log("Current Form State:", currentValues);
-  const currentErrors = methods.formState.errors;
-  console.log("Current Errors:", currentErrors);
-
   const onSubmit = async (data: OnboardingFormValues) => {
     setIsSubmitting(true);
 
-    // Transform optional empty values back to correct structure if needed
     const payload: OrganisationCreateRequest = {
       name: data.name,
       slug: data.slug,
@@ -75,7 +67,7 @@ export default function OrganisationOnboarding() {
       toast.success('Organization Created Successfully!', {
         description: `${response.name} has been set up with default roles and ${response.planType} plan.`,
       });
-      navigate('/dashboard'); // or dynamic route if applicable
+      navigate('/organisation');
     } catch (error: any) {
       toast.error('Failed to create organization', {
         description: error?.message || 'Please check your inputs and try again.',
@@ -116,7 +108,16 @@ export default function OrganisationOnboarding() {
 
           <RoleSeeding />
 
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={() => navigate('/organisation')}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
             <Button
               type="submit"
               size="lg"

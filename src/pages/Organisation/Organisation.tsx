@@ -7,10 +7,15 @@ import {
   CalendarDays,
   HardDrive,
   Globe,
+  Plus,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import styles from './Organisation.module.css';
+import { ROUTES } from '@/components/Constant/Route';
 
 const Organisation = () => {
+  const navigate = useNavigate();
+
   return (
     <div className={styles.orgPage}>
       <div className={styles.pageHeader}>
@@ -20,6 +25,10 @@ const Organisation = () => {
             Manage your organisation details, subscription, and billing
           </p>
         </div>
+        <button className={styles.createBtn} onClick={() => navigate(ROUTES.ORGANISATION_ONBOARDING)}>
+          <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
+          Create Organisation
+        </button>
       </div>
 
       <div className={styles.cardsGrid}>
