@@ -1,11 +1,27 @@
-export const PlanType = {
-  FREE: 'FREE',
-  STARTER: 'STARTER',
-  PRO: 'PRO',
-  ENTERPRISE: 'ENTERPRISE',
-} as const;
+// ─── Address ──────────────────────────────────────────────────────────────────
 
-export type PlanType = typeof PlanType[keyof typeof PlanType];
+export interface OrganisationAddressRequest {
+  addressLine1?: string;
+  addressLine2?: string;
+  street?: string;
+  district?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
+}
+
+export interface OrganisationAddressResponse {
+  id?: number;
+  addressLine1?: string;
+  addressLine2?: string;
+  street?: string;
+  district?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
+}
+
+// ─── Roles ────────────────────────────────────────────────────────────────────
 
 export interface CustomRoleRequest {
   name: string;
@@ -13,25 +29,70 @@ export interface CustomRoleRequest {
   designation: string;
 }
 
+// ─── Create / Update Requests ─────────────────────────────────────────────────
+
 export interface OrganisationCreateRequest {
   name: string;
-  slug: string;
+  email: string;
   domain?: string;
-  planType: PlanType;
+  subscriptionId: string;  // UUID of existing global subscription plan
+  subscriptionStartDate?: string;  // ISO datetime string e.g. "2024-01-01T00:00:00"
+  phoneNumber?: string;
+  contactedPersonName?: string;
+  gstin?: string;
+  pan?: string;
+  tan?: string;
+  address?: OrganisationAddressRequest;
   customRoles?: CustomRoleRequest[];
 }
 
+export interface OrganisationUpdateRequest {
+  name?: string;
+  email?: string;
+  domain?: string;
+  planType?: string;
+  phoneNumber?: string;
+  contactedPersonName?: string;
+  gstin?: string;
+  pan?: string;
+  tan?: string;
+  address?: OrganisationAddressRequest;
+  isActive?: boolean;
+}
+
+// ─── Response ─────────────────────────────────────────────────────────────────
+
 export interface OrganisationResponse {
-  id: number;
   uuid: string;
   name: string;
-  slug: string;
-  domain: string;
-  planType: PlanType;
+  email: string;
+  domain?: string;
+  planType: string;
   isActive: boolean;
-  subscriptionId: string;
+  phoneNumber?: string;
+  contactedPersonName?: string;
+  gstin?: string;
+  pan?: string;
+  tan?: string;
+  statusId?: number;
+  statusName?: string;
+  statusColourCode?: string;
+  address?: OrganisationAddressResponse;
+  subscriptionId?: string;
   createdAt: string;
 }
+
+// ─── Pagination ───────────────────────────────────────────────────────────────
+
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+// ─── Common ───────────────────────────────────────────────────────────────────
 
 export interface CommonOrgRole {
   id: number;

@@ -1,0 +1,400 @@
+/* ─── Page Layout ──────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ─── Header ───────────────────────────────────── */
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.headerInfo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.orgIconLarge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: hsla(221, 83%, 53%, 0.12);
+  color: hsl(221, 83%, 63%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pageTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: hsl(210, 40%, 95%);
+}
+
+.pageSubtitle {
+  font-size: 13px;
+  color: hsl(215, 20%, 50%);
+  font-family: monospace;
+  margin-top: 2px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 7px;
+  border: 1px solid hsl(217, 33%, 17%);
+  background: none;
+  color: hsl(215, 20%, 55%);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.backBtn:hover {
+  border-color: hsl(221, 83%, 53%);
+  color: hsl(221, 83%, 63%);
+  background: hsla(221, 83%, 53%, 0.07);
+}
+
+/* ─── Status Badge ─────────────────────────────── */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.statusActive {
+  background: hsla(142, 71%, 45%, 0.12);
+  color: hsl(142, 71%, 55%);
+}
+
+.statusInactive {
+  background: hsla(0, 84%, 60%, 0.1);
+  color: hsl(0, 84%, 60%);
+}
+
+/* ─── Grid ─────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Panel ────────────────────────────────────── */
+.panel {
+  border-radius: 14px;
+  background: hsla(222, 47%, 8%, 0.6);
+  border: 1px solid hsl(217, 33%, 15%);
+  overflow: hidden;
+}
+
+.panelHeader {
+  padding: 18px 24px;
+  border-bottom: 1px solid hsl(217, 33%, 13%);
+}
+
+.panelTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(210, 40%, 85%);
+}
+
+.panelBody {
+  padding: 8px 0;
+}
+
+/* ─── Detail Rows ──────────────────────────────── */
+.detailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  border-bottom: 1px solid hsl(217, 33%, 11%);
+}
+
+.detailRow:last-child {
+  border-bottom: none;
+}
+
+.detailLabel {
+  font-size: 12.5px;
+  color: hsl(215, 20%, 45%);
+  font-weight: 500;
+}
+
+.detailValue {
+  font-size: 13.5px;
+  color: hsl(210, 40%, 85%);
+  font-weight: 500;
+  text-align: right;
+}
+
+.slugValue {
+  font-family: monospace;
+  font-size: 12.5px;
+  color: hsl(215, 20%, 65%);
+}
+
+/* ─── Plan Display ─────────────────────────────── */
+.planDisplay {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+}
+
+.planIconWrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: hsla(221, 83%, 53%, 0.1);
+  color: hsl(221, 83%, 63%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.planName {
+  font-size: 16px;
+  font-weight: 700;
+  color: hsl(210, 40%, 90%);
+}
+
+.planSub {
+  font-size: 12px;
+  color: hsl(215, 20%, 45%);
+  margin-top: 2px;
+}
+
+/* ─── Plan Badge ───────────────────────────────── */
+.planBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-left: auto;
+}
+
+.planFree {
+  background: hsla(215, 20%, 40%, 0.15);
+  color: hsl(215, 20%, 65%);
+}
+
+.planStarter {
+  background: hsla(142, 71%, 45%, 0.12);
+  color: hsl(142, 71%, 55%);
+}
+
+.planPro {
+  background: hsla(221, 83%, 53%, 0.12);
+  color: hsl(221, 83%, 68%);
+}
+
+.planEnterprise {
+  background: hsla(262, 83%, 58%, 0.12);
+  color: hsl(262, 83%, 72%);
+}
+
+/* ─── Status Toggle ────────────────────────────── */
+.statusToggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 50px;
+  height: 28px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s;
+  padding: 0;
+}
+
+.statusToggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.toggleOn {
+  background: hsl(182, 50%, 22%);
+  justify-content: flex-end;
+  padding-right: 3px;
+}
+
+.toggleOff {
+  background: hsl(350, 60%, 82%);
+  justify-content: flex-start;
+  padding-left: 3px;
+}
+
+.toggleKnob {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toggleOn .toggleKnob { color: hsl(182, 52%, 35%); }
+.toggleOff .toggleKnob { color: hsl(350, 70%, 55%); }
+
+/* ─── Subscription Panel ───────────────────────── */
+.manageSubBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 7px;
+  border: 1px solid hsl(217, 33%, 20%);
+  background: hsla(221, 83%, 53%, 0.08);
+  color: hsl(221, 83%, 65%);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.manageSubBtn:hover {
+  background: hsla(221, 83%, 53%, 0.16);
+  border-color: hsl(221, 83%, 45%);
+}
+
+.subGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+}
+
+.subField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 24px;
+  border-bottom: 1px solid hsl(217, 33%, 11%);
+  border-right: 1px solid hsl(217, 33%, 11%);
+}
+
+.subField:nth-child(3n) { border-right: none; }
+
+.subFieldFull {
+  grid-column: 1 / -1;
+  border-right: none;
+}
+
+.subLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(215, 20%, 40%);
+}
+
+.subValue {
+  font-size: 13.5px;
+  color: hsl(210, 40%, 85%);
+  font-weight: 500;
+}
+
+.subStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  align-self: flex-start;
+}
+
+.subTrial   { background: hsla(221, 83%, 53%, 0.12); color: hsl(221, 83%, 68%); }
+.subActive  { background: hsla(142, 71%, 45%, 0.12); color: hsl(142, 71%, 55%); }
+.subSuspended { background: hsla(38, 92%, 50%, 0.12); color: hsl(38, 92%, 60%); }
+.subCancelled { background: hsla(215, 20%, 40%, 0.12); color: hsl(215, 20%, 55%); }
+.subExpired { background: hsla(0, 84%, 60%, 0.10); color: hsl(0, 84%, 60%); }
+
+.subLoadingRow {
+  padding: 24px;
+  font-size: 13px;
+  color: hsl(215, 20%, 45%);
+}
+
+.subEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  color: hsl(215, 20%, 45%);
+  font-size: 13.5px;
+  text-align: center;
+  gap: 8px;
+}
+
+.subCreateBtn {
+  margin-top: 4px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 7px;
+  border: 1px solid hsl(221, 83%, 45%);
+  background: hsla(221, 83%, 53%, 0.1);
+  color: hsl(221, 83%, 65%);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.subCreateBtn:hover {
+  background: hsla(221, 83%, 53%, 0.2);
+}
+
+/* ─── States ───────────────────────────────────── */
+.loadingState,
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  color: hsl(215, 20%, 45%);
+  font-size: 14px;
+  text-align: center;
+  gap: 16px;
+}

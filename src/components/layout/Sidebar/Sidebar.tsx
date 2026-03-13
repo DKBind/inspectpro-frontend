@@ -11,6 +11,7 @@ import {
   Settings,
   Shield,
   Building2,
+  CreditCard,
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
@@ -38,7 +39,10 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
   const secondaryNavItems = [
     { label: 'Reports', icon: BarChart3, path: ROUTES.REPORTS },
     ...(isSuperAdmin
-      ? [{ label: 'Organisation', icon: Building2, path: ROUTES.ORGANISATION }]
+      ? [
+          { label: 'Organisation', icon: Building2, path: ROUTES.ORGANISATION },
+          { label: 'Subscriptions', icon: CreditCard, path: ROUTES.SUBSCRIPTIONS },
+        ]
       : []),
     { label: 'Settings', icon: Settings, path: ROUTES.SETTINGS },
   ];

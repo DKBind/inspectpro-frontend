@@ -10,8 +10,10 @@ export const ROUTES = {
   REPORTS: '/reports',
   SETTINGS: '/settings',
   ORGANISATION: '/organisation',
+  ORGANISATION_DETAIL: '/organisation/:uuid',
   ORGANISATION_ONBOARDING: '/organisation/onboarding',
   ORGANISATION_CREATE: '/organisation/create',
+  SUBSCRIPTIONS: '/subscriptions',
   USERS: '/users',
   PROFILE: '/profile',
 } as const;

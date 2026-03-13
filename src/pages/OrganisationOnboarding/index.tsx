@@ -6,72 +6,148 @@ import * as z from 'zod';
 import { toast } from 'sonner';
 
 import { organisationService } from '@/services/organisationService';
-import type { OrganisationCreateRequest } from '@/services/models/organisation';
-import { PlanType } from '@/services/models/organisation';
 
 import { PlanSelector } from './PlanSelector';
 import { OrgDetailsForm } from './OrgDetailsForm';
-import { RoleSeeding } from './RoleSeeding';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-// Zod Validation Schema
-const customRoleSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  designation: z.string().min(2, 'Designation must be at least 2 characters'),
-  description: z.string().min(5, 'Description must be at least 5 characters'),
-});
+// ─── Schema ───────────────────────────────────────────────────────────────────
 
 const onboardingSchema = z.object({
-  name: z.string().min(2, 'Organization Name is required'),
-  slug: z
+  name: z.string().min(2, 'Organisation name is required'),
+  email: z.string().email('Please enter a valid contact email'),
+  domain: z
     .string()
-    .min(2, 'Slug is required')
-    .regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and dashes'),
-  domain: z.string().optional(),
-  planType: z.nativeEnum(PlanType).refine((val) => val !== undefined, { message: 'Please select a plan' }),
-  customRoles: z.array(customRoleSchema).optional(),
+    .optional()
+    .refine(
+      (val) => !val || /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(val),
+      'Please enter a valid domain (e.g. acme.com)'
+    ),
+  subscriptionId: z.string().min(1, 'Please select a plan'),
+  subscriptionStartDate: z.string().min(1, 'Start date is required'),
+  phoneNumber: z
+    .string()
+    .optional()
+    .refine((val) => !val || /^[0-9+\-\s()]{7,15}$/.test(val), 'Please enter a valid phone number'),
+  contactedPersonName: z.string().optional(),
+  gstin: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/i.test(val),
+      'Invalid GSTIN format (e.g. 22AAAAA0000A1Z5)'
+    ),
+  pan: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || /^[A-Z]{5}[0-9]{4}[A-Z]$/i.test(val),
+      'Invalid PAN format (e.g. ABCDE1234F)'
+    ),
+  tan: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || /^[A-Z]{4}[0-9]{5}[A-Z]$/i.test(val),
+      'Invalid TAN format (e.g. ABCD12345E)'
+    ),
+  address: z
+    .object({
+      addressLine1: z.string().optional(),
+      addressLine2: z.string().optional(),
+      street: z.string().optional(),
+      district: z.string().optional(),
+      state: z.string().optional(),
+      country: z.string().optional(),
+      pincode: z
+        .string()
+        .optional()
+        .refine((val) => !val || /^[0-9]{6}$/.test(val), 'Pincode must be 6 digits'),
+    })
+    .optional(),
 });
 
 type OnboardingFormValues = z.infer<typeof onboardingSchema>;
+
+const clean = (val?: string) => (val?.trim() ? val.trim() : undefined);
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function OrganisationOnboarding() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const methods = useForm<OnboardingFormValues>({
+  const methods = useForm<OnboardingFormValues, unknown, OnboardingFormValues>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
       name: '',
-      slug: '',
+      email: '',
       domain: '',
-      planType: PlanType.STARTER,
-      customRoles: [],
+      subscriptionId: '',
+      subscriptionStartDate: '',
+      phoneNumber: '',
+      contactedPersonName: '',
+      gstin: '',
+      pan: '',
+      tan: '',
+      address: {
+        addressLine1: '',
+        addressLine2: '',
+        street: '',
+        district: '',
+        state: '',
+        country: '',
+        pincode: '',
+      },
     },
   });
 
   const onSubmit = async (data: OnboardingFormValues) => {
     setIsSubmitting(true);
 
-    const payload: OrganisationCreateRequest = {
-      name: data.name,
-      slug: data.slug,
-      domain: data.domain || undefined,
-      planType: data.planType,
-      customRoles: data.customRoles?.length ? data.customRoles : undefined,
-    };
+    const rawAddr = data.address;
+    const cleanAddr = rawAddr
+      ? {
+        addressLine1: clean(rawAddr.addressLine1),
+        addressLine2: clean(rawAddr.addressLine2),
+        street: clean(rawAddr.street),
+        district: clean(rawAddr.district),
+        state: clean(rawAddr.state),
+        country: clean(rawAddr.country),
+        pincode: clean(rawAddr.pincode),
+      }
+      : undefined;
+    const hasAddress = cleanAddr && Object.values(cleanAddr).some(Boolean);
 
     try {
-      const response = await organisationService.createOrganisation(payload);
-      toast.success('Organization Created Successfully!', {
-        description: `${response.name} has been set up with default roles and ${response.planType} plan.`,
+      const response = await organisationService.createOrganisation({
+        name: data.name,
+        email: data.email,
+        domain: clean(data.domain),
+        subscriptionId: data.subscriptionId,
+        subscriptionStartDate: data.subscriptionStartDate
+          ? data.subscriptionStartDate + 'T00:00:00'
+          : undefined,
+        phoneNumber: clean(data.phoneNumber),
+        contactedPersonName: clean(data.contactedPersonName),
+        gstin: clean(data.gstin),
+        pan: clean(data.pan),
+        tan: clean(data.tan),
+        address: hasAddress ? cleanAddr : undefined,
+      });
+      toast.success('Organisation created successfully!', {
+        description: `${response.name} has been set up with the ${response.planType} plan.`,
       });
       navigate('/organisation');
     } catch (error: any) {
-      toast.error('Failed to create organization', {
-        description: error?.message || 'Please check your inputs and try again.',
-      });
+      const message = error?.message || 'Please check your inputs and try again.';
+      if (message.toLowerCase().includes('email')) {
+        methods.setError('email', { type: 'manual', message: 'This email is already registered.' });
+      } else {
+        toast.error('Failed to create organisation', { description: message });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -80,23 +156,24 @@ export default function OrganisationOnboarding() {
   return (
     <div className="container mx-auto max-w-5xl py-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Organization Onboarding</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Organisation Onboarding</h1>
         <p className="text-muted-foreground mt-2">
-          Setup a new organization, define its subscription, and provision its default user roles instantly.
+          Set up a new organisation, define its subscription plan, and provide contact details.
         </p>
       </div>
 
       <FormProvider {...methods}>
-        <form onSubmit={methods.handleSubmit(onSubmit, (errors) => {
-          console.log(errors);
-          toast.error("Please check the form for errors.");
-        })} className="space-y-8">
-
+        <form
+          onSubmit={methods.handleSubmit(onSubmit, () =>
+            toast.error('Please fix the errors before submitting.')
+          )}
+          className="space-y-8"
+        >
           <Card>
             <CardHeader>
               <CardTitle>Subscription Plan</CardTitle>
               <CardDescription>
-                Select the billing template and capabilities for this organization.
+                Select the billing template and capabilities for this organisation.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -105,8 +182,6 @@ export default function OrganisationOnboarding() {
           </Card>
 
           <OrgDetailsForm />
-
-          <RoleSeeding />
 
           <div className="flex justify-end gap-3 pt-4">
             <Button
@@ -124,7 +199,7 @@ export default function OrganisationOnboarding() {
               className="min-w-[200px]"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Processing Transaction...' : 'Create Organization'}
+              {isSubmitting ? 'Creating...' : 'Create Organisation'}
             </Button>
           </div>
         </form>

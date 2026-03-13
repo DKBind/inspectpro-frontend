@@ -127,3 +127,59 @@
     justify-content: center;
   }
 }
+
+
+/* This is the outer container */
+.paginationWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* Pushes leftSection to left, controls to right */
+  padding: 16px 0;
+  width: 100%;
+  gap: 20px;
+}
+
+/* This is the container for "Showing..." and "Show per page" */
+.leftSection {
+  display: flex;
+  flex-direction: row;
+  /* Force horizontal */
+  align-items: center;
+  /* Center them vertically */
+  gap: 12px;
+  flex-shrink: 0;
+  /* Prevents this section from shrinking and forcing a wrap */
+}
+
+/* Ensure the info text doesn't take up the whole line */
+.info {
+  font-size: 13px;
+  color: hsl(215, 20%, 55%);
+  white-space: nowrap;
+  /* Prevents text from breaking into two lines */
+  margin: 0;
+}
+
+.separator {
+  color: hsl(217, 33%, 25%);
+  font-size: 16px;
+  user-select: none;
+}
+
+.pageSizeSelect {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: hsl(215, 20%, 55%);
+  white-space: nowrap;
+}
+
+/* Navigation buttons container */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
