@@ -27,6 +27,7 @@ const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName:  z.string().min(1, 'Last name is required'),
   email:     z.string().email('Enter a valid email'),
+  password:  z.string().optional(),
   gender:    z.string().optional(),
   orgId:     z.string().min(1, 'Organisation is required'),
   roleId:    z.string().min(1, 'Role is required'),
@@ -52,7 +53,7 @@ const Users = () => {
 
   const { register, reset, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { firstName: '', lastName: '', email: '', gender: '', orgId: '', roleId: '' },
+    defaultValues: { firstName: '', lastName: '', email: '', password: '', gender: '', orgId: '', roleId: '' },
   });
 
   // ─── Fetch ─────────────────────────────────────────────────────────────────
@@ -81,7 +82,7 @@ const Users = () => {
   // ─── Open modals ───────────────────────────────────────────────────────────
 
   const openCreate = () => {
-    reset({ firstName: '', lastName: '', email: '', gender: '', orgId: '', roleId: '' });
+    reset({ firstName: '', lastName: '', email: '', password: '', gender: '', orgId: '', roleId: '' });
     setEditTarget(null);
     setModalMode('create');
   };
@@ -108,6 +109,8 @@ const Users = () => {
         firstName: values.firstName,
         lastName:  values.lastName,
         email:     values.email,
+        // Only send password if provided (never send empty string)
+        ...(values.password?.trim() && { password: values.password.trim() }),
         gender:    values.gender,
         orgId:     values.orgId,
         roleId:    Number(values.roleId),
@@ -309,6 +312,15 @@ const Users = () => {
               <Label>Email *</Label>
               <Input {...register('email')} type="email" placeholder="john@example.com" />
               {errors.email && <span style={{ color: 'hsl(0,84%,60%)', fontSize: 12 }}>{errors.email.message}</span>}
+            </div>
+
+            <div>
+              <Label>{modalMode === 'create' ? 'Password' : 'New Password'}</Label>
+              <Input
+                {...register('password')}
+                type="password"
+                placeholder={modalMode === 'create' ? 'Set a password' : 'Leave blank to keep current'}
+              />
             </div>
 
             <div>

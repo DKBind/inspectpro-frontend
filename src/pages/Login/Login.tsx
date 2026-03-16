@@ -10,11 +10,12 @@ import styles from './Login.module.css';
 
 const Login = () => {
   const { setAuth } = useAuthStore();
-  const { setModules, setAccessModules } = useModuleStore();
+  const { setAccessModules } = useModuleStore();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +23,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const data = await authService.login(email.trim().toLowerCase());
+      const data = await authService.login(email.trim().toLowerCase(), password);
 
       const user = {
         id:          data.userId,
@@ -38,13 +39,8 @@ const Login = () => {
 
       setAuth(user, data.accessToken, data.refreshToken, false);
 
-      // Fetch subscription modules (org-level) and role-based access in parallel
-      await Promise.allSettled([
-        data.orgId
-          ? moduleService.getMyModules(data.orgId).then(setModules).catch(() => {})
-          : Promise.resolve(),
-        moduleService.getMyAccess(data.userId).then(setAccessModules).catch(() => {}),
-      ]);
+      // Use my-access as the single source of truth for sidebar visibility
+      await moduleService.getMyAccess(data.userId).then(setAccessModules).catch(() => {});
 
       navigate(ROUTES.DASHBOARD);
     } catch (err: unknown) {
@@ -69,7 +65,7 @@ const Login = () => {
         </div>
 
         <h2 className={styles.formTitle}>Welcome back</h2>
-        <p className={styles.formSubtitle}>Sign in with your email to continue</p>
+        <p className={styles.formSubtitle}>Sign in to your account to continue</p>
 
         <form onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
@@ -81,6 +77,18 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Password</label>
+            <input
+              type="password"
+              className={styles.formInput}
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
             />
           </div>

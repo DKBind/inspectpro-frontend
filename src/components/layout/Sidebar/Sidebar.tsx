@@ -42,9 +42,9 @@ const mainNavItems: NavItem[] = [
 
 const systemNavItems: NavItem[] = [
   { label: 'Reports',       icon: BarChart3,  path: ROUTES.REPORTS },
-  { label: 'Users',         icon: Users,      path: ROUTES.USERS,         roles: ['super_admin'] },
-  { label: 'Organisation',  icon: Building2,  path: ROUTES.ORGANISATION,  roles: ['super_admin'] },
-  { label: 'Subscriptions', icon: CreditCard, path: ROUTES.SUBSCRIPTIONS, roles: ['super_admin'] },
+  { label: 'Users',         icon: Users,      path: ROUTES.USERS },
+  { label: 'Organisation',  icon: Building2,  path: ROUTES.ORGANISATION },
+  { label: 'Subscriptions', icon: CreditCard, path: ROUTES.SUBSCRIPTIONS },
   { label: 'Settings',      icon: Settings,   path: ROUTES.SETTINGS },
 ];
 
@@ -56,20 +56,24 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
-  // Routes from org subscription plan (what the org paid for)
+  // DB module routes (e.g. "/organisation/create") vs sidebar paths (e.g. "/organisation")
+  // Use prefix matching: a module route "/organisation/create" grants access to sidebar "/organisation"
+  const matchesAnyRoute = (sidebarPath: string, routes: Set<string>): boolean => {
+    if (routes.size === 0) return true; // filter inactive when no routes loaded
+    for (const route of routes) {
+      if (route === sidebarPath || route.startsWith(sidebarPath + '/')) return true;
+    }
+    return false;
+  };
+
   const subscriptionRoutes = new Set(modules.map((m) => m.route));
-  // Routes from user's assigned roles (what this user is permitted to access)
-  const roleRoutes = new Set(accessModules.map((m) => m.route));
+  const roleRoutes         = new Set(accessModules.map((m) => m.route));
 
   const isVisible = (item: NavItem): boolean => {
-    // Super admin sees everything
     if (isSuperAdmin) return true;
-    // Items locked to specific roles (e.g. Organisation, Subscriptions — super_admin only)
     if (item.roles && !item.roles.includes(user?.role ?? '')) return false;
-    // Role-based filter: user must have access via their assigned role
-    if (roleRoutes.size > 0 && !roleRoutes.has(item.path)) return false;
-    // Subscription filter: org must have this module in their plan
-    if (subscriptionRoutes.size > 0 && !subscriptionRoutes.has(item.path)) return false;
+    if (!matchesAnyRoute(item.path, roleRoutes)) return false;
+    if (!matchesAnyRoute(item.path, subscriptionRoutes)) return false;
     return true;
   };
 
