@@ -18,6 +18,8 @@ export interface ModuleInfo {
 
 export interface SubscriptionResponse {
   id: string;
+  /** null = global plan (super_admin); set = org-owned plan for franchises */
+  createdByOrgId?: string;
   planName: string;
   price?: number;
   currency?: string;
@@ -38,6 +40,8 @@ export interface SubscriptionRequest {
   statusId?: number;
   notes?: string;
   moduleIds?: number[];
+  /** Set to org UUID when org user creates plans for their franchises */
+  createdByOrgId?: string;
 }
 
 // ─── Org-level subscription ───────────────────────────────────────────────────

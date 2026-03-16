@@ -58,6 +58,24 @@ export const subscriptionService = {
     return response.object as SubscriptionResponse[];
   },
 
+  /** All subscription plans created by a specific org (for franchise assignment). */
+  listSubscriptionsByOrgId: async (orgId: string): Promise<SubscriptionResponse[]> => {
+    const response = await api.get<ApiResponse<SubscriptionResponse[]>>(
+      `/organisations/${orgId}/subscription-plans`,
+    );
+    if (!response.status) throw new Error(response.message || 'Failed to fetch org subscription plans');
+    return (response.object as SubscriptionResponse[]) ?? [];
+  },
+
+  /** Active subscription plans created by a specific org. */
+  listActiveSubscriptionsByOrgId: async (orgId: string): Promise<SubscriptionResponse[]> => {
+    const response = await api.get<ApiResponse<SubscriptionResponse[]>>(
+      `/organisations/${orgId}/subscription-plans/active`,
+    );
+    if (!response.status) throw new Error(response.message || 'Failed to fetch active org subscription plans');
+    return (response.object as SubscriptionResponse[]) ?? [];
+  },
+
   // ─── Plan module management ──────────────────────────────────────────────
 
   setPlanModules: async (planId: string, moduleIds: number[]): Promise<SubscriptionResponse> => {

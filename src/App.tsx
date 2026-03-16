@@ -13,6 +13,11 @@ import OrganisationOnboarding from './pages/OrganisationOnboarding';
 import OrganisationCreate from './pages/OrganisationCreate';
 import Franchise from './pages/Franchise/Franchise';
 import Subscriptions from './pages/Subscriptions/Subscriptions';
+import FranchiseSubscriptions from './pages/FranchiseSubscriptions/FranchiseSubscriptions';
+import Customers from './pages/Customers/Customers';
+import UsersRolesPage from './pages/UsersRoles/UsersRolesPage';
+import Notifications from './pages/Notifications/Notifications';
+import ProfilePage from './pages/Profile/ProfilePage';
 import Users from './pages/Users/Users';
 import NotFound from './components/ui/NotFound/NotFound';
 
@@ -45,10 +50,14 @@ function App() {
             <Route path={ROUTES.ORGANISATION_DETAIL} element={<OrganisationDetail />} />
             <Route path={ROUTES.ORGANISATION_ONBOARDING} element={<OrganisationOnboarding />} />
             <Route path={ROUTES.ORGANISATION_CREATE} element={<OrganisationCreate />} />
-            <Route path={ROUTES.PROFILE} element={<Settings />} />
             <Route path={ROUTES.SUBSCRIPTIONS} element={<Subscriptions />} />
             <Route path={ROUTES.USERS} element={<Users />} />
             <Route path={ROUTES.FRANCHISE} element={<Franchise />} />
+            <Route path={ROUTES.FRANCHISE_SUBSCRIPTIONS} element={<FranchiseSubscriptions />} />
+            <Route path={ROUTES.CUSTOMERS} element={<Customers />} />
+            <Route path={ROUTES.USERS_ROLES} element={<UsersRolesPage />} />
+            <Route path={ROUTES.NOTIFICATIONS} element={<Notifications />} />
+            <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
           </Route>
         </Route>
 

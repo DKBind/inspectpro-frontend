@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { GitBranch, Plus, Globe, RefreshCw, Eye, Pencil, Trash2, XCircle, CheckCircle, AlertTriangle, Building2 } from 'lucide-react';
+import { GitBranch, Plus, Globe, RefreshCw, Eye, Pencil, Trash2, XCircle, CheckCircle, AlertTriangle, Building2, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { organisationService } from '@/services/organisationService';
@@ -144,6 +144,7 @@ const Franchise = () => {
                   <tr>
                     <th>Franchise</th>
                     <th>Parent Organisation</th>
+                    <th>Plan</th>
                     <th>Contact Person</th>
                     <th>Email</th>
                     <th>Status</th>
@@ -174,6 +175,16 @@ const Franchise = () => {
                           <Building2 style={{ width: 13, height: 13, opacity: 0.5 }} />
                           <span className={styles.mutedCell}>{f.parentOrgName ?? '—'}</span>
                         </div>
+                      </td>
+                      <td>
+                        {f.subscriptionPlanName ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: 'rgba(139,92,246,0.12)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.25)' }}>
+                            <Crown style={{ width: 10, height: 10 }} />
+                            {f.subscriptionPlanName}
+                          </span>
+                        ) : (
+                          <span className={styles.mutedCell}>—</span>
+                        )}
                       </td>
                       <td className={styles.mutedCell}>{f.contactedPersonName ?? '—'}</td>
                       <td className={styles.mutedCell}>{f.email ?? '—'}</td>

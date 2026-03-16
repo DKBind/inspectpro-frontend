@@ -5,6 +5,7 @@ import { ROUTES } from '@/components/Constant/Route';
 import {
   LayoutDashboard, FolderKanban, ClipboardCheck, ListChecks, Bug,
   BarChart3, Settings, Shield, Building2, CreditCard, GitBranch,
+  Sparkles, Users, Bell, UserCircle,
   type LucideIcon,
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
@@ -35,6 +36,9 @@ const ALL_SYSTEM_ITEMS: NavItem[] = [
   { label: 'Organisation',  icon: Building2,   path: ROUTES.ORGANISATION },
   { label: 'Franchise',     icon: GitBranch,   path: ROUTES.FRANCHISE },
   { label: 'Subscriptions', icon: CreditCard,  path: ROUTES.SUBSCRIPTIONS },
+  { label: 'Users & Roles', icon: Users,       path: ROUTES.USERS_ROLES },
+  { label: 'Notifications', icon: Bell,        path: ROUTES.NOTIFICATIONS },
+  { label: 'Profile',       icon: UserCircle,  path: ROUTES.PROFILE },
   { label: 'Settings',      icon: Settings,    path: ROUTES.SETTINGS },
 ];
 
@@ -49,8 +53,13 @@ const MODULE_META: Record<string, { label: string; icon: LucideIcon; section: Se
   '/reports':       { label: 'Reports',       icon: BarChart3,       section: 'system' },
   '/organisation':  { label: 'Organisation',  icon: Building2,       section: 'system' },
   '/franchise':     { label: 'Franchise',     icon: GitBranch,       section: 'system' },
-  '/subscriptions': { label: 'Subscriptions', icon: CreditCard,      section: 'system' },
-  '/settings':      { label: 'Settings',      icon: Settings,        section: 'system' },
+  '/subscriptions':           { label: 'Subscriptions',          icon: CreditCard,  section: 'system' },
+  '/franchise-subscriptions': { label: 'Franchise Subscriptions', icon: Sparkles,    section: 'system' },
+  '/customers':               { label: 'Customers',               icon: Users,       section: 'system' },
+  '/users-roles':             { label: 'Users & Roles',           icon: Users,       section: 'system' },
+  '/notifications':           { label: 'Notifications',           icon: Bell,        section: 'system' },
+  '/profile':                 { label: 'Profile',                 icon: UserCircle,  section: 'system' },
+  '/settings':                { label: 'Settings',                icon: Settings,    section: 'system' },
 };
 
 const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
@@ -79,8 +88,8 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
       else system.push(item);
     });
 
-    // Always ensure Settings is visible
-    if (!seen.has('/settings')) system.push({ label: 'Settings', icon: Settings, path: ROUTES.SETTINGS });
+    // Always ensure Profile is visible
+    if (!seen.has('/profile')) system.push({ label: 'Profile', icon: UserCircle, path: ROUTES.PROFILE });
 
     return { main, system };
   };
@@ -96,9 +105,9 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
     visibleMain   = built.main;
     visibleSystem = built.system;
   } else {
-    // Not yet loaded — show nothing except Settings
+    // Not yet loaded — show nothing except Profile
     visibleMain   = [];
-    visibleSystem = [{ label: 'Settings', icon: Settings, path: ROUTES.SETTINGS }];
+    visibleSystem = [{ label: 'Profile', icon: UserCircle, path: ROUTES.PROFILE }];
   }
 
   const renderNavItem = (item: NavItem) => (
