@@ -1,35 +1,56 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useModuleStore } from '@/store/useModuleStore';
+import { moduleService } from '@/services/moduleService';
+import { authService } from '@/services/authService';
 import { ROUTES } from '@/components/Constant/Route';
 import { Shield, Lock } from 'lucide-react';
 import styles from './Login.module.css';
 
 const Login = () => {
   const { setAuth } = useAuthStore();
+  const { setModules, setAccessModules } = useModuleStore();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('admin@inspectpro.com');
-  const [password, setPassword] = useState('password');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const isFirstLogin = false; // toggle to true to test first-login flow
-    setAuth(
-      { 
-        id: '1', 
-        email, 
-        name: 'Admin User', 
-        role: 'super_admin', // Default role
-        roles: ['super_admin', 'admin'] // All accessible roles
-      },
-      'mock-access-token',
-      'mock-refresh-token',
-      isFirstLogin
-    );
-    if (isFirstLogin) {
-      navigate(ROUTES.UPDATE_PASSWORD);
-    } else {
+    setError('');
+    setLoading(true);
+
+    try {
+      const data = await authService.login(email);
+
+      const user = {
+        id: data.userId,
+        email: data.email,
+        name: `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim(),
+        role: data.superAdmin ? 'super_admin' : (data.roleName ?? 'user'),
+        roles: data.superAdmin
+          ? ['super_admin']
+          : (data.roleName ? [data.roleName] : []),
+        orgId: data.orgId,
+        isSuperAdmin: data.superAdmin,
+      };
+
+      setAuth(user, data.accessToken, data.refreshToken, false);
+
+      // Fetch subscription modules (org-level) and role-based access in parallel
+      await Promise.allSettled([
+        data.orgId
+          ? moduleService.getMyModules(data.orgId).then(setModules).catch(() => {})
+          : Promise.resolve(),
+        moduleService.getMyAccess(data.userId).then(setAccessModules).catch(() => {}),
+      ]);
+
       navigate(ROUTES.DASHBOARD);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,7 +72,7 @@ const Login = () => {
         </div>
 
         <h2 className={styles.formTitle}>Welcome back</h2>
-        <p className={styles.formSubtitle}>Sign in to your account to continue</p>
+        <p className={styles.formSubtitle}>Sign in with your email to continue</p>
 
         <form onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
@@ -63,39 +84,26 @@ const Login = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Password</label>
-            <input
-              type="password"
-              className={styles.formInput}
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+          {error && (
+            <div style={{
+              color: 'hsl(0,84%,60%)',
+              fontSize: 13,
+              padding: '8px 12px',
+              background: 'hsla(0,84%,60%,0.08)',
+              borderRadius: 6,
+              border: '1px solid hsla(0,84%,60%,0.2)',
+              marginBottom: 8,
+            }}>
+              {error}
+            </div>
+          )}
 
-
-
-          <div className={styles.formOptions}>
-            <label className={styles.rememberMe}>
-              <input type="checkbox" />
-              Remember me
-            </label>
-            <button
-              type="button"
-              className={styles.forgotLink}
-              onClick={() => navigate(ROUTES.FORGOT_PASSWORD)}
-            >
-              Forgot password?
-            </button>
-          </div>
-
-          <button type="submit" className={styles.submitBtn}>
-            Sign In
+          <button type="submit" className={styles.submitBtn} disabled={loading}>
+            {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
 

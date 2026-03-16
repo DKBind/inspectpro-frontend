@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthStore, type UserRole } from '@/store/useAuthStore';
+import { useModuleStore } from '@/store/useModuleStore';
 import { Menu, Search, Bell, LogOut, PanelLeftClose, PanelLeftOpen, ChevronDown, Check } from 'lucide-react';
 import styles from './Header.module.css';
 
@@ -25,6 +26,7 @@ const routeLabelMap: Record<string, string> = {
 
 const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps) => {
   const { user, clearAuth, switchRole } = useAuthStore();
+  const { clearModules } = useModuleStore();
   const location = useLocation();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -107,7 +109,7 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
         <div className={styles.divider} />
 
         <div className={styles.userMenuWrapper} ref={menuRef}>
-          <button 
+          <button
             className={`${styles.userMenu} ${hasMultipleRoles ? styles.userMenuClickable : ''}`}
             onClick={() => hasMultipleRoles && setShowRoleMenu(!showRoleMenu)}
           >
@@ -145,7 +147,7 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
           )}
         </div>
 
-        <button className={styles.iconBtn} title="Logout" onClick={clearAuth}>
+        <button className={styles.iconBtn} title="Logout" onClick={() => { clearAuth(); clearModules(); }}>
           <LogOut />
         </button>
       </div>

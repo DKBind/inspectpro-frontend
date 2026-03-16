@@ -10,16 +10,28 @@ interface Props {
   onClose: () => void;
 }
 
-const PLAN_LABELS: Record<string, string> = {
-  FREE: 'Free', STARTER: 'Starter', PRO: 'Professional', ENTERPRISE: 'Enterprise',
-};
+function formatDate(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
-const PLAN_COLORS: Record<string, string> = {
-  FREE: 'text-slate-400 bg-slate-800/60 border-slate-700',
-  STARTER: 'text-emerald-400 bg-emerald-900/20 border-emerald-800/40',
-  PRO: 'text-blue-400 bg-blue-900/20 border-blue-800/40',
-  ENTERPRISE: 'text-purple-400 bg-purple-900/20 border-purple-800/40',
-};
+function planBadgeStyle(planName?: string): string {
+  const p = (planName ?? '').toUpperCase();
+  if (p.includes('FREE')) return 'text-slate-400 bg-slate-800/60 border-slate-700';
+  if (p.includes('STARTER') || p.includes('BASIC')) return 'text-emerald-400 bg-emerald-900/20 border-emerald-800/40';
+  if (p.includes('PRO') || p.includes('PROFESSIONAL')) return 'text-blue-400 bg-blue-900/20 border-blue-800/40';
+  if (p.includes('ENTERPRISE') || p.includes('PREMIUM')) return 'text-purple-400 bg-purple-900/20 border-purple-800/40';
+  const palettes = [
+    'text-amber-400 bg-amber-900/20 border-amber-800/40',
+    'text-cyan-400 bg-cyan-900/20 border-cyan-800/40',
+    'text-rose-400 bg-rose-900/20 border-rose-800/40',
+    'text-indigo-400 bg-indigo-900/20 border-indigo-800/40',
+  ];
+  const hash = (planName ?? '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return palettes[hash % palettes.length];
+}
 
 export function OrganisationViewModal({ org, onClose }: Props) {
   if (!org) return null;
@@ -36,6 +48,8 @@ export function OrganisationViewModal({ org, onClose }: Props) {
       [org.address.country, org.address.pincode].filter(Boolean).join(' - '),
     ].filter(Boolean)
     : [];
+
+  const planName = org.subscriptionPlanName ?? org.planType;
 
   return (
     <Dialog open={!!org} onOpenChange={(open) => !open && onClose()}>
@@ -56,12 +70,9 @@ export function OrganisationViewModal({ org, onClose }: Props) {
             <div className="min-w-0 flex-1 pr-10">
               <h2 className="text-xl font-bold text-white truncate">{org.name}</h2>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${PLAN_COLORS[org.planType] ?? PLAN_COLORS.FREE
-                    }`}
-                >
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${planBadgeStyle(planName)}`}>
                   <Crown size={11} />
-                  {PLAN_LABELS[org.planType] ?? org.planType}
+                  {planName ?? '—'}
                 </span>
                 {org.isActive ? (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-900/20 border border-emerald-800/40 text-emerald-400">
@@ -79,6 +90,27 @@ export function OrganisationViewModal({ org, onClose }: Props) {
 
         {/* Body */}
         <div className="px-7 py-6 space-y-6">
+
+          {/* Subscription Plan */}
+          <ViewSection title="Subscription Plan">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <p className="text-xs text-slate-500 uppercase tracking-wide">Plan</p>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${planBadgeStyle(planName)}`}>
+                  <Crown size={11} />
+                  {planName ?? '—'}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs text-slate-500 uppercase tracking-wide">Start Date</p>
+                <p className="text-sm text-slate-200 font-medium">{formatDate(org.periodStart)}</p>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs text-slate-500 uppercase tracking-wide">End Date</p>
+                <p className="text-sm text-slate-200 font-medium">{formatDate(org.periodEnd)}</p>
+              </div>
+            </div>
+          </ViewSection>
 
           {/* Contact Info */}
           <ViewSection title="Contact Information">
@@ -125,9 +157,7 @@ export function OrganisationViewModal({ org, onClose }: Props) {
               <InfoRow
                 icon={<Calendar size={14} />}
                 label="Created On"
-                value={org.createdAt ? new Date(org.createdAt).toLocaleDateString('en-IN', {
-                  day: '2-digit', month: 'short', year: 'numeric',
-                }) : undefined}
+                value={formatDate(org.createdAt)}
               />
               {org.statusName && (
                 <InfoRow

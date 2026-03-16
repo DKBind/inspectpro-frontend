@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-export type UserRole = 'super_admin' | 'admin';
+export type UserRole = string;
 
 export interface User {
   id: string;
@@ -9,6 +9,8 @@ export interface User {
   name?: string;
   role: UserRole;
   roles: UserRole[];
+  orgId?: string;       // set for org-level users; undefined for super_admin
+  isSuperAdmin?: boolean;
 }
 
 interface AuthState {
@@ -44,6 +46,13 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
+      // Only tokens + auth flags go to localStorage — user object (role, roles) stays in memory only
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+        isFirstLogin: state.isFirstLogin,
+      }),
     }
   )
 );

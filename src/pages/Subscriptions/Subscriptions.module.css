@@ -235,3 +235,55 @@
 .pageBtn:disabled { opacity: 0.35; cursor: not-allowed; }
 .pageBtnActive { background: #2563eb; border-color: #2563eb; color: #fff; }
 .pageBtnActive:hover { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+
+/* ─── Status Toggle ────────────────────────────── */
+
+.statusToggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 50px;
+  height: 28px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s;
+  padding: 0;
+}
+
+.statusToggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.toggleOn {
+  background: hsl(182, 50%, 22%);
+  justify-content: flex-end;
+  padding-right: 3px;
+}
+
+.toggleOff {
+  background: hsl(350, 60%, 82%);
+  justify-content: flex-start;
+  padding-left: 3px;
+}
+
+.toggleKnob {
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.toggleOn .toggleKnob {
+  color: hsl(182, 52%, 35%);
+}
+
+.toggleOff .toggleKnob {
+  color: hsl(350, 70%, 55%);
+}

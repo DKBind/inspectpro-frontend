@@ -12,6 +12,7 @@ import OrganisationDetail from './pages/Organisation/OrganisationDetail';
 import OrganisationOnboarding from './pages/OrganisationOnboarding';
 import OrganisationCreate from './pages/OrganisationCreate';
 import Subscriptions from './pages/Subscriptions/Subscriptions';
+import Users from './pages/Users/Users';
 import NotFound from './components/ui/NotFound/NotFound';
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
             <Route path={ROUTES.ORGANISATION_CREATE} element={<OrganisationCreate />} />
             <Route path={ROUTES.PROFILE} element={<Settings />} />
             <Route path={ROUTES.SUBSCRIPTIONS} element={<Subscriptions />} />
+            <Route path={ROUTES.USERS} element={<Users />} />
           </Route>
         </Route>
 

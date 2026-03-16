@@ -6,6 +6,7 @@ import type {
   OrgSubscriptionRequest,
   OrgSubscriptionResponse,
 } from './models/subscription';
+import type { ModuleResponse } from './models/module';
 
 interface ApiResponse<T> {
   status: boolean;
@@ -57,6 +58,17 @@ export const subscriptionService = {
     return response.object as SubscriptionResponse[];
   },
 
+  // ─── Plan module management ──────────────────────────────────────────────
+
+  setPlanModules: async (planId: string, moduleIds: number[]): Promise<SubscriptionResponse> => {
+    const response = await api.put<ApiResponse<SubscriptionResponse>>(
+      `/subscriptions/${planId}/modules`,
+      moduleIds,
+    );
+    if (!response.status) throw new Error(response.message || 'Failed to set plan modules');
+    return response.object as SubscriptionResponse;
+  },
+
   // ─── Org-level endpoints ─────────────────────────────────────────────────
 
   getOrgSubscription: async (orgUuid: string): Promise<OrgSubscriptionResponse> => {
@@ -75,5 +87,11 @@ export const subscriptionService = {
     );
     if (!response.status) throw new Error(response.message || 'Failed to save subscription');
     return response.object as OrgSubscriptionResponse;
+  },
+
+  getOrgModules: async (orgUuid: string): Promise<ModuleResponse[]> => {
+    const response = await api.get<ApiResponse<ModuleResponse[]>>(`/organisations/${orgUuid}/modules`);
+    if (!response.status) throw new Error(response.message || 'Failed to fetch org modules');
+    return (response.object as ModuleResponse[]) ?? [];
   },
 };

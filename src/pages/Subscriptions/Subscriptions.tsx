@@ -7,10 +7,13 @@ import { toast } from 'sonner';
 import {
   CreditCard, Plus, RefreshCw, IndianRupee, Clock,
   FileText, Loader2, Eye, Pencil, Trash2, ChevronLeft, ChevronRight,
+  CheckCircle, XCircle, Users, Package, LayoutGrid,
 } from 'lucide-react';
 
 import { subscriptionService } from '@/services/subscriptionService';
+import { moduleService } from '@/services/moduleService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
+import type { ModuleResponse } from '@/services/models/module';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
@@ -34,6 +37,11 @@ const schema = z.object({
     .string()
     .min(1, 'Duration is required')
     .refine((v) => /^\d+$/.test(v) && parseInt(v) > 0, 'Enter a valid number of months'),
+  maxUsers: z
+    .string()
+    .optional()
+    .refine((v) => !v || (/^\d+$/.test(v) && parseInt(v) > 0), 'Enter a valid number'),
+  billingCycle: z.enum(['MONTHLY', 'YEARLY']).optional(),
   isActive: z.boolean(),
   notes: z.string().optional(),
 });
@@ -49,6 +57,7 @@ const isActivePlan = (plan: SubscriptionResponse) =>
 
 const Subscriptions = () => {
   const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
+  const [allModules, setAllModules] = useState<ModuleResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -58,10 +67,12 @@ const Subscriptions = () => {
   const [deleteTarget, setDeleteTarget] = useState<SubscriptionResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [toggleTarget, setToggleTarget] = useState<{ plan: SubscriptionResponse; newActive: boolean } | null>(null);
+  const [selectedModuleIds, setSelectedModuleIds] = useState<number[]>([]);
 
   const { register, reset, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { planName: '', price: '', durationMonths: '', isActive: true, notes: '' },
+    defaultValues: { planName: '', price: '', durationMonths: '', maxUsers: '', billingCycle: 'MONTHLY', isActive: true, notes: '' },
   });
 
   const watchIsActive = watch('isActive');
@@ -71,8 +82,12 @@ const Subscriptions = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const p = await subscriptionService.listSubscriptions();
+      const [p, m] = await Promise.all([
+        subscriptionService.listSubscriptions(),
+        moduleService.listModules(),
+      ]);
       setPlans(p);
+      setAllModules(m);
     } catch {
       toast.error('Failed to load subscription data');
     } finally {
@@ -86,7 +101,8 @@ const Subscriptions = () => {
 
   const openCreate = () => {
     setEditTarget(null);
-    reset({ planName: '', price: '', durationMonths: '', isActive: true, notes: '' });
+    setSelectedModuleIds([]);
+    reset({ planName: '', price: '', durationMonths: '', maxUsers: '', billingCycle: 'MONTHLY', isActive: true, notes: '' });
     setModalMode('create');
   };
 
@@ -94,14 +110,25 @@ const Subscriptions = () => {
 
   const openEdit = (plan: SubscriptionResponse) => {
     setEditTarget(plan);
+    setSelectedModuleIds((plan.modules ?? []).map((m) => m.id));
     reset({
       planName: plan.planName,
       price: plan.price != null ? String(plan.price) : '',
       durationMonths: plan.durationMonths != null ? String(plan.durationMonths) : '',
+      maxUsers: plan.maxUsers != null ? String(plan.maxUsers) : '',
+      billingCycle: (plan.billingCycle as 'MONTHLY' | 'YEARLY') ?? 'MONTHLY',
       isActive: isActivePlan(plan),
       notes: plan.notes ?? '',
     });
     setModalMode('edit');
+  };
+
+  // ─── Module toggle ────────────────────────────────────────────────────────
+
+  const toggleModule = (id: number) => {
+    setSelectedModuleIds((prev) =>
+      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id],
+    );
   };
 
   // ─── Submit (create / edit) ───────────────────────────────────────────────
@@ -112,8 +139,11 @@ const Subscriptions = () => {
       planName: data.planName,
       price: parseFloat(data.price),
       durationMonths: parseInt(data.durationMonths),
+      maxUsers: data.maxUsers ? parseInt(data.maxUsers) : undefined,
+      billingCycle: data.billingCycle,
       statusId: data.isActive ? 1 : 2,
       notes: data.notes || undefined,
+      moduleIds: selectedModuleIds,
     };
     try {
       if (modalMode === 'edit' && editTarget) {
@@ -135,15 +165,23 @@ const Subscriptions = () => {
 
   // ─── Toggle status ────────────────────────────────────────────────────────
 
-  const handleToggleStatus = async (plan: SubscriptionResponse) => {
+  const handleToggleStatus = (plan: SubscriptionResponse) => {
+    setToggleTarget({ plan, newActive: !isActivePlan(plan) });
+  };
+
+  const confirmToggleStatus = async () => {
+    if (!toggleTarget) return;
+    const { plan } = toggleTarget;
     setTogglingId(plan.id);
     try {
       const updated = await subscriptionService.toggleStatus(plan.id);
       setPlans((prev) => prev.map((p) => p.id === plan.id ? updated : p));
+      toast.success(`Plan marked as ${toggleTarget.newActive ? 'Active' : 'Inactive'}`);
     } catch (e: any) {
       toast.error(e.message || 'Failed to toggle status');
     } finally {
       setTogglingId(null);
+      setToggleTarget(null);
     }
   };
 
@@ -178,7 +216,7 @@ const Subscriptions = () => {
         <div>
           <h1 className={styles.pageTitle}>Subscription Plans</h1>
           <p className={styles.pageSubtitle}>
-            Create and manage global subscription plans. Assign them to organisations from the Organisation detail page.
+            Create and manage global subscription plans with features (modules) and user limits.
           </p>
         </div>
         <button className={styles.createBtn} onClick={openCreate}>
@@ -219,6 +257,8 @@ const Subscriptions = () => {
                     <th>Plan Name</th>
                     <th>Price</th>
                     <th>Duration</th>
+                    <th>Max Users</th>
+                    <th>Modules</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -228,10 +268,21 @@ const Subscriptions = () => {
                     <tr key={p.id} className={styles.tableRow}>
                       <td><span className={styles.planName}>{p.planName}</span></td>
                       <td className={styles.mutedCell}>
-                        {p.price != null ? `₹ ${Number(p.price).toLocaleString('en-IN')}` : '—'}
+                        {p.price != null ? `\u20B9 ${Number(p.price).toLocaleString('en-IN')}` : '\u2014'}
                       </td>
                       <td className={styles.mutedCell}>
-                        {p.durationMonths != null ? `${p.durationMonths} month${p.durationMonths !== 1 ? 's' : ''}` : '—'}
+                        {p.durationMonths != null
+                          ? `${p.durationMonths} mo${p.billingCycle ? ` \u00B7 ${p.billingCycle.charAt(0) + p.billingCycle.slice(1).toLowerCase()}` : ''}`
+                          : '\u2014'}
+                      </td>
+                      <td className={styles.mutedCell}>
+                        {p.maxUsers != null ? p.maxUsers.toLocaleString() : '\u2014'}
+                      </td>
+                      <td className={styles.mutedCell}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#94a3b8' }}>
+                          <Package style={{ width: 12, height: 12 }} />
+                          {p.modules?.length ?? 0}
+                        </span>
                       </td>
                       <td>
                         <StatusToggle
@@ -262,10 +313,9 @@ const Subscriptions = () => {
                 </tbody>
               </table>
 
-              {/* Pagination — always shown */}
               <div className={styles.pagination}>
                 <span className={styles.paginationInfo}>
-                  {`Showing ${currentPage * PAGE_SIZE + 1}–${Math.min((currentPage + 1) * PAGE_SIZE, plans.length)} of ${plans.length}`}
+                  {`Showing ${currentPage * PAGE_SIZE + 1}\u2013${Math.min((currentPage + 1) * PAGE_SIZE, plans.length)} of ${plans.length}`}
                 </span>
                 <div className={styles.paginationControls}>
                   <button
@@ -298,9 +348,9 @@ const Subscriptions = () => {
         </div>
       </div>
 
-      {/* ── Create / Edit Modal ── */}
+      {/* Create / Edit Modal */}
       <Dialog open={modalMode !== null} onOpenChange={(open) => { if (!open) setModalMode(null); }}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
             <div className="flex items-center gap-3 mb-1">
               <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
@@ -312,8 +362,8 @@ const Subscriptions = () => {
             </div>
             <DialogDescription className="text-slate-400 text-sm pl-12">
               {modalMode === 'edit'
-                ? 'Update the details of this subscription plan.'
-                : 'Define a reusable plan that can be assigned to any organisation.'}
+                ? 'Update the plan details and its assigned modules.'
+                : 'Define a reusable plan with pricing, limits, and features.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -346,7 +396,35 @@ const Subscriptions = () => {
                 </Fld>
               </div>
 
-              {/* Status toggle — only shown in edit mode */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Fld label="Max Users" hint="Optional" error={errors.maxUsers?.message}>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">
+                      <Users size={14} />
+                    </span>
+                    <Input placeholder="e.g. 50" {...register('maxUsers')}
+                      className={inputCls(!!errors.maxUsers) + ' pl-9'} />
+                  </div>
+                </Fld>
+                <Fld label="Billing Cycle">
+                  <div className="flex gap-2">
+                    {(['MONTHLY', 'YEARLY'] as const).map((cycle) => (
+                      <button
+                        key={cycle}
+                        type="button"
+                        onClick={() => setValue('billingCycle', cycle)}
+                        className={`flex-1 h-10 rounded-md text-sm font-medium border transition-all ${watch('billingCycle') === cycle
+                          ? 'bg-blue-600/20 border-blue-500/60 text-blue-400'
+                          : 'bg-slate-950/60 border-slate-700 text-slate-400 hover:border-slate-600'
+                          }`}
+                      >
+                        {cycle.charAt(0) + cycle.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                </Fld>
+              </div>
+
               {modalMode === 'edit' && (
                 <Fld label="Status">
                   <div className="flex items-center gap-3 py-1">
@@ -355,9 +433,11 @@ const Subscriptions = () => {
                       role="switch"
                       aria-checked={watchIsActive}
                       onClick={() => setValue('isActive', !watchIsActive)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${watchIsActive ? 'bg-green-500' : 'bg-slate-600'}`}
+                      className={`${styles.statusToggle} ${watchIsActive ? styles.toggleOn : styles.toggleOff}`}
                     >
-                      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${watchIsActive ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <span className={styles.toggleKnob}>
+                        {watchIsActive ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                      </span>
                     </button>
                     <span className={`text-sm font-medium ${watchIsActive ? 'text-green-400' : 'text-slate-500'}`}>
                       {watchIsActive ? 'Active' : 'Inactive'}
@@ -365,6 +445,63 @@ const Subscriptions = () => {
                   </div>
                 </Fld>
               )}
+
+              <Fld label="Features (Modules)" hint="Select which features this plan includes">
+                {allModules.length === 0 ? (
+                  <p className="text-xs text-slate-500 py-2">
+                    No modules available. Create modules on the Modules page first.
+                  </p>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2 mt-1">
+                    {allModules.map((m) => {
+                      const checked = selectedModuleIds.includes(m.id);
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => toggleModule(m.id)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 10,
+                            padding: '10px 12px',
+                            borderRadius: 8,
+                            border: `1px solid ${checked ? 'rgba(59,130,246,0.4)' : '#1e293b'}`,
+                            background: checked ? 'rgba(59,130,246,0.08)' : 'rgba(15,23,42,0.4)',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          <span style={{
+                            marginTop: 2, flexShrink: 0, width: 16, height: 16,
+                            borderRadius: 4, border: `1px solid ${checked ? '#3b82f6' : '#475569'}`,
+                            background: checked ? '#3b82f6' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {checked && <CheckCircle size={10} color="white" />}
+                          </span>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: checked ? '#93c5fd' : '#94a3b8', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {m.name}
+                            </p>
+                            {m.category && (
+                              <p style={{ fontSize: 11, color: '#475569', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {m.category}
+                              </p>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {selectedModuleIds.length > 0 && (
+                  <p style={{ fontSize: 12, color: '#60a5fa', marginTop: 8 }}>
+                    {selectedModuleIds.length} module{selectedModuleIds.length !== 1 ? 's' : ''} selected
+                  </p>
+                )}
+              </Fld>
 
               <Fld label="Notes" hint="Optional" error={errors.notes?.message}>
                 <div className="relative">
@@ -401,9 +538,9 @@ const Subscriptions = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── View Modal ── */}
+      {/* View Modal */}
       <Dialog open={viewPlan !== null} onOpenChange={(open) => { if (!open) setViewPlan(null); }}>
-        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
             <div className="flex items-center gap-3 mb-1">
               <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
@@ -413,12 +550,38 @@ const Subscriptions = () => {
             </div>
           </DialogHeader>
           {viewPlan && (
-            <div className="px-7 py-6 space-y-1">
-              <ViewRow label="Plan Name" value={viewPlan.planName} />
-              <ViewRow label="Price" value={viewPlan.price != null ? `₹ ${Number(viewPlan.price).toLocaleString('en-IN')}` : '—'} />
-              <ViewRow label="Duration" value={viewPlan.durationMonths != null ? `${viewPlan.durationMonths} month${viewPlan.durationMonths !== 1 ? 's' : ''}` : '—'} />
-              <ViewRow label="Status" value={viewPlan.status?.name ?? '—'} />
-              <ViewRow label="Notes" value={viewPlan.notes ?? '—'} />
+            <div className="px-7 py-6 space-y-5">
+              <div>
+                <ViewRow label="Plan Name" value={viewPlan.planName} />
+                <ViewRow label="Price" value={viewPlan.price != null ? `\u20B9 ${Number(viewPlan.price).toLocaleString('en-IN')}` : '\u2014'} />
+                <ViewRow label="Duration" value={viewPlan.durationMonths != null ? `${viewPlan.durationMonths} month${viewPlan.durationMonths !== 1 ? 's' : ''}` : '\u2014'} />
+                <ViewRow label="Billing Cycle" value={viewPlan.billingCycle ?? '\u2014'} />
+                <ViewRow label="Max Users" value={viewPlan.maxUsers != null ? String(viewPlan.maxUsers) : 'Unlimited'} />
+                <ViewRow label="Status" value={viewPlan.status?.name ?? '\u2014'} />
+                <ViewRow label="Notes" value={viewPlan.notes ?? '\u2014'} />
+              </div>
+
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <LayoutGrid size={12} />
+                  Features / Modules ({(viewPlan.modules ?? []).length})
+                </p>
+                {(viewPlan.modules ?? []).length === 0 ? (
+                  <p style={{ fontSize: 12, color: '#475569' }}>No modules assigned to this plan.</p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {viewPlan.modules!.map((m) => (
+                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(15,23,42,0.4)', border: '1px solid #1e293b', borderRadius: 8, padding: '8px 12px' }}>
+                        <Package size={13} color="#60a5fa" style={{ flexShrink: 0 }} />
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
+                          {m.category && <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>{m.category}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
           <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
@@ -430,7 +593,50 @@ const Subscriptions = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── Delete Confirm Modal ── */}
+      {/* Toggle Confirm Modal */}
+      <Dialog open={toggleTarget !== null} onOpenChange={(open) => { if (!open) setToggleTarget(null); }}>
+        <DialogContent className="sm:max-w-sm !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+            <div className="flex items-center gap-3 mb-1">
+              <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${toggleTarget?.newActive ? 'bg-green-600/20 border border-green-500/30' : 'bg-orange-600/20 border border-orange-500/30'}`}>
+                {toggleTarget?.newActive
+                  ? <CheckCircle size={18} className="text-green-400" />
+                  : <XCircle size={18} className="text-orange-400" />}
+              </div>
+              <DialogTitle className="text-xl font-bold text-white">
+                {toggleTarget?.newActive ? 'Activate Plan' : 'Deactivate Plan'}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-slate-400 text-sm pl-12">
+              Are you sure you want to{' '}
+              <strong className="text-white">{toggleTarget?.newActive ? 'activate' : 'deactivate'}</strong>{' '}
+              <strong className="text-white">{toggleTarget?.plan.planName}</strong>?
+              {!toggleTarget?.newActive && ' Inactive plans will not be available for new organisations.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
+            <Button variant="ghost" onClick={() => setToggleTarget(null)} disabled={!!togglingId}
+              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmToggleStatus}
+              disabled={!!togglingId}
+              className={toggleTarget?.newActive
+                ? 'bg-green-600 hover:bg-green-500 text-white font-semibold'
+                : 'bg-orange-600 hover:bg-orange-500 text-white font-semibold'}
+            >
+              {togglingId ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin" /> Updating...
+                </span>
+              ) : toggleTarget?.newActive ? 'Activate' : 'Deactivate'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Modal */}
       <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <DialogContent className="sm:max-w-sm !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
@@ -509,9 +715,11 @@ function StatusToggle({ active, loading, onToggle }: {
       disabled={loading}
       onClick={onToggle}
       title={active ? 'Click to deactivate' : 'Click to activate'}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 cursor-pointer ${active ? 'bg-green-500' : 'bg-slate-600'}`}
+      className={`${styles.statusToggle} ${active ? styles.toggleOn : styles.toggleOff}`}
     >
-      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${active ? 'translate-x-4' : 'translate-x-0.5'}`} />
+      <span className={styles.toggleKnob}>
+        {active ? <CheckCircle size={8} /> : <XCircle size={8} />}
+      </span>
     </button>
   );
 }

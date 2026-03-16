@@ -3,7 +3,7 @@ import { useForm, FormProvider, useController } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
-import { Building2, Globe, Mail, Sparkles, Phone, User, FileText, MapPin } from 'lucide-react';
+import { Building2, Globe, Mail, Sparkles, Phone, User, FileText, MapPin, ChevronDown, Calendar, Crown } from 'lucide-react';
 
 import { organisationService } from '@/services/organisationService';
 import { subscriptionService } from '@/services/subscriptionService';
@@ -18,9 +18,40 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatDisplayDate(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function planBadgeStyle(planName?: string): string {
+  const p = (planName ?? '').toUpperCase();
+  if (p.includes('FREE')) return 'text-slate-400 bg-slate-800/60 border-slate-700';
+  if (p.includes('STARTER') || p.includes('BASIC')) return 'text-emerald-400 bg-emerald-900/20 border-emerald-800/40';
+  if (p.includes('PRO') || p.includes('PROFESSIONAL')) return 'text-blue-400 bg-blue-900/20 border-blue-800/40';
+  if (p.includes('ENTERPRISE') || p.includes('PREMIUM')) return 'text-purple-400 bg-purple-900/20 border-purple-800/40';
+  const palettes = [
+    'text-amber-400 bg-amber-900/20 border-amber-800/40',
+    'text-cyan-400 bg-cyan-900/20 border-cyan-800/40',
+    'text-rose-400 bg-rose-900/20 border-rose-800/40',
+    'text-indigo-400 bg-indigo-900/20 border-indigo-800/40',
+  ];
+  const hash = (planName ?? '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return palettes[hash % palettes.length];
+}
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -34,7 +65,9 @@ const schema = z.object({
       (val) => !val || /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/.test(val),
       'Please enter a valid domain (e.g. acme.com)'
     ),
-  subscriptionId: z.string().optional(),  // required only on create
+  subscriptionId: z.string().optional(),
+  subscriptionStartDate: z.string().optional(),
+  subscriptionEndDate: z.string().optional(),
   phoneNumber: z
     .string()
     .optional()
@@ -84,6 +117,8 @@ const EMPTY_DEFAULTS: FormValues = {
   email: '',
   domain: '',
   subscriptionId: '',
+  subscriptionStartDate: '',
+  subscriptionEndDate: '',
   phoneNumber: '',
   contactedPersonName: '',
   gstin: '',
@@ -110,7 +145,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
   const isEditMode = !!editOrg;
 
   const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY_DEFAULTS });
-  const { control, formState: { errors }, setError, reset, register } = methods;
+  const { control, formState: { errors }, setError, reset, register, watch, setValue } = methods;
 
   const { field: nameField } = useController({ name: 'name', control });
   const { field: emailField } = useController({ name: 'email', control });
@@ -127,11 +162,23 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
   const { field: countryField } = useController({ name: 'address.country', control });
   const { field: pincodeField } = useController({ name: 'address.pincode', control });
 
-  // Fetch subscription plans when modal opens
+  const selectedPlanId = watch('subscriptionId');
+  const subscriptionStartDate = watch('subscriptionStartDate');
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+
+  const computedEndDate = (() => {
+    if (!subscriptionStartDate || !selectedPlan?.durationMonths) return '';
+    const d = new Date(subscriptionStartDate);
+    if (isNaN(d.getTime())) return '';
+    d.setMonth(d.getMonth() + selectedPlan.durationMonths);
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  })();
+
+  // Fetch active subscription plans when modal opens (create mode only)
   useEffect(() => {
     if (!open || isEditMode) return;
     setPlansLoading(true);
-    subscriptionService.listSubscriptions()
+    subscriptionService.listActiveSubscriptions()
       .then(setPlans)
       .catch(() => setPlans([]))
       .finally(() => setPlansLoading(false));
@@ -145,6 +192,8 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
         email: editOrg.email ?? '',
         domain: editOrg.domain ?? '',
         subscriptionId: '',
+        subscriptionStartDate: '',
+        subscriptionEndDate: '',
         phoneNumber: editOrg.phoneNumber ?? '',
         contactedPersonName: editOrg.contactedPersonName ?? '',
         gstin: editOrg.gstin ?? '',
@@ -176,14 +225,14 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
     const rawAddr = data.address;
     const cleanAddr = rawAddr
       ? {
-          addressLine1: clean(rawAddr.addressLine1),
-          addressLine2: clean(rawAddr.addressLine2),
-          street: clean(rawAddr.street),
-          district: clean(rawAddr.district),
-          state: clean(rawAddr.state),
-          country: clean(rawAddr.country),
-          pincode: clean(rawAddr.pincode),
-        }
+        addressLine1: clean(rawAddr.addressLine1),
+        addressLine2: clean(rawAddr.addressLine2),
+        street: clean(rawAddr.street),
+        district: clean(rawAddr.district),
+        state: clean(rawAddr.state),
+        country: clean(rawAddr.country),
+        pincode: clean(rawAddr.pincode),
+      }
       : undefined;
     const hasAddress = cleanAddr && Object.values(cleanAddr).some(Boolean);
 
@@ -212,6 +261,9 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
           email: data.email,
           domain: clean(data.domain),
           subscriptionId: data.subscriptionId,
+          subscriptionStartDate: data.subscriptionStartDate
+            ? data.subscriptionStartDate + 'T00:00:00'
+            : undefined,
           phoneNumber: clean(data.phoneNumber),
           contactedPersonName: clean(data.contactedPersonName),
           gstin: clean(data.gstin),
@@ -238,9 +290,6 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
   const inputCls = (hasError: boolean) =>
     `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
 
-  const selectCls =
-    'h-10 w-full rounded-md bg-slate-950/60 border border-slate-700 text-white text-sm px-3 focus:border-blue-500 focus:outline-none appearance-none cursor-pointer';
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
@@ -264,29 +313,91 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
           <form onSubmit={methods.handleSubmit(onSubmit, () => toast.error('Please fix the errors before submitting.'))}>
             <div className="px-7 py-6 space-y-6">
 
-              {/* Subscription Plan — shown on create only */}
-              {!isEditMode && (
-                <Sec icon={<Sparkles size={13} />} label="Subscription Plan">
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+              {/* Subscription Plan — create: editable dropdown; edit: read-only info */}
+              <Sec icon={<Sparkles size={13} />} label="Subscription Plan">
+                {isEditMode ? (
+                  /* Read-only plan info in edit mode */
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-slate-500 uppercase tracking-wide">Plan</p>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${planBadgeStyle(editOrg?.subscriptionPlanName ?? editOrg?.planType)}`}>
+                        <Crown size={11} />
+                        {editOrg?.subscriptionPlanName ?? editOrg?.planType ?? '—'}
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-slate-500 uppercase tracking-wide">Start Date</p>
+                      <p className="text-sm text-slate-200 font-medium">{formatDisplayDate(editOrg?.periodStart)}</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-slate-500 uppercase tracking-wide">End Date</p>
+                      <p className="text-sm text-slate-200 font-medium">{formatDisplayDate(editOrg?.periodEnd)}</p>
+                    </div>
+                  </div>
+                ) : (
+                  /* Create mode: plan selector + dates */
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-4">
                     <Fld label="Select Plan" required error={(errors as any).subscriptionId?.message}>
                       {plansLoading ? (
                         <div className="h-10 flex items-center text-slate-400 text-sm">Loading plans...</div>
                       ) : (
-                        <select {...register('subscriptionId')} className={selectCls}>
-                          <option value="">— Select a subscription plan —</option>
-                          {plans.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.planName}
-                              {p.price != null ? ` — ${p.currency ?? 'INR'} ${Number(p.price).toLocaleString()}` : ''}
-                              {p.status?.name ? ` [${p.status.name}]` : ''}
-                            </option>
-                          ))}
-                        </select>
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger
+                            className={`w-full inline-flex items-center justify-between h-10 rounded-md border bg-slate-950/60 px-3 text-sm font-normal text-white hover:bg-slate-900 focus:outline-none ${(errors as any).subscriptionId ? 'border-red-500' : 'border-slate-700'}`}
+                          >
+                            <span className={selectedPlan ? 'text-white' : 'text-slate-400'}>
+                              {selectedPlan ? selectedPlan.planName : '— Select a subscription plan —'}
+                            </span>
+                            <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            className="!bg-[#1e293b] border-slate-700 text-white z-[9999]"
+                            style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
+                          >
+                            {plans.length === 0 ? (
+                              <DropdownMenuItem disabled className="text-slate-400">No active plans available</DropdownMenuItem>
+                            ) : (
+                              plans.map((p) => (
+                                <DropdownMenuItem
+                                  key={p.id}
+                                  onSelect={() => setValue('subscriptionId', p.id, { shouldValidate: true })}
+                                  className="cursor-pointer focus:bg-slate-800 focus:text-white py-3"
+                                >
+                                  <span className="font-medium">{p.planName}</span>
+                                </DropdownMenuItem>
+                              ))
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </Fld>
+
+                    {selectedPlan && (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Fld label="Start Date" error={(errors as any).subscriptionStartDate?.message}>
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+                            <Input
+                              type="date"
+                              {...register('subscriptionStartDate')}
+                              className={`pl-9 h-10 bg-slate-950/60 border-slate-700 text-white [color-scheme:dark] focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 ${(errors as any).subscriptionStartDate ? 'border-red-500' : ''}`}
+                            />
+                          </div>
+                        </Fld>
+                        <Fld label="End Date">
+                          <div className="relative">
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+                            <div className={`pl-9 h-10 bg-slate-950/30 border border-slate-700 rounded-md flex items-center text-sm ${computedEndDate ? 'text-slate-300' : 'text-slate-500'}`}>
+                              {computedEndDate || (selectedPlan?.durationMonths ? 'Select a start date' : 'No duration set')}
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">Auto-calculated ({selectedPlan?.durationMonths ?? '?'} months)</p>
+                        </Fld>
+                      </div>
+                    )}
                   </div>
-                </Sec>
-              )}
+                )}
+              </Sec>
 
               {/* Core Details */}
               <Sec icon={<Building2 size={13} />} label="Organisation Details">

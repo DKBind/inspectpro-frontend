@@ -18,13 +18,16 @@ import {
 import { Button } from '@/components/ui/button';
 import styles from './Organisation.module.css';
 
-const PLAN_BADGE: Record<string, string> = {
-  FREE: styles.planFree, STARTER: styles.planStarter,
-  PRO: styles.planPro, ENTERPRISE: styles.planEnterprise,
-};
-const PLAN_LABEL: Record<string, string> = {
-  FREE: 'Free', STARTER: 'Starter', PRO: 'Professional', ENTERPRISE: 'Enterprise',
-};
+function getPlanBadgeClass(planName?: string): string {
+  const p = (planName ?? '').toUpperCase();
+  if (p.includes('FREE')) return styles.planFree;
+  if (p.includes('STARTER') || p.includes('BASIC')) return styles.planStarter;
+  if (p.includes('PRO') || p.includes('PROFESSIONAL')) return styles.planPro;
+  if (p.includes('ENTERPRISE') || p.includes('PREMIUM')) return styles.planEnterprise;
+  const palettes = [styles.planPalette1, styles.planPalette2, styles.planPalette3, styles.planPalette4];
+  const hash = (planName ?? '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return palettes[hash % palettes.length];
+}
 
 const Organisation = () => {
   const [organisations, setOrganisations] = useState<OrganisationResponse[]>([]);
@@ -215,9 +218,9 @@ const Organisation = () => {
                       <td className={styles.mutedCell}>{org.contactedPersonName ?? '—'}</td>
                       <td className={styles.mutedCell}>{org.email ?? '—'}</td>
                       <td>
-                        <span className={`${styles.planBadge} ${PLAN_BADGE[org.planType as string] ?? styles.planFree}`}>
+                        <span className={`${styles.planBadge} ${getPlanBadgeClass(org.planType)}`}>
                           <Crown style={{ display: 'inline', width: 11, height: 11, marginRight: 4, verticalAlign: 'middle' }} />
-                          {PLAN_LABEL[org.planType as string] ?? org.planType}
+                          {org.planType ?? '—'}
                         </span>
                       </td>
                       <td>

@@ -36,6 +36,7 @@ const createSchema = z.object({
     ),
   subscriptionId: z.string().min(1, 'Please select a plan'),
   subscriptionStartDate: z.string().min(1, 'Start date is required'),
+  subscriptionEndDate: z.string().min(1, 'End date is required'),
   phoneNumber: z
     .string()
     .optional()
@@ -109,6 +110,7 @@ export default function OrganisationCreate() {
       domain: '',
       subscriptionId: '',
       subscriptionStartDate: '',
+      subscriptionEndDate: '',
       phoneNumber: '',
       contactedPersonName: '',
       gstin: '',
@@ -129,19 +131,7 @@ export default function OrganisationCreate() {
   const { field: domainField } = useController({ name: 'domain', control });
 
   const selectedPlanId = watch('subscriptionId');
-  const startDateVal = watch('subscriptionStartDate');
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
-
-  const computedEndDate = (() => {
-    if (!startDateVal || !selectedPlan?.durationMonths) return null;
-    try {
-      const d = new Date(startDateVal);
-      d.setMonth(d.getMonth() + selectedPlan.durationMonths);
-      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return null;
-    }
-  })();
 
   const onSubmit = async (data: CreateFormValues) => {
     setIsSubmitting(true);
@@ -165,6 +155,9 @@ export default function OrganisationCreate() {
         subscriptionId: data.subscriptionId,
         subscriptionStartDate: data.subscriptionStartDate
           ? data.subscriptionStartDate + 'T00:00:00'
+          : undefined,
+        subscriptionEndDate: data.subscriptionEndDate
+          ? data.subscriptionEndDate + 'T00:00:00'
           : undefined,
         phoneNumber: clean(data.phoneNumber),
         contactedPersonName: clean(data.contactedPersonName),
@@ -242,10 +235,6 @@ export default function OrganisationCreate() {
                         className="flex justify-between cursor-pointer"
                       >
                         <span className="font-medium">{plan.planName}</span>
-                        <span className="text-xs text-muted-foreground ml-4">
-                          {plan.price != null ? `₹${plan.price}` : ''}
-                          {plan.durationMonths != null ? ` · ${plan.durationMonths}mo` : ''}
-                        </span>
                       </DropdownMenuItem>
                     ))
                   )}
@@ -275,27 +264,24 @@ export default function OrganisationCreate() {
               )}
             </div>
 
-            {/* End Date (auto-calculated) */}
-            {selectedPlan && startDateVal && (
-              <div className="space-y-2">
-                <Label>
-                  End Date <span className="text-xs text-muted-foreground font-normal">(auto-calculated)</span>
-                </Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    readOnly
-                    value={computedEndDate ?? '—'}
-                    className="pl-9 bg-muted cursor-not-allowed"
-                  />
-                </div>
-                {selectedPlan.durationMonths && (
-                  <p className="text-xs text-muted-foreground">
-                    Based on {selectedPlan.durationMonths} month{selectedPlan.durationMonths !== 1 ? 's' : ''} plan duration
-                  </p>
-                )}
+            {/* End Date */}
+            <div className="space-y-2">
+              <Label htmlFor="subscriptionEndDate">
+                End Date <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="subscriptionEndDate"
+                  type="date"
+                  {...register('subscriptionEndDate')}
+                  className={`pl-9 ${inputCls(!!errors.subscriptionEndDate)}`}
+                />
               </div>
-            )}
+              {errors.subscriptionEndDate && (
+                <p className="text-sm text-destructive">{errors.subscriptionEndDate.message}</p>
+              )}
+            </div>
 
           </CardContent>
         </Card>

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChevronDown, Calendar } from 'lucide-react';
 import {
@@ -16,7 +15,7 @@ import type { SubscriptionResponse } from '@/services/models/subscription';
 export function PlanSelector() {
   const { watch, setValue, register, formState: { errors } } = useFormContext();
   const selectedPlanId = watch('subscriptionId');
-  const startDateVal = watch('subscriptionStartDate');
+  const subscriptionStartDate = watch('subscriptionStartDate');
 
   const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,14 +30,11 @@ export function PlanSelector() {
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
 
   const computedEndDate = (() => {
-    if (!startDateVal || !selectedPlan?.durationMonths) return null;
-    try {
-      const d = new Date(startDateVal);
-      d.setMonth(d.getMonth() + selectedPlan.durationMonths);
-      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return null;
-    }
+    if (!subscriptionStartDate || !selectedPlan?.durationMonths) return '';
+    const d = new Date(subscriptionStartDate);
+    if (isNaN(d.getTime())) return '';
+    d.setMonth(d.getMonth() + selectedPlan.durationMonths);
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   })();
 
   return (
@@ -47,19 +43,16 @@ export function PlanSelector() {
       <div className="space-y-2">
         <Label className="text-slate-200">Subscription Plan <span className="text-destructive">*</span></Label>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              disabled={loading}
-              className={`w-full justify-between font-normal h-11 !bg-[#0f172a] text-white ${
-                errors.subscriptionId ? 'border-destructive' : 'border-slate-500'
-              }`}
-            >
-              <span className={selectedPlan ? 'text-white' : 'text-slate-400'}>
-                {loading ? 'Loading plans...' : selectedPlan ? selectedPlan.planName : 'Select a subscription plan'}
-              </span>
-              <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
-            </Button>
+          <DropdownMenuTrigger
+            className={`w-full inline-flex items-center justify-between h-11 rounded-md border bg-[#0f172a] px-3 text-sm font-normal text-white hover:bg-slate-900 focus:outline-none ${
+              errors.subscriptionId ? 'border-destructive' : 'border-slate-500'
+            }`}
+            disabled={loading}
+          >
+            <span className={selectedPlan ? 'text-white' : 'text-slate-400'}>
+              {loading ? 'Loading plans...' : selectedPlan ? selectedPlan.planName : 'Select a subscription plan'}
+            </span>
+            <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="min-w-[280px] !bg-[#1e293b] border-slate-700 text-white z-[9999]">
             {plans.length === 0 ? (
@@ -69,13 +62,9 @@ export function PlanSelector() {
                 <DropdownMenuItem
                   key={plan.id}
                   onSelect={() => setValue('subscriptionId', plan.id, { shouldValidate: true })}
-                  className="flex justify-between cursor-pointer focus:bg-slate-800 focus:text-white py-3"
+                  className="cursor-pointer focus:bg-slate-800 focus:text-white py-3"
                 >
                   <span className="font-medium">{plan.planName}</span>
-                  <span className="text-xs text-slate-400 ml-4">
-                    {plan.price != null ? `₹${plan.price}` : ''}
-                    {plan.durationMonths != null ? ` · ${plan.durationMonths}mo` : ''}
-                  </span>
                 </DropdownMenuItem>
               ))
             )}
@@ -106,27 +95,19 @@ export function PlanSelector() {
         )}
       </div>
 
-      {/* End Date (auto-calculated) */}
-      {selectedPlan && startDateVal && (
-        <div className="space-y-2">
-          <Label className="text-slate-200">
-            End Date <span className="text-xs text-slate-400 font-normal">(auto-calculated)</span>
-          </Label>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              readOnly
-              value={computedEndDate ?? '—'}
-              className="pl-9 h-11 !bg-[#1e293b] text-slate-300 border-slate-600 cursor-not-allowed"
-            />
+      {/* End Date — read-only, auto-calculated */}
+      <div className="space-y-2">
+        <Label className="text-slate-200">End Date</Label>
+        <div className="relative">
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <div className={`pl-9 h-11 bg-slate-950/30 border border-slate-700 rounded-md flex items-center text-sm ${computedEndDate ? 'text-slate-300' : 'text-slate-500'}`}>
+            {computedEndDate || (selectedPlan?.durationMonths ? 'Select a start date' : 'Select a plan first')}
           </div>
-          {selectedPlan.durationMonths && (
-            <p className="text-xs text-slate-400">
-              Based on {selectedPlan.durationMonths} month{selectedPlan.durationMonths !== 1 ? 's' : ''} plan duration
-            </p>
-          )}
         </div>
-      )}
+        <p className="text-xs text-slate-500">
+          Auto-calculated{selectedPlan?.durationMonths ? ` (${selectedPlan.durationMonths} months from start)` : ''}
+        </p>
+      </div>
     </div>
   );
 }

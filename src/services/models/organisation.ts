@@ -37,6 +37,7 @@ export interface OrganisationCreateRequest {
   domain?: string;
   subscriptionId: string;  // UUID of existing global subscription plan
   subscriptionStartDate?: string;  // ISO datetime string e.g. "2024-01-01T00:00:00"
+  subscriptionEndDate?: string;    // ISO datetime string e.g. "2025-01-01T00:00:00"
   phoneNumber?: string;
   contactedPersonName?: string;
   gstin?: string;
@@ -79,6 +80,9 @@ export interface OrganisationResponse {
   statusColourCode?: string;
   address?: OrganisationAddressResponse;
   subscriptionId?: string;
+  subscriptionPlanName?: string;
+  periodStart?: string;
+  periodEnd?: string;
   createdAt: string;
 }
 
