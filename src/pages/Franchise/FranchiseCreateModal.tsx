@@ -7,6 +7,7 @@ import { GitBranch, Globe, Mail, Phone, User, MapPin, ChevronDown, Building2 } f
 
 import { organisationService } from '@/services/organisationService';
 import type { OrganisationResponse } from '@/services/models/organisation';
+import { useAuthStore } from '@/store/useAuthStore';
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -58,6 +59,9 @@ interface Props {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }: Props) {
+  const { user: authUser } = useAuthStore();
+  const isSuperAdmin = authUser?.isSuperAdmin === true || authUser?.role === 'super_admin';
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [parentOrgs, setParentOrgs]     = useState<OrganisationResponse[]>([]);
   const isEditMode = !!editOrg;
@@ -112,7 +116,11 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
         },
       });
     } else if (open && !editOrg) {
-      reset(EMPTY);
+      reset({
+        ...EMPTY,
+        // For non-super-admin, lock parent org to their own org
+        parentOrgId: !isSuperAdmin && authUser?.orgId ? authUser.orgId : '',
+      });
     }
   }, [open, editOrg, reset]);
 
@@ -188,39 +196,47 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
           <form onSubmit={methods.handleSubmit(onSubmit, () => toast.error('Please fix the errors before submitting.'))}>
             <div className="px-7 py-6 space-y-6">
 
-              {/* Parent Organisation */}
+              {/* Parent Organisation — super_admin picks from list; org user sees their own org locked */}
               {!isEditMode && (
                 <Sec icon={<Building2 size={13} />} label="Parent Organisation">
                   <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-                    <Fld label="Select Parent Organisation" required error={(errors as any).parentOrgId?.message}>
-                      <DropdownMenu modal={false}>
-                        <DropdownMenuTrigger
-                          className={`w-full inline-flex items-center justify-between h-10 rounded-md border bg-slate-950/60 px-3 text-sm font-normal text-white hover:bg-slate-900 focus:outline-none ${(errors as any).parentOrgId ? 'border-red-500' : 'border-slate-700'}`}
-                        >
-                          <span className={selectedParentOrg ? 'text-white' : 'text-slate-400'}>
-                            {selectedParentOrg ? selectedParentOrg.name : '— Select organisation —'}
-                          </span>
-                          <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          className="!bg-[#1e293b] border-slate-700 text-white z-[9999]"
-                          style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
-                        >
-                          {parentOrgs.length === 0 ? (
-                            <DropdownMenuItem disabled className="text-slate-400">No organisations found</DropdownMenuItem>
-                          ) : (
-                            parentOrgs.map((o) => (
-                              <DropdownMenuItem
-                                key={o.uuid}
-                                onSelect={() => methods.setValue('parentOrgId', o.uuid, { shouldValidate: true })}
-                                className="cursor-pointer focus:bg-slate-800 focus:text-white py-3"
-                              >
-                                {o.name}
-                              </DropdownMenuItem>
-                            ))
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <Fld label="Parent Organisation" required error={(errors as any).parentOrgId?.message}>
+                      {isSuperAdmin ? (
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger
+                            className={`w-full inline-flex items-center justify-between h-10 rounded-md border bg-slate-950/60 px-3 text-sm font-normal text-white hover:bg-slate-900 focus:outline-none ${(errors as any).parentOrgId ? 'border-red-500' : 'border-slate-700'}`}
+                          >
+                            <span className={selectedParentOrg ? 'text-white' : 'text-slate-400'}>
+                              {selectedParentOrg ? selectedParentOrg.name : '— Select organisation —'}
+                            </span>
+                            <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            className="!bg-[#1e293b] border-slate-700 text-white z-[9999]"
+                            style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
+                          >
+                            {parentOrgs.length === 0 ? (
+                              <DropdownMenuItem disabled className="text-slate-400">No organisations found</DropdownMenuItem>
+                            ) : (
+                              parentOrgs.map((o) => (
+                                <DropdownMenuItem
+                                  key={o.uuid}
+                                  onSelect={() => methods.setValue('parentOrgId', o.uuid, { shouldValidate: true })}
+                                  className="cursor-pointer focus:bg-slate-800 focus:text-white py-3"
+                                >
+                                  {o.name}
+                                </DropdownMenuItem>
+                              ))
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        /* Non-super-admin: show their org as read-only */
+                        <div className="h-10 rounded-md border border-slate-700 bg-slate-950/30 px-3 flex items-center gap-2 text-sm text-slate-300">
+                          <Building2 size={14} className="text-slate-500" />
+                          {parentOrgs.find((o) => o.uuid === authUser?.orgId)?.name ?? authUser?.orgId ?? '—'}
+                        </div>
+                      )}
                     </Fld>
                   </div>
                 </Sec>
