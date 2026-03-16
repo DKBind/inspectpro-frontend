@@ -27,8 +27,8 @@ export interface LoginResponse {
 }
 
 export const authService = {
-  login: async (email: string): Promise<LoginResponse> => {
-    const res = await api.post<ApiResponse<LoginResponse>>('/auth/login', { email });
+  login: async (email: string, password?: string): Promise<LoginResponse> => {
+    const res = await api.post<ApiResponse<LoginResponse>>('/auth/login', { email, password });
     if (!res.status) throw new Error(res.message || 'Login failed');
     return res.object as LoginResponse;
   },

@@ -56,12 +56,13 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
-      // Only tokens + auth flags persist — user object stays in memory only
+      // Persist tokens, auth flags, AND user (so role survives page refresh)
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
         isFirstLogin: state.isFirstLogin,
+        user: state.user,
       }),
     }
   )
