@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Fld, IcoInput, inputCls } from '@/components/ui/form-helpers';
 import styles from './UsersRoles.module.css';
 
 // ─── Permission badge ─────────────────────────────────────────────────────────
@@ -49,34 +49,8 @@ type FormValues = z.infer<typeof schema>;
 
 const EMPTY: FormValues = { firstName: '', lastName: '', email: '', password: '', gender: '', orgId: '', roleId: '', statusId: '1' };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const inp = (hasError = false) =>
-  `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
-
 const selectCls = (hasError = false) =>
   `w-full inline-flex items-center justify-between h-10 rounded-md border bg-slate-950/60 px-3 text-sm font-normal text-white hover:bg-slate-900 focus:outline-none transition-all ${hasError ? 'border-red-500' : 'border-slate-700'}`;
-
-function Fld({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <Label className="text-slate-300 text-sm font-medium">{label}</Label>
-        {required && <span className="text-red-400 text-xs">*</span>}
-      </div>
-      {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
-    </div>
-  );
-}
-
-function IcoInput({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">{icon}</span>
-      <div className="[&_input]:pl-9">{children}</div>
-    </div>
-  );
-}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 type SubTab = 'users' | 'roles';
@@ -279,9 +253,9 @@ const UsersRoles = () => {
                     </td>
                     <td>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
-                        <button className={styles.iconBtn} title="View" onClick={() => setViewUser(u)}><Eye size={13} /></button>
-                        <button className={styles.iconBtn} title="Edit" onClick={() => openEdit(u)}><Pencil size={13} /></button>
-                        <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} title="Delete" onClick={() => setDeleteTarget(u)}><Trash2 size={13} /></button>
+                        <button className={styles.actionBtn} title="View" onClick={() => setViewUser(u)}><Eye size={13} /></button>
+                        <button className={styles.actionBtn} title="Edit" onClick={() => openEdit(u)}><Pencil size={13} /></button>
+                        <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} title="Delete" onClick={() => setDeleteTarget(u)}><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -310,40 +284,56 @@ const UsersRoles = () => {
           ) : roleList.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'hsl(215,20%,45%)', fontSize: 13.5 }}>No roles found.</div>
           ) : (
-            <div className={styles.rolesGrid}>
-              {roleList.map((role) => {
-                const mods = roleModules[role.roleId] ?? [];
-                return (
-                  <div key={role.roleId} className={styles.roleCard}>
-                    <div className={styles.roleCardHeader}>
-                      <div>
-                        <div className={styles.roleCardTitle}><Shield size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />{role.name}</div>
-                        {role.description && <div className={styles.roleCardDesc}>{role.description}</div>}
-                        {role.designation && <div style={{ fontSize: 11.5, color: 'hsl(215,20%,40%)', marginTop: 2 }}>{role.designation}</div>}
-                      </div>
-                      <span style={{ fontSize: 11, background: 'hsla(221,83%,53%,0.12)', color: 'hsl(221,83%,63%)', padding: '2px 8px', borderRadius: 5 }}>
-                        {mods.length} module{mods.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    {mods.length === 0 ? (
-                      <p style={{ fontSize: 12.5, color: 'hsl(215,20%,38%)', padding: '0 0 4px' }}>No modules assigned yet.</p>
-                    ) : (
-                      <div className={styles.permissionsGrid}>
-                        {mods.map((m) => {
-                          const ps = permStyle(m.permissionName);
-                          return (
-                            <div key={m.moduleId} className={styles.permissionItem}>
-                              <span style={{ color: 'hsl(210,40%,80%)', fontSize: 13 }}>{m.moduleName}</span>
-                              <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 5, background: ps.bg, color: ps.color }}>{m.permissionName ?? 'None'}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th style={{ width: 200 }}>Role</th>
+                  <th>Module</th>
+                  <th style={{ width: 120 }}>Permission</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roleList.map((role) => {
+                  const mods = roleModules[role.roleId] ?? [];
+                  if (mods.length === 0) {
+                    return (
+                      <tr key={role.roleId}>
+                        <td>
+                          <span className={styles.roleBadge}>
+                            <Shield size={11} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+                            {role.name}
+                          </span>
+                        </td>
+                        <td colSpan={2} style={{ color: 'hsl(215,20%,38%)', fontSize: 12.5, fontStyle: 'italic' }}>
+                          No modules assigned
+                        </td>
+                      </tr>
+                    );
+                  }
+                  return mods.map((m, idx) => {
+                    const ps = permStyle(m.permissionName);
+                    return (
+                      <tr key={`${role.roleId}-${m.moduleId}`}>
+                        {idx === 0 && (
+                          <td rowSpan={mods.length} style={{ verticalAlign: 'top', paddingTop: 16 }}>
+                            <span className={styles.roleBadge}>
+                              <Shield size={11} style={{ marginRight: 5, verticalAlign: 'middle' }} />
+                              {role.name}
+                            </span>
+                          </td>
+                        )}
+                        <td style={{ color: 'hsl(210,40%,75%)', fontSize: 13 }}>{m.moduleName}</td>
+                        <td>
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 5, background: ps.bg, color: ps.color }}>
+                            {m.permissionName ?? 'None'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  });
+                })}
+              </tbody>
+            </table>
           )}
         </div>
       )}
@@ -379,23 +369,23 @@ const UsersRoles = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Fld label="First Name" required error={errors.firstName?.message}>
                         <IcoInput icon={<User size={15} />}>
-                          <Input placeholder="John" {...firstNameField} className={inp(!!errors.firstName)} />
+                          <Input placeholder="John" {...firstNameField} className={inputCls(!!errors.firstName)} />
                         </IcoInput>
                       </Fld>
                       <Fld label="Last Name" required error={errors.lastName?.message}>
                         <IcoInput icon={<User size={15} />}>
-                          <Input placeholder="Doe" {...lastNameField} className={inp(!!errors.lastName)} />
+                          <Input placeholder="Doe" {...lastNameField} className={inputCls(!!errors.lastName)} />
                         </IcoInput>
                       </Fld>
                       <Fld label="Email" required error={errors.email?.message}>
                         <IcoInput icon={<Mail size={15} />}>
-                          <Input type="email" autoComplete="off" placeholder="john@example.com" {...emailField} className={inp(!!errors.email)} />
+                          <Input type="email" autoComplete="off" placeholder="john@example.com" {...emailField} className={inputCls(!!errors.email)} />
                         </IcoInput>
                       </Fld>
                       <Fld label={modalMode === 'create' ? 'Password' : 'New Password'}>
                         <div className="flex gap-2">
                           <IcoInput icon={<Lock size={15} />}>
-                            <Input type="text" autoComplete="new-password" placeholder={modalMode === 'create' ? 'Set a password' : 'Leave blank to keep current'} {...passwordField} className={inp(false)} />
+                            <Input type="text" autoComplete="new-password" placeholder={modalMode === 'create' ? 'Set a password' : 'Leave blank to keep current'} {...passwordField} className={inputCls(false)} />
                           </IcoInput>
                           <button type="button" onClick={generatePassword} title="Generate password"
                             className="shrink-0 h-10 px-3 rounded-md border border-slate-700 bg-slate-900 text-slate-400 hover:text-blue-400 hover:border-blue-500 transition-all flex items-center gap-1.5 text-xs font-medium">

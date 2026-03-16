@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { OrgModuleDTO, UserModuleAccessDTO } from '@/services/models/module';
 
 interface ModuleState {
@@ -15,16 +16,25 @@ interface ModuleState {
   hasPermission: (route: string, permission: string) => boolean;
 }
 
-export const useModuleStore = create<ModuleState>()((set, get) => ({
-  modules: [],
-  accessModules: [],
+export const useModuleStore = create<ModuleState>()(
+  persist(
+    (set, get) => ({
+      modules: [],
+      accessModules: [],
 
-  setModules: (modules) => set({ modules }),
-  setAccessModules: (accessModules) => set({ accessModules }),
-  clearModules: () => set({ modules: [], accessModules: [] }),
+      setModules: (modules) => set({ modules }),
+      setAccessModules: (accessModules) => set({ accessModules }),
+      clearModules: () => set({ modules: [], accessModules: [] }),
 
-  hasPermission: (route, permission) => {
-    const mod = get().accessModules.find((m) => m.route === route);
-    return mod?.permissions.includes(permission) ?? false;
-  },
-}));
+      hasPermission: (route, permission) => {
+        const mod = get().accessModules.find((m) => m.route === route);
+        return mod?.permissions.includes(permission) ?? false;
+      },
+    }),
+    {
+      name: 'module-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ accessModules: state.accessModules }),
+    }
+  )
+);

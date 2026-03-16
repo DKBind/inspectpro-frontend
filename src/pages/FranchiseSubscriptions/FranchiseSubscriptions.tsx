@@ -6,7 +6,6 @@
  * createdByOrgId = authUser.orgId so they're isolated from global plans.
  */
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,17 +17,16 @@ import {
 } from 'lucide-react';
 
 import { subscriptionService } from '@/services/subscriptionService';
-import { moduleService } from '@/services/moduleService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
-import type { ModuleResponse } from '@/services/models/module';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useModuleStore } from '@/store/useModuleStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Fld, inputCls, ViewRow } from '@/components/ui/form-helpers';
 import styles from '@/pages/Subscriptions/Subscriptions.module.css';
 
 const PAGE_SIZE = 10;
@@ -53,10 +51,10 @@ const isActivePlan = (plan: SubscriptionResponse) =>
 
 const FranchiseSubscriptions = () => {
   const { user } = useAuthStore();
+  const { accessModules } = useModuleStore();
   const orgId = user?.orgId ?? '';
 
-  const [plans, setPlans]           = useState<SubscriptionResponse[]>([]);
-  const [allModules, setAllModules] = useState<ModuleResponse[]>([]);
+  const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
   const [loading, setLoading]       = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -82,12 +80,8 @@ const FranchiseSubscriptions = () => {
     if (!orgId) return;
     setLoading(true);
     try {
-      const [p, m] = await Promise.all([
-        subscriptionService.listSubscriptionsByOrgId(orgId),
-        moduleService.listModules(),
-      ]);
+      const p = await subscriptionService.listSubscriptionsByOrgId(orgId);
       setPlans(p);
-      setAllModules(m);
     } catch {
       toast.error('Failed to load subscription data');
     } finally {
@@ -402,14 +396,14 @@ const FranchiseSubscriptions = () => {
               )}
 
               <Fld label="Features (Modules)" hint="Select which features this plan includes">
-                {allModules.length === 0 ? (
+                {accessModules.length === 0 ? (
                   <p className="text-xs text-slate-500 py-2">No modules available.</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 mt-1">
-                    {allModules.map((m) => {
-                      const checked = selectedModuleIds.includes(m.id);
+                    {accessModules.map((m) => {
+                      const checked = selectedModuleIds.includes(m.moduleId);
                       return (
-                        <button key={m.id} type="button" onClick={() => toggleModule(m.id)}
+                        <button key={m.moduleId} type="button" onClick={() => toggleModule(m.moduleId)}
                           style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${checked ? 'rgba(139,92,246,0.4)' : '#1e293b'}`, background: checked ? 'rgba(139,92,246,0.08)' : 'rgba(15,23,42,0.4)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
                           <span style={{ marginTop: 2, flexShrink: 0, width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? '#8b5cf6' : '#475569'}`, background: checked ? '#8b5cf6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {checked && <CheckCircle size={10} color="white" />}
@@ -554,41 +548,19 @@ const FranchiseSubscriptions = () => {
 
 export default FranchiseSubscriptions;
 
-// ─── Micro helpers ─────────────────────────────────────────────────────────────
-
-const inputCls = (hasError?: boolean) =>
-  `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
-
-function Fld({ label, required, hint, error, children }: {
-  label: string; required?: boolean; hint?: string; error?: string; children: ReactNode;
+function StatusToggle({ active, loading, onToggle }: {
+  active: boolean; loading: boolean; onToggle: () => void;
 }) {
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <Label className="text-slate-300 text-sm font-medium">{label}</Label>
-        {required && <span className="text-red-400 text-xs">*</span>}
-        {hint && <span className="text-slate-500 text-xs">({hint})</span>}
-      </div>
-      {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
-    </div>
-  );
-}
-
-function ViewRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-2.5 border-b border-slate-800 last:border-0">
-      <span className="text-xs text-slate-500 uppercase tracking-wide font-medium shrink-0 w-28">{label}</span>
-      <span className="text-sm text-slate-200 text-right">{value}</span>
-    </div>
-  );
-}
-
-function StatusToggle({ active, loading, onToggle }: { active: boolean; loading: boolean; onToggle: () => void }) {
-  return (
-    <button type="button" role="switch" aria-checked={active} disabled={loading} onClick={onToggle}
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
+      disabled={loading}
+      onClick={onToggle}
       title={active ? 'Click to deactivate' : 'Click to activate'}
-      className={`${styles.statusToggle} ${active ? styles.toggleOn : styles.toggleOff}`}>
+      className={`${styles.statusToggle} ${active ? styles.toggleOn : styles.toggleOff}`}
+    >
       <span className={styles.toggleKnob}>
         {active ? <CheckCircle size={8} /> : <XCircle size={8} />}
       </span>

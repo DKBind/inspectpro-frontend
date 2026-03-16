@@ -9,6 +9,7 @@ import { organisationService } from '@/services/organisationService';
 import { subscriptionService } from '@/services/subscriptionService';
 import type { OrganisationResponse } from '@/services/models/organisation';
 import type { SubscriptionResponse } from '@/services/models/subscription';
+import { useAuthStore } from '@/store/useAuthStore';
 
 import {
   Dialog,
@@ -26,7 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Sec, Fld, IcoInput } from '@/components/ui/form-helpers';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -139,6 +140,8 @@ interface Props {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg }: Props) {
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
   const [plansLoading, setPlansLoading] = useState(false);
@@ -174,11 +177,15 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   })();
 
-  // Fetch active subscription plans when modal opens (create mode only)
+  // Fetch active subscription plans when modal opens (create mode only).
+  // Super-admins see global plans; org-admins see their own org-scoped plans.
   useEffect(() => {
     if (!open || isEditMode) return;
     setPlansLoading(true);
-    subscriptionService.listActiveSubscriptions()
+    const fetch = isSuperAdmin
+      ? subscriptionService.listActiveSubscriptions()
+      : subscriptionService.listActiveSubscriptionsByOrgId(user!.orgId!);
+    fetch
       .then(setPlans)
       .catch(() => setPlans([]))
       .finally(() => setPlansLoading(false));
@@ -510,42 +517,3 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
 }
 
 // ─── Micro helpers ────────────────────────────────────────────────────────────
-
-function Sec({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
-  return (
-    <section>
-      {label && (
-        <div className="flex items-center gap-2 mb-3">
-          {icon && <span className="text-blue-400">{icon}</span>}
-          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</span>
-        </div>
-      )}
-      {children}
-    </section>
-  );
-}
-
-function Fld({ label, required, hint, error, children }: {
-  label: string; required?: boolean; hint?: string; error?: string; children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <Label className="text-slate-300 text-sm font-medium">{label}</Label>
-        {required && <span className="text-red-400 text-xs">*</span>}
-        {hint && <span className="text-slate-500 text-xs">({hint})</span>}
-      </div>
-      {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
-    </div>
-  );
-}
-
-function IcoInput({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">{icon}</span>
-      <div className="[&_input]:pl-9">{children}</div>
-    </div>
-  );
-}

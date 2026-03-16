@@ -22,6 +22,7 @@ export interface LoginResponse {
   roleName?: string;
   roles: RoleItem[];   // all roles assigned to the user
   superAdmin: boolean;
+  firstLogin: boolean; // true when user still has the default password
   accessToken: string;
   refreshToken: string;
 }

@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Fld } from '@/components/ui/form-helpers';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -293,23 +293,5 @@ export default function SubscriptionModal({
         </form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// ─── Micro helper ─────────────────────────────────────────────────────────────
-
-function Fld({ label, required, hint, error, children }: {
-  label: string; required?: boolean; hint?: string; error?: string; children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <Label className="text-slate-300 text-sm font-medium">{label}</Label>
-        {required && <span className="text-red-400 text-xs">*</span>}
-        {hint && <span className="text-slate-500 text-xs">({hint})</span>}
-      </div>
-      {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
-    </div>
   );
 }

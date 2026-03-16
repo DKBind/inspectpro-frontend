@@ -6,7 +6,9 @@ import { userService } from '@/services/userService';
 import type { UserModuleAccessDTO } from '@/services/models/module';
 import type { RoleModuleAssignment } from '@/services/models/user';
 import { ROUTES } from '@/components/Constant/Route';
-import { Menu, Search, Bell, LogOut, PanelLeftClose, PanelLeftOpen, ChevronDown, Check, Loader2 } from 'lucide-react';
+import { Menu, Search, Bell, LogOut, PanelLeftClose, PanelLeftOpen, ChevronDown, Check, Loader2, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import styles from './Header.module.css';
 
 interface HeaderProps {
@@ -56,6 +58,7 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
   const location = useLocation();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -99,6 +102,7 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
   const hasMultipleRoles = (user?.roles?.length ?? 0) > 1;
 
   return (
+    <>
     <header className={styles.header}>
       <div className={styles.leftSection}>
         <button className={styles.menuBtn} onClick={onMenuToggle}>
@@ -197,12 +201,40 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
         <button
           className={styles.iconBtn}
           title="Logout"
-          onClick={() => { clearAuth(); clearModules(); navigate('/login'); }}
+          onClick={() => setShowLogoutConfirm(true)}
         >
           <LogOut />
         </button>
       </div>
     </header>
+
+    {/* Logout confirmation dialog */}
+    <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+      <DialogContent className="sm:max-w-sm !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
+        <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="h-9 w-9 rounded-xl bg-orange-600/20 border border-orange-500/30 flex items-center justify-center">
+              <AlertTriangle size={18} className="text-orange-400" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-white">Sign Out</DialogTitle>
+          </div>
+          <DialogDescription className="text-slate-400 text-sm pl-12">
+            Are you sure you want to logout?
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
+          <Button variant="ghost" onClick={() => setShowLogoutConfirm(false)}
+            className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+            Cancel
+          </Button>
+          <Button onClick={() => { clearAuth(); clearModules(); navigate('/login'); }}
+            className="bg-orange-600 hover:bg-orange-500 text-white font-semibold min-w-28">
+            Yes, Logout
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
 

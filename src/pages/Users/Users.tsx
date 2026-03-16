@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Sec, Fld, IcoInput, inputCls } from '@/components/ui/form-helpers';
 import styles from './Users.module.css';
 
 const PAGE_SIZE = 10;
@@ -45,47 +45,6 @@ const EMPTY: FormValues = {
   firstName: '', lastName: '', email: '', password: '',
   gender: '', orgId: '', roleId: '', statusId: '1',
 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function Sec({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
-  return (
-    <section>
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-blue-400">{icon}</span>
-        <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</span>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Fld({ label, required, error, children }: {
-  label: string; required?: boolean; error?: string; children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <Label className="text-slate-300 text-sm font-medium">{label}</Label>
-        {required && <span className="text-red-400 text-xs">*</span>}
-      </div>
-      {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
-    </div>
-  );
-}
-
-function IcoInput({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">{icon}</span>
-      <div className="[&_input]:pl-9">{children}</div>
-    </div>
-  );
-}
-
-const inp = (hasError: boolean) =>
-  `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
 
 const selectCls = (hasError = false) =>
   `w-full inline-flex items-center justify-between h-10 rounded-md border bg-slate-950/60 px-3 text-sm font-normal text-white hover:bg-slate-900 focus:outline-none transition-all ${hasError ? 'border-red-500' : 'border-slate-700'}`;
@@ -375,17 +334,17 @@ const Users = () => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Fld label="First Name" required error={errors.firstName?.message}>
                         <IcoInput icon={<User size={15} />}>
-                          <Input placeholder="John" {...firstNameField} className={inp(!!errors.firstName)} />
+                          <Input placeholder="John" {...firstNameField} className={inputCls(!!errors.firstName)} />
                         </IcoInput>
                       </Fld>
                       <Fld label="Last Name" required error={errors.lastName?.message}>
                         <IcoInput icon={<User size={15} />}>
-                          <Input placeholder="Doe" {...lastNameField} className={inp(!!errors.lastName)} />
+                          <Input placeholder="Doe" {...lastNameField} className={inputCls(!!errors.lastName)} />
                         </IcoInput>
                       </Fld>
                       <Fld label="Email" required error={errors.email?.message}>
                         <IcoInput icon={<Mail size={15} />}>
-                          <Input type="email" autoComplete="off" placeholder="john@example.com" {...emailField} className={inp(!!errors.email)} />
+                          <Input type="email" autoComplete="off" placeholder="john@example.com" {...emailField} className={inputCls(!!errors.email)} />
                         </IcoInput>
                       </Fld>
                       <Fld label={modalMode === 'create' ? 'Password' : 'New Password'}>
@@ -396,7 +355,7 @@ const Users = () => {
                               autoComplete="new-password"
                               placeholder={modalMode === 'create' ? 'Set a password' : 'Leave blank to keep current'}
                               {...passwordField}
-                              className={inp(false)}
+                              className={inputCls(false)}
                             />
                           </IcoInput>
                           <button

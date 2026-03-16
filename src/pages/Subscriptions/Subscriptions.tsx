@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,6 +13,7 @@ import { subscriptionService } from '@/services/subscriptionService';
 import { moduleService } from '@/services/moduleService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useModuleStore } from '@/store/useModuleStore';
 import type { ModuleResponse } from '@/services/models/module';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Fld, ViewRow, inputCls } from '@/components/ui/form-helpers';
 import styles from './Subscriptions.module.css';
 
 const PAGE_SIZE = 10;
@@ -58,6 +58,7 @@ const isActivePlan = (plan: SubscriptionResponse) =>
 
 const Subscriptions = () => {
   const { user } = useAuthStore();
+  const { accessModules } = useModuleStore();
   const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
 
   const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
@@ -86,14 +87,14 @@ const Subscriptions = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [p, m] = await Promise.all([
-        isSuperAdmin
-          ? subscriptionService.listSubscriptions()
-          : subscriptionService.listSubscriptionsByOrgId(user!.orgId!),
-        moduleService.listModules(),
-      ]);
+      const p = await (isSuperAdmin
+        ? subscriptionService.listSubscriptions()
+        : subscriptionService.listSubscriptionsByOrgId(user!.orgId!));
       setPlans(p);
-      setAllModules(m);
+      if (isSuperAdmin) {
+        const m = await moduleService.listModules();
+        setAllModules(m);
+      }
     } catch {
       toast.error('Failed to load subscription data');
     } finally {
@@ -214,6 +215,11 @@ const Subscriptions = () => {
 
   const totalPages = Math.max(1, Math.ceil(plans.length / PAGE_SIZE));
   const paginated = plans.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+
+  // For super-admin use fetched allModules; for org-admin use role-based accessModules
+  const modulePickerItems = isSuperAdmin
+    ? allModules.map((m) => ({ id: m.id, name: m.name, category: m.category ?? '' }))
+    : accessModules.map((m) => ({ id: m.moduleId, name: m.name, category: m.category }));
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -457,13 +463,13 @@ const Subscriptions = () => {
               )}
 
               <Fld label="Features (Modules)" hint="Select which features this plan includes">
-                {allModules.length === 0 ? (
+                {modulePickerItems.length === 0 ? (
                   <p className="text-xs text-slate-500 py-2">
                     No modules available. Create modules on the Modules page first.
                   </p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 mt-1">
-                    {allModules.map((m) => {
+                    {modulePickerItems.map((m) => {
                       const checked = selectedModuleIds.includes(m.id);
                       return (
                         <button
@@ -683,36 +689,6 @@ const Subscriptions = () => {
 };
 
 export default Subscriptions;
-
-// ─── Micro helpers ─────────────────────────────────────────────────────────────
-
-const inputCls = (hasError?: boolean) =>
-  `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
-
-function Fld({ label, required, hint, error, children }: {
-  label: string; required?: boolean; hint?: string; error?: string; children: ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <Label className="text-slate-300 text-sm font-medium">{label}</Label>
-        {required && <span className="text-red-400 text-xs">*</span>}
-        {hint && <span className="text-slate-500 text-xs">({hint})</span>}
-      </div>
-      {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
-    </div>
-  );
-}
-
-function ViewRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-2.5 border-b border-slate-800 last:border-0">
-      <span className="text-xs text-slate-500 uppercase tracking-wide font-medium shrink-0 w-28">{label}</span>
-      <span className="text-sm text-slate-200 text-right">{value}</span>
-    </div>
-  );
-}
 
 function StatusToggle({ active, loading, onToggle }: {
   active: boolean; loading: boolean; onToggle: () => void;

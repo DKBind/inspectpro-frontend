@@ -38,6 +38,11 @@ export const userService = {
     if (!res.status) throw new Error(res.message || 'Failed to delete user');
   },
 
+  changePassword: async (newPassword: string): Promise<void> => {
+    const res = await api.patch<ApiResponse<null>>('/users/me/password', { password: newPassword });
+    if (!res.status) throw new Error(res.message || 'Failed to update password');
+  },
+
   listRoles: async (orgId?: string): Promise<RoleResponse[]> => {
     const url = orgId ? `/roles?orgId=${orgId}` : '/roles';
     const res = await api.get<ApiResponse<RoleResponse[]>>(url);

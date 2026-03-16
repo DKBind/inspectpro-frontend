@@ -38,7 +38,7 @@ const Login = () => {
         isSuperAdmin: data.superAdmin,
       };
 
-      setAuth(user, data.accessToken, data.refreshToken, false);
+      setAuth(user, data.accessToken, data.refreshToken, data.firstLogin ?? false);
 
       // Use my-access as the single source of truth for sidebar visibility
       await moduleService.getMyAccess(data.userId).then(setAccessModules).catch(() => {});

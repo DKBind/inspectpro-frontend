@@ -12,7 +12,7 @@ import * as z from 'zod';
 import { toast } from 'sonner';
 import {
   Users, Plus, RefreshCw, Eye, Pencil, Trash2, Mail, Phone,
-  Building2, ChevronDown, Crown, AlertTriangle, User,
+  Building2, ChevronDown, Crown, AlertTriangle, User, Package,
 } from 'lucide-react';
 
 import { customerService } from '@/services/customerService';
@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Fld, IcoInput, ViewRow, inputCls } from '@/components/ui/form-helpers';
 import styles from '@/pages/Organisation/Organisation.module.css';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -82,7 +82,6 @@ const Customers = () => {
   const { field: emailField     } = useController({ name: 'email',     control });
   const { field: phoneField     } = useController({ name: 'phoneNumber', control });
   const { field: companyField   } = useController({ name: 'companyName', control });
-  const { field: notesField     } = useController({ name: 'notes',     control });
 
   const selectedPlanId = methods.watch('subscriptionId');
   const selectedPlan   = plans.find((p) => p.id === selectedPlanId);
@@ -356,12 +355,12 @@ const Customers = () => {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Fld label="First Name" required error={errors.firstName?.message}>
                     <IcoInput icon={<User size={14} />}>
-                      <Input placeholder="John" {...firstNameField} className={inp(!!errors.firstName)} />
+                      <Input placeholder="John" {...firstNameField} className={inputCls(!!errors.firstName, 'purple')} />
                     </IcoInput>
                   </Fld>
                   <Fld label="Last Name">
                     <IcoInput icon={<User size={14} />}>
-                      <Input placeholder="Doe" {...lastNameField} className={inp(false)} />
+                      <Input placeholder="Doe" {...lastNameField} className={inputCls(false, 'purple')} />
                     </IcoInput>
                   </Fld>
                 </div>
@@ -369,19 +368,19 @@ const Customers = () => {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Fld label="Email" error={errors.email?.message}>
                     <IcoInput icon={<Mail size={14} />}>
-                      <Input type="email" placeholder="john@company.com" {...emailField} className={inp(!!errors.email)} />
+                      <Input type="email" placeholder="john@company.com" {...emailField} className={inputCls(!!errors.email, 'purple')} />
                     </IcoInput>
                   </Fld>
                   <Fld label="Phone">
                     <IcoInput icon={<Phone size={14} />}>
-                      <Input placeholder="+91 98765 43210" {...phoneField} className={inp(false)} />
+                      <Input placeholder="+91 98765 43210" {...phoneField} className={inputCls(false, 'purple')} />
                     </IcoInput>
                   </Fld>
                 </div>
 
                 <Fld label="Company Name">
                   <IcoInput icon={<Building2 size={14} />}>
-                    <Input placeholder="Company Pvt. Ltd." {...companyField} className={inp(false)} />
+                    <Input placeholder="Company Pvt. Ltd." {...companyField} className={inputCls(false, 'purple')} />
                   </IcoInput>
                 </Fld>
 
@@ -419,6 +418,20 @@ const Customers = () => {
                     <p className="text-xs text-amber-400/80 mt-1">No plans available. Create plans in My Subscription Plans first.</p>
                   )}
                 </Fld>
+
+                {/* Modules included in selected plan */}
+                {selectedPlan && (selectedPlan.modules?.length ?? 0) > 0 && (
+                  <Fld label="Included Modules" hint="From selected plan">
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {selectedPlan.modules!.map((m) => (
+                        <span key={m.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: 'rgba(139,92,246,0.1)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.2)' }}>
+                          <Package size={10} />
+                          {m.name}
+                        </span>
+                      ))}
+                    </div>
+                  </Fld>
+                )}
 
                 <Fld label="Notes" hint="Optional">
                   <textarea rows={3} placeholder="Any additional notes..." {...register('notes')}
@@ -509,42 +522,3 @@ const Customers = () => {
 };
 
 export default Customers;
-
-// ─── Micro helpers ─────────────────────────────────────────────────────────────
-
-const inp = (hasError: boolean) =>
-  `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
-
-function Fld({ label, required, hint, error, children }: {
-  label: string; required?: boolean; hint?: string; error?: string; children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <Label className="text-slate-300 text-sm font-medium">{label}</Label>
-        {required && <span className="text-red-400 text-xs">*</span>}
-        {hint && <span className="text-slate-500 text-xs">({hint})</span>}
-      </div>
-      {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
-    </div>
-  );
-}
-
-function IcoInput({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">{icon}</span>
-      <div className="[&_input]:pl-9">{children}</div>
-    </div>
-  );
-}
-
-function ViewRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-2.5 border-b border-slate-800 last:border-0">
-      <span className="text-xs text-slate-500 uppercase tracking-wide font-medium shrink-0 w-24">{label}</span>
-      <span className="text-sm text-slate-200 text-right break-all">{value}</span>
-    </div>
-  );
-}

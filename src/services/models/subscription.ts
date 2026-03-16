@@ -20,6 +20,8 @@ export interface SubscriptionResponse {
   id: string;
   /** null = global plan (super_admin); set = org-owned plan for franchises */
   createdByOrgId?: string;
+  /** true when createdByOrgId is null — system-level plan available to all root orgs */
+  global: boolean;
   planName: string;
   price?: number;
   currency?: string;

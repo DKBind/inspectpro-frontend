@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Sec, Fld, IcoInput } from '@/components/ui/form-helpers';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -139,21 +139,24 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
       .catch(() => setParentOrgs([]));
   }, [open]);
 
-  // Load subscription plans (create mode only)
+  // Load subscription plans whenever the parent org changes (create mode only).
+  // Plans are always scoped to the parent org — the org that created them for its franchises.
   useEffect(() => {
     if (!open || isEditMode) return;
+    // For super_admin: use whichever parent org is selected in the dropdown.
+    // For org users: always use their own orgId (they are the parent).
+    const targetOrgId = isSuperAdmin ? selectedParentId : authUser?.orgId;
+    if (!targetOrgId) {
+      setPlans([]);
+      return;
+    }
     setPlansLoading(true);
-    // For org users: load plans they've created for franchises
-    // For super_admin: load global active plans
-    const orgId = !isSuperAdmin ? authUser?.orgId : undefined;
-    const fetcher = orgId
-      ? subscriptionService.listActiveSubscriptionsByOrgId(orgId)
-      : subscriptionService.listActiveSubscriptions();
-    fetcher
+    setValue('subscriptionId', ''); // reset plan selection when parent changes
+    subscriptionService.listActiveSubscriptionsByOrgId(targetOrgId)
       .then(setPlans)
       .catch(() => setPlans([]))
       .finally(() => setPlansLoading(false));
-  }, [open, isEditMode]);
+  }, [open, isEditMode, selectedParentId]);
 
   useEffect(() => {
     if (open && editOrg) {
@@ -494,42 +497,5 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
         </FormProvider>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function Sec({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
-  return (
-    <section>
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-purple-400">{icon}</span>
-        <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</span>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Fld({ label, required, hint, error, children }: {
-  label: string; required?: boolean; hint?: string; error?: string; children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <Label className="text-slate-300 text-sm font-medium">{label}</Label>
-        {required && <span className="text-red-400 text-xs">*</span>}
-        {hint && <span className="text-slate-500 text-xs">({hint})</span>}
-      </div>
-      {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
-    </div>
-  );
-}
-
-function IcoInput({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">{icon}</span>
-      <div className="[&_input]:pl-9">{children}</div>
-    </div>
   );
 }
