@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuthStore } from '@/store/useAuthStore';
 import { Users, Bell, UserCircle } from 'lucide-react';
 import UsersRoles from './UsersRoles/UsersRoles';
 import Profile from './Profile/Profile';
@@ -23,7 +22,6 @@ const notificationPrefs = [
 ];
 
 const Settings = () => {
-  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabKey>('users-roles');
   const [toggled, setToggled] = useState<Record<string, boolean>>(
     Object.fromEntries(notificationPrefs.map((p) => [p.id, p.defaultOn]))
