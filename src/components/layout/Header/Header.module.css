@@ -200,6 +200,15 @@
   height: 18px;
 }
 
+.logoutBtn {
+  color: var(--ip-red);
+}
+
+.logoutBtn:hover {
+  background: var(--ip-red-light);
+  color: var(--ip-red);
+}
+
 .notifBadge {
   position: absolute;
   top: 6px;

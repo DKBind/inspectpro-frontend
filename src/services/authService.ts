@@ -54,4 +54,19 @@ export const authService = {
     const res = await api.post<ApiResponse<null>>('/auth/change-password', { newPassword });
     if (!res.status) throw new Error(res.message || 'Failed to change password');
   },
+
+  refreshTokens: async (refreshToken: string): Promise<{ accessToken: string; idToken: string }> => {
+    const res = await api.post<ApiResponse<{ accessToken: string; idToken: string }>>('/auth/refresh-token', { refreshToken });
+    if (!res.status) throw new Error(res.message || 'Token refresh failed');
+    return res.object!;
+  },
+
+  logout: async (): Promise<void> => {
+    try {
+      await api.post('/auth/logout');
+    } finally {
+      localStorage.removeItem('auth-storage');
+      window.location.href = '/login';
+    }
+  },
 };
