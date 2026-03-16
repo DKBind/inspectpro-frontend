@@ -14,12 +14,12 @@
 .pageTitle {
   font-size: 22px;
   font-weight: 700;
-  color: hsl(210, 40%, 95%);
+  color: var(--ip-text-primary);
 }
 
 .pageSubtitle {
   font-size: 13.5px;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-secondary);
   margin-top: 4px;
 }
 
@@ -31,24 +31,26 @@
   padding: 0 16px;
   border-radius: 8px;
   border: none;
-  background: hsl(221, 83%, 53%);
+  background: var(--ip-brand);
   color: white;
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease;
+  box-shadow: 0 2px 8px var(--ip-brand-light);
 }
 
 .createBtn:hover {
-  background: hsl(221, 83%, 45%);
+  background: var(--ip-brand-hover);
 }
 
 /* ─── Panel ────────────────────────────────────── */
 .panel {
   border-radius: 14px;
-  background: hsla(222, 47%, 8%, 0.6);
-  border: 1px solid hsl(217, 33%, 15%);
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
   overflow: hidden;
+  box-shadow: var(--ip-shadow-sm);
 }
 
 .panelHeader {
@@ -56,13 +58,13 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid hsl(217, 33%, 13%);
+  border-bottom: 1px solid var(--ip-border);
 }
 
 .panelTitle {
   font-size: 15px;
   font-weight: 600;
-  color: hsl(210, 40%, 93%);
+  color: var(--ip-text-primary);
   display: flex;
   align-items: center;
 }
@@ -76,8 +78,8 @@
   height: 22px;
   padding: 0 7px;
   border-radius: 20px;
-  background: hsla(221, 83%, 53%, 0.15);
-  color: hsl(221, 83%, 68%);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand-hover);
   font-size: 11px;
   font-weight: 700;
 }
@@ -89,17 +91,17 @@
   width: 30px;
   height: 30px;
   border-radius: 6px;
-  border: 1px solid hsl(217, 33%, 17%);
+  border: 1px solid var(--ip-border);
   background: none;
-  color: hsl(215, 20%, 50%);
+  color: var(--ip-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .refreshBtn:hover {
-  border-color: hsl(221, 83%, 53%);
-  color: hsl(221, 83%, 63%);
-  background: hsla(221, 83%, 53%, 0.08);
+  border-color: var(--ip-brand);
+  color: var(--ip-brand);
+  background: var(--ip-brand-light);
 }
 
 .panelBody {
@@ -119,16 +121,16 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: hsl(215, 20%, 45%);
-  background: hsla(217, 33%, 10%, 0.5);
-  border-bottom: 1px solid hsl(217, 33%, 13%);
+  color: var(--ip-text-muted);
+  background: var(--ip-surface-raised);
+  border-bottom: 1px solid var(--ip-border);
 }
 
 .table td {
   padding: 14px 24px;
   font-size: 13.5px;
-  color: hsl(215, 20%, 70%);
-  border-bottom: 1px solid hsl(217, 33%, 11%);
+  color: var(--ip-text-secondary);
+  border-bottom: 1px solid var(--ip-border);
 }
 
 .table tr:last-child td {
@@ -136,7 +138,7 @@
 }
 
 .table tr:hover td {
-  background: hsla(215, 25%, 27%, 0.08);
+  background: var(--ip-surface-hover);
 }
 
 .clickableRow {
@@ -144,7 +146,7 @@
 }
 
 .clickableRow:hover td {
-  background: hsla(221, 83%, 53%, 0.06);
+  background: var(--ip-brand-light);
 }
 
 /* ─── Cell Styles ──────────────────────────────── */
@@ -158,8 +160,8 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: hsla(221, 23%, 49%, 0.1);
-  color: hsl(221, 83%, 63%);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,21 +170,21 @@
 
 .orgName {
   font-weight: 600;
-  color: hsl(210, 40%, 90%);
+  color: var(--ip-text-primary);
 }
 
 .slugCell {
   font-family: monospace;
   font-size: 12.5px;
-  color: hsl(215, 20%, 60%);
+  color: var(--ip-text-muted);
 }
 
 .domainCell {
-  color: hsl(215, 20%, 70%);
+  color: var(--ip-text-secondary);
 }
 
 .muted {
-  color: hsl(215, 20%, 35%);
+  color: var(--ip-text-disabled);
 }
 
 /* ─── Plan Badge ───────────────────────────────── */
@@ -196,43 +198,43 @@
 }
 
 .planFree {
-  background: hsla(215, 20%, 40%, 0.15);
-  color: hsl(215, 20%, 65%);
+  background: var(--ip-neutral-light);
+  color: var(--ip-text-secondary);
 }
 
 .planStarter {
-  background: hsla(142, 71%, 45%, 0.12);
-  color: hsl(142, 71%, 55%);
+  background: var(--ip-green-light);
+  color: var(--ip-green);
 }
 
 .planPro {
-  background: hsla(221, 83%, 53%, 0.12);
-  color: hsl(221, 83%, 68%);
+  background: var(--ip-blue-light);
+  color: var(--ip-blue-text);
 }
 
 .planEnterprise {
-  background: hsla(262, 83%, 58%, 0.12);
-  color: hsl(262, 83%, 72%);
+  background: var(--ip-purple-light);
+  color: var(--ip-purple);
 }
 
 .planPalette1 {
-  background: hsla(38, 92%, 50%, 0.12);
-  color: hsl(38, 92%, 62%);
+  background: var(--ip-orange-light);
+  color: var(--ip-orange);
 }
 
 .planPalette2 {
-  background: hsla(188, 78%, 41%, 0.12);
-  color: hsl(188, 78%, 55%);
+  background: var(--ip-teal-light);
+  color: var(--ip-teal);
 }
 
 .planPalette3 {
-  background: hsla(350, 80%, 60%, 0.12);
-  color: hsl(350, 80%, 70%);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
 }
 
 .planPalette4 {
-  background: hsla(239, 84%, 67%, 0.12);
-  color: hsl(239, 84%, 75%);
+  background: var(--ip-purple-light);
+  color: var(--ip-purple);
 }
 
 /* ─── Status Badge ─────────────────────────────── */
@@ -254,21 +256,21 @@
 }
 
 .statusActive {
-  background: hsla(142, 71%, 45%, 0.12);
-  color: hsl(142, 71%, 55%);
+  background: var(--ip-green-light);
+  color: var(--ip-green);
 }
 
 .statusActive::before {
-  background: hsl(142, 71%, 50%);
+  background: var(--ip-green);
 }
 
 .statusInactive {
-  background: hsla(0, 84%, 60%, 0.1);
-  color: hsl(0, 84%, 60%);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
 }
 
 .statusInactive::before {
-  background: hsl(0, 84%, 60%);
+  background: var(--ip-red);
 }
 
 /* ─── Empty State ──────────────────────────────── */
@@ -278,39 +280,32 @@
   align-items: center;
   justify-content: center;
   padding: 60px 24px;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-muted);
   font-size: 14px;
   text-align: center;
 }
 
 .emptySubtext {
   font-size: 12.5px;
-  color: hsl(215, 20%, 38%);
+  color: var(--ip-text-disabled);
   margin-top: 4px;
 }
 
-
-
-
-
-
-
 /* ─── Table Row ────────────────────────────────── */
-
 .tableRow {
   cursor: default;
   transition: background 0.15s ease;
 }
 
 .tableRow:hover td {
-  background: hsla(221, 83%, 53%, 0.05);
+  background: var(--ip-surface-hover);
 }
 
 .table td {
   padding: 14px 24px;
   font-size: 13.5px;
-  color: hsl(215, 20%, 70%);
-  border-bottom: 1px solid hsl(217, 33%, 11%);
+  color: var(--ip-text-secondary);
+  border-bottom: 1px solid var(--ip-border);
   white-space: nowrap;
   vertical-align: middle;
 }
@@ -324,7 +319,7 @@
 
 .orgName {
   font-weight: 600;
-  color: hsl(210, 40%, 90%);
+  color: var(--ip-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   display: block;
@@ -332,17 +327,16 @@
 
 .orgMeta {
   font-size: 11.5px;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-muted);
   margin-top: 2px;
 }
 
 .mutedCell {
-  color: hsl(215, 20%, 60%);
+  color: var(--ip-text-muted);
   font-size: 13px;
 }
 
 /* ─── Plan Badge ───────────────────────────────── */
-
 .planBadge {
   display: inline-flex;
   align-items: center;
@@ -357,19 +351,17 @@
 }
 
 /* ─── Pagination wrapper ───────────────────────── */
-
 .paginationArea {
   padding: 4px 24px 8px;
-  border-top: 1px solid hsl(217, 33%, 11%);
+  border-top: 1px solid var(--ip-border);
 }
 
 /* ─── Loading Spinner ──────────────────────────── */
-
 .spinner {
   width: 28px;
   height: 28px;
-  border: 3px solid hsl(217, 33%, 20%);
-  border-top-color: hsl(221, 83%, 53%);
+  border: 3px solid var(--ip-border-strong);
+  border-top-color: var(--ip-brand);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -381,7 +373,6 @@
 }
 
 /* ─── Status Toggle ────────────────────────────── */
-
 .statusToggle {
   position: relative;
   display: inline-flex;
@@ -401,13 +392,13 @@
 }
 
 .toggleOn {
-  background: hsl(182, 50%, 22%);
+  background: var(--ip-toggle-on-bg);
   justify-content: flex-end;
   padding-right: 3px;
 }
 
 .toggleOff {
-  background: hsl(350, 60%, 82%);
+  background: var(--ip-toggle-off-bg);
   justify-content: flex-start;
   padding-left: 3px;
 }
@@ -422,18 +413,18 @@
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 
 .toggleOn .toggleKnob {
-  color: hsl(182, 52%, 35%);
+  color: var(--ip-brand-hover);
 }
 
 .toggleOff .toggleKnob {
-  color: hsl(350, 70%, 55%);
+  color: var(--ip-red);
 }
 
 /* ─── Action Buttons ───────────────────────────── */
-
 .actionCell {
   position: relative;
   display: flex;
@@ -455,23 +446,23 @@
   width: 30px;
   height: 30px;
   border-radius: 6px;
-  border: 1px solid hsl(217, 33%, 17%);
+  border: 1px solid var(--ip-border);
   background: transparent;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .actionBtn:hover {
-  border-color: hsl(221, 83%, 45%);
-  background: hsla(221, 83%, 53%, 0.1);
-  color: hsl(221, 83%, 68%);
+  border-color: var(--ip-brand);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand-hover);
 }
 
 .actionBtnDanger:hover {
-  border-color: hsl(0, 84%, 50%);
-  background: hsla(0, 84%, 60%, 0.1);
-  color: hsl(0, 84%, 65%);
+  border-color: var(--ip-red-border);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
 }
 
 .menuBtn {
@@ -483,15 +474,15 @@
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .menuBtn:hover {
-  border-color: hsl(217, 33%, 22%);
-  background: hsla(215, 25%, 20%, 0.5);
-  color: hsl(210, 40%, 85%);
+  border-color: var(--ip-border);
+  background: var(--ip-page-bg);
+  color: var(--ip-text-primary);
 }
 
 .dropdownMenu {
@@ -500,11 +491,11 @@
   right: 0;
   z-index: 100;
   min-width: 140px;
-  background: hsl(222, 47%, 10%);
-  border: 1px solid hsl(217, 33%, 18%);
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
   border-radius: 10px;
   padding: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--ip-shadow-lg);
   animation: dropIn 0.12s ease;
 }
 
@@ -529,7 +520,7 @@
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: hsl(215, 20%, 65%);
+  color: var(--ip-text-secondary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -538,21 +529,21 @@
 }
 
 .dropdownItem:hover {
-  background: hsla(215, 25%, 27%, 0.4);
-  color: hsl(210, 40%, 92%);
+  background: var(--ip-page-bg);
+  color: var(--ip-text-primary);
 }
 
 .dropdownItemDanger {
-  color: hsl(0, 84%, 60%);
+  color: var(--ip-red);
 }
 
 .dropdownItemDanger:hover {
-  background: hsla(0, 84%, 60%, 0.12);
-  color: hsl(0, 84%, 68%);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
 }
 
 .dropdownDivider {
   height: 1px;
-  background: hsl(217, 33%, 15%);
+  background: var(--ip-border);
   margin: 3px 0;
 }

@@ -8,9 +8,10 @@
   flex-direction: column;
   z-index: 40;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: linear-gradient(180deg, hsl(222, 47%, 8%) 0%, hsl(222, 47%, 11%) 100%);
-  border-right: 1px solid hsl(217, 33%, 17%);
+  background: var(--ip-sidebar-bg);
+  border-right: 1px solid var(--ip-sidebar-border);
   overflow: hidden;
+  box-shadow: var(--ip-shadow-sm);
 }
 
 .sidebarCollapsed {
@@ -22,9 +23,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 20px 20px 16px;
-  border-bottom: 1px solid hsl(217, 33%, 15%);
-  min-height: 64px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--ip-border);
+  height: 64px;
   flex-shrink: 0;
 }
 
@@ -32,12 +33,12 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(262, 83%, 58%));
+  background: var(--ip-gradient-brand);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px hsla(221, 83%, 53%, 0.3);
+  box-shadow: 0 4px 12px var(--ip-brand-light);
 }
 
 .logoIcon svg {
@@ -57,14 +58,14 @@
 .brandText h1 {
   font-size: 16px;
   font-weight: 700;
-  color: hsl(210, 40%, 98%);
+  color: var(--ip-text-primary);
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
 .brandText span {
   font-size: 11px;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-muted);
   font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -92,7 +93,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-sidebar-label);
   padding: 0 8px;
   margin-bottom: 8px;
   white-space: nowrap;
@@ -110,7 +111,7 @@
   gap: 12px;
   padding: 10px 12px;
   border-radius: 8px;
-  color: hsl(215, 20%, 65%);
+  color: var(--ip-sidebar-text);
   font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
@@ -123,13 +124,13 @@
 }
 
 .navItem:hover {
-  background: hsla(215, 25%, 27%, 0.35);
-  color: hsl(210, 40%, 90%);
+  background: var(--ip-sidebar-hover-bg);
+  color: var(--ip-sidebar-hover-text);
 }
 
 .navItemActive {
-  background: hsla(221, 83%, 53%, 0.12);
-  color: hsl(221, 83%, 68%);
+  background: var(--ip-sidebar-active-bg);
+  color: var(--ip-sidebar-text-active);
 }
 
 .navItemActive::before {
@@ -140,7 +141,7 @@
   transform: translateY(-50%);
   width: 3px;
   height: 20px;
-  background: hsl(221, 83%, 53%);
+  background: var(--ip-brand);
   border-radius: 0 3px 3px 0;
 }
 
@@ -170,7 +171,7 @@
 
 .badge {
   margin-left: auto;
-  background: hsl(0, 84%, 60%);
+  background: var(--ip-red);
   color: white;
   font-size: 10px;
   font-weight: 700;
@@ -185,13 +186,11 @@
   opacity: 0;
 }
 
-
-
 /* Mobile overlay */
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--ip-shadow-xl);
   }
 
   .sidebarMobileOpen {

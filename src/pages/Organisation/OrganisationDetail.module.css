@@ -30,8 +30,8 @@
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: hsla(221, 83%, 53%, 0.12);
-  color: hsl(221, 83%, 63%);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -41,12 +41,12 @@
 .pageTitle {
   font-size: 22px;
   font-weight: 700;
-  color: hsl(210, 40%, 95%);
+  color: var(--ip-text-primary);
 }
 
 .pageSubtitle {
   font-size: 13px;
-  color: hsl(215, 20%, 50%);
+  color: var(--ip-text-secondary);
   font-family: monospace;
   margin-top: 2px;
 }
@@ -58,9 +58,9 @@
   height: 34px;
   padding: 0 14px;
   border-radius: 7px;
-  border: 1px solid hsl(217, 33%, 17%);
+  border: 1px solid var(--ip-border);
   background: none;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-secondary);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -68,9 +68,9 @@
 }
 
 .backBtn:hover {
-  border-color: hsl(221, 83%, 53%);
-  color: hsl(221, 83%, 63%);
-  background: hsla(221, 83%, 53%, 0.07);
+  border-color: var(--ip-brand);
+  color: var(--ip-brand);
+  background: var(--ip-brand-light);
 }
 
 /* ─── Status Badge ─────────────────────────────── */
@@ -85,13 +85,13 @@
 }
 
 .statusActive {
-  background: hsla(142, 71%, 45%, 0.12);
-  color: hsl(142, 71%, 55%);
+  background: var(--ip-green-light);
+  color: var(--ip-green);
 }
 
 .statusInactive {
-  background: hsla(0, 84%, 60%, 0.1);
-  color: hsl(0, 84%, 60%);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
 }
 
 /* ─── Grid ─────────────────────────────────────── */
@@ -110,20 +110,21 @@
 /* ─── Panel ────────────────────────────────────── */
 .panel {
   border-radius: 14px;
-  background: hsla(222, 47%, 8%, 0.6);
-  border: 1px solid hsl(217, 33%, 15%);
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
   overflow: hidden;
+  box-shadow: var(--ip-shadow-sm);
 }
 
 .panelHeader {
   padding: 18px 24px;
-  border-bottom: 1px solid hsl(217, 33%, 13%);
+  border-bottom: 1px solid var(--ip-border);
 }
 
 .panelTitle {
   font-size: 14px;
   font-weight: 600;
-  color: hsl(210, 40%, 85%);
+  color: var(--ip-text-primary);
 }
 
 .panelBody {
@@ -136,7 +137,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 24px;
-  border-bottom: 1px solid hsl(217, 33%, 11%);
+  border-bottom: 1px solid var(--ip-border);
 }
 
 .detailRow:last-child {
@@ -145,13 +146,13 @@
 
 .detailLabel {
   font-size: 12.5px;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-muted);
   font-weight: 500;
 }
 
 .detailValue {
   font-size: 13.5px;
-  color: hsl(210, 40%, 85%);
+  color: var(--ip-text-primary);
   font-weight: 500;
   text-align: right;
 }
@@ -159,7 +160,7 @@
 .slugValue {
   font-family: monospace;
   font-size: 12.5px;
-  color: hsl(215, 20%, 65%);
+  color: var(--ip-text-secondary);
 }
 
 /* ─── Plan Display ─────────────────────────────── */
@@ -174,8 +175,8 @@
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: hsla(221, 83%, 53%, 0.1);
-  color: hsl(221, 83%, 63%);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -185,12 +186,12 @@
 .planName {
   font-size: 16px;
   font-weight: 700;
-  color: hsl(210, 40%, 90%);
+  color: var(--ip-text-primary);
 }
 
 .planSub {
   font-size: 12px;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-secondary);
   margin-top: 2px;
 }
 
@@ -209,23 +210,23 @@
 }
 
 .planFree {
-  background: hsla(215, 20%, 40%, 0.15);
-  color: hsl(215, 20%, 65%);
+  background: var(--ip-neutral-light);
+  color: var(--ip-text-secondary);
 }
 
 .planStarter {
-  background: hsla(142, 71%, 45%, 0.12);
-  color: hsl(142, 71%, 55%);
+  background: var(--ip-green-light);
+  color: var(--ip-green);
 }
 
 .planPro {
-  background: hsla(221, 83%, 53%, 0.12);
-  color: hsl(221, 83%, 68%);
+  background: var(--ip-blue-light);
+  color: var(--ip-blue-text);
 }
 
 .planEnterprise {
-  background: hsla(262, 83%, 58%, 0.12);
-  color: hsl(262, 83%, 72%);
+  background: var(--ip-purple-light);
+  color: var(--ip-purple);
 }
 
 /* ─── Status Toggle ────────────────────────────── */
@@ -248,13 +249,13 @@
 }
 
 .toggleOn {
-  background: hsl(182, 50%, 22%);
+  background: var(--ip-toggle-on-bg);
   justify-content: flex-end;
   padding-right: 3px;
 }
 
 .toggleOff {
-  background: hsl(350, 60%, 82%);
+  background: var(--ip-toggle-off-bg);
   justify-content: flex-start;
   padding-left: 3px;
 }
@@ -268,10 +269,11 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 
-.toggleOn .toggleKnob { color: hsl(182, 52%, 35%); }
-.toggleOff .toggleKnob { color: hsl(350, 70%, 55%); }
+.toggleOn .toggleKnob { color: var(--ip-brand-hover); }
+.toggleOff .toggleKnob { color: var(--ip-red); }
 
 /* ─── Subscription Panel ───────────────────────── */
 .manageSubBtn {
@@ -281,9 +283,9 @@
   height: 32px;
   padding: 0 12px;
   border-radius: 7px;
-  border: 1px solid hsl(217, 33%, 20%);
-  background: hsla(221, 83%, 53%, 0.08);
-  color: hsl(221, 83%, 65%);
+  border: 1px solid var(--ip-border);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand-hover);
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
@@ -291,8 +293,8 @@
 }
 
 .manageSubBtn:hover {
-  background: hsla(221, 83%, 53%, 0.16);
-  border-color: hsl(221, 83%, 45%);
+  background: var(--ip-brand-border);
+  border-color: var(--ip-brand);
 }
 
 .subGrid {
@@ -306,8 +308,8 @@
   flex-direction: column;
   gap: 4px;
   padding: 14px 24px;
-  border-bottom: 1px solid hsl(217, 33%, 11%);
-  border-right: 1px solid hsl(217, 33%, 11%);
+  border-bottom: 1px solid var(--ip-border);
+  border-right: 1px solid var(--ip-border);
 }
 
 .subField:nth-child(3n) { border-right: none; }
@@ -322,12 +324,12 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: hsl(215, 20%, 40%);
+  color: var(--ip-text-muted);
 }
 
 .subValue {
   font-size: 13.5px;
-  color: hsl(210, 40%, 85%);
+  color: var(--ip-text-primary);
   font-weight: 500;
 }
 
@@ -343,16 +345,16 @@
   align-self: flex-start;
 }
 
-.subTrial   { background: hsla(221, 83%, 53%, 0.12); color: hsl(221, 83%, 68%); }
-.subActive  { background: hsla(142, 71%, 45%, 0.12); color: hsl(142, 71%, 55%); }
-.subSuspended { background: hsla(38, 92%, 50%, 0.12); color: hsl(38, 92%, 60%); }
-.subCancelled { background: hsla(215, 20%, 40%, 0.12); color: hsl(215, 20%, 55%); }
-.subExpired { background: hsla(0, 84%, 60%, 0.10); color: hsl(0, 84%, 60%); }
+.subTrial   { background: var(--ip-blue-light);  color: var(--ip-blue-text); }
+.subActive  { background: var(--ip-green-light);  color: var(--ip-green); }
+.subSuspended { background: var(--ip-orange-light); color: var(--ip-orange); }
+.subCancelled { background: var(--ip-neutral-light); color: var(--ip-text-secondary); }
+.subExpired { background: var(--ip-red-light);   color: var(--ip-red); }
 
 .subLoadingRow {
   padding: 24px;
   font-size: 13px;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-secondary);
 }
 
 .subEmpty {
@@ -361,7 +363,7 @@
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-muted);
   font-size: 13.5px;
   text-align: center;
   gap: 8px;
@@ -372,9 +374,9 @@
   height: 32px;
   padding: 0 14px;
   border-radius: 7px;
-  border: 1px solid hsl(221, 83%, 45%);
-  background: hsla(221, 83%, 53%, 0.1);
-  color: hsl(221, 83%, 65%);
+  border: 1px solid var(--ip-brand);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand-hover);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -382,7 +384,7 @@
 }
 
 .subCreateBtn:hover {
-  background: hsla(221, 83%, 53%, 0.2);
+  background: var(--ip-brand-press-bg);
 }
 
 /* ─── States ───────────────────────────────────── */
@@ -393,7 +395,7 @@
   align-items: center;
   justify-content: center;
   padding: 80px 24px;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-muted);
   font-size: 14px;
   text-align: center;
   gap: 16px;

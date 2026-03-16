@@ -5,7 +5,7 @@ import { useModuleStore } from '@/store/useModuleStore';
 import { moduleService } from '@/services/moduleService';
 import { authService } from '@/services/authService';
 import { ROUTES } from '@/components/Constant/Route';
-import { Shield, Lock } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff } from 'lucide-react';
 import styles from './Login.module.css';
 
 const Login = () => {
@@ -14,8 +14,9 @@ const Login = () => {
   const navigate = useNavigate();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState('');
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState('');
+  const [showPassword,  setShowPassword]  = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,26 +84,28 @@ const Login = () => {
 
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Password</label>
-            <input
-              type="password"
-              className={styles.formInput}
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
+            <div className={styles.passwordWrapper}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className={styles.formInput}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+              <button
+                type="button"
+                className={styles.eyeBtn}
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </button>
+            </div>
           </div>
 
           {error && (
-            <div style={{
-              color: 'hsl(0,84%,60%)',
-              fontSize: 13,
-              padding: '8px 12px',
-              background: 'hsla(0,84%,60%,0.08)',
-              borderRadius: 6,
-              border: '1px solid hsla(0,84%,60%,0.2)',
-              marginBottom: 8,
-            }}>
+            <div className={styles.errorMsg}>
               {error}
             </div>
           )}
