@@ -6,6 +6,11 @@ interface ApiResponse<T> {
   object: T | null;
 }
 
+export interface RoleItem {
+  roleId: number;
+  roleName: string;
+}
+
 export interface LoginResponse {
   userId: string;
   email: string;
@@ -15,6 +20,7 @@ export interface LoginResponse {
   orgName?: string;
   roleId?: number;
   roleName?: string;
+  roles: RoleItem[];   // all roles assigned to the user
   superAdmin: boolean;
   accessToken: string;
   refreshToken: string;

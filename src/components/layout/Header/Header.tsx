@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useAuthStore, type UserRole } from '@/store/useAuthStore';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useModuleStore } from '@/store/useModuleStore';
-import { Menu, Search, Bell, LogOut, PanelLeftClose, PanelLeftOpen, ChevronDown, Check } from 'lucide-react';
+import { userService } from '@/services/userService';
+import type { UserModuleAccessDTO } from '@/services/models/module';
+import type { RoleModuleAssignment } from '@/services/models/user';
+import { ROUTES } from '@/components/Constant/Route';
+import { Menu, Search, Bell, LogOut, PanelLeftClose, PanelLeftOpen, ChevronDown, Check, Loader2 } from 'lucide-react';
 import styles from './Header.module.css';
 
 interface HeaderProps {
@@ -24,11 +28,34 @@ const routeLabelMap: Record<string, string> = {
   profile: 'Profile',
 };
 
+/** Aggregate flat role-module rows into access module DTOs (one entry per module) */
+function toAccessModules(rows: RoleModuleAssignment[]): UserModuleAccessDTO[] {
+  const map = new Map<number, UserModuleAccessDTO>();
+  for (const row of rows) {
+    if (!map.has(row.moduleId)) {
+      map.set(row.moduleId, {
+        moduleId: row.moduleId,
+        name: row.moduleName,
+        route: row.moduleRoute,
+        icon: '',
+        category: row.moduleCategory ?? '',
+        permissions: [],
+      });
+    }
+    if (row.permissionName) {
+      map.get(row.moduleId)!.permissions.push(row.permissionName);
+    }
+  }
+  return Array.from(map.values());
+}
+
 const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps) => {
+  const navigate = useNavigate();
   const { user, clearAuth, switchRole } = useAuthStore();
-  const { clearModules } = useModuleStore();
+  const { clearModules, setAccessModules } = useModuleStore();
   const location = useLocation();
   const [showRoleMenu, setShowRoleMenu] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -51,25 +78,33 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleRoleSwitch = (role: UserRole) => {
-    if (user?.role === role) return;
-    switchRole(role);
+  const handleRoleSwitch = async (roleName: string, roleId: number) => {
+    if (!user || user.role === roleName || switching) return;
+    setSwitching(true);
     setShowRoleMenu(false);
-    // Reload the page and route to dashboard as requested
-    window.location.href = '/dashboard';
+    try {
+      // 1. Update active role in store (in-memory, no page reload)
+      switchRole(roleName, roleId);
+      // 2. Re-fetch access modules for the newly selected role
+      const rows = await userService.getRoleModules(roleId);
+      setAccessModules(toAccessModules(rows));
+    } catch {
+      clearModules();
+    } finally {
+      setSwitching(false);
+      navigate(ROUTES.DASHBOARD);
+    }
   };
 
-  const hasMultipleRoles = user?.roles && user.roles.length > 1;
+  const hasMultipleRoles = (user?.roles?.length ?? 0) > 1;
 
   return (
     <header className={styles.header}>
       <div className={styles.leftSection}>
-        {/* Mobile menu toggle */}
         <button className={styles.menuBtn} onClick={onMenuToggle}>
           <Menu />
         </button>
 
-        {/* Desktop sidebar toggle */}
         <button
           className={styles.sidebarToggleBtn}
           onClick={onSidebarToggle}
@@ -78,7 +113,6 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
           {sidebarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
         </button>
 
-        {/* Breadcrumb */}
         <div className={styles.breadcrumb}>
           <span className={styles.breadcrumbItem}>
             <span className={styles.breadcrumbLink}>Home</span>
@@ -88,7 +122,6 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
         </div>
       </div>
 
-      {/* Search */}
       <div className={styles.searchBar}>
         <Search className={styles.searchIcon} />
         <input
@@ -99,7 +132,6 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
         <kbd className={styles.searchKbd}>⌘K</kbd>
       </div>
 
-      {/* Right Section */}
       <div className={styles.rightSection}>
         <button className={styles.iconBtn} title="Notifications">
           <Bell />
@@ -111,35 +143,37 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
         <div className={styles.userMenuWrapper} ref={menuRef}>
           <button
             className={`${styles.userMenu} ${hasMultipleRoles ? styles.userMenuClickable : ''}`}
-            onClick={() => hasMultipleRoles && setShowRoleMenu(!showRoleMenu)}
+            onClick={() => hasMultipleRoles && !switching && setShowRoleMenu(!showRoleMenu)}
           >
             <div className={styles.avatar}>
-              {getInitials(user?.name, user?.email)}
+              {switching
+                ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />
+                : getInitials(user?.name, user?.email)
+              }
             </div>
             <div className={styles.userInfo}>
-              <span className={styles.userName}>{user?.name || user?.email || 'Admin'}</span>
-              <span className={styles.userRole}>
-                {user?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
-              </span>
+              <span className={styles.userName}>{user?.name || user?.email || 'User'}</span>
+              {/* Show the actual current role name from DB */}
+              <span className={styles.userRole}>{user?.role ?? 'User'}</span>
             </div>
             {hasMultipleRoles && (
               <ChevronDown className={`${styles.chevron} ${showRoleMenu ? styles.chevronUp : ''}`} />
             )}
           </button>
 
-          {/* Role Dropdown */}
+          {/* Role Switcher Dropdown */}
           {showRoleMenu && hasMultipleRoles && (
             <div className={styles.roleDropdown}>
               <div className={styles.dropdownHeader}>Switch Role</div>
               <div className={styles.roleList}>
-                {user.roles.map((r) => (
+                {user!.roles.map((r) => (
                   <button
-                    key={r}
-                    className={`${styles.roleItem} ${user.role === r ? styles.roleItemActive : ''}`}
-                    onClick={() => handleRoleSwitch(r)}
+                    key={r.roleId}
+                    className={`${styles.roleItem} ${user!.role === r.roleName ? styles.roleItemActive : ''}`}
+                    onClick={() => handleRoleSwitch(r.roleName, r.roleId)}
                   >
-                    <span>{r === 'super_admin' ? 'Super Admin' : 'Admin'}</span>
-                    {user.role === r && <Check className={styles.checkIcon} />}
+                    <span>{r.roleName}</span>
+                    {user!.role === r.roleName && <Check className={styles.checkIcon} />}
                   </button>
                 ))}
               </div>
@@ -147,7 +181,11 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
           )}
         </div>
 
-        <button className={styles.iconBtn} title="Logout" onClick={() => { clearAuth(); clearModules(); }}>
+        <button
+          className={styles.iconBtn}
+          title="Logout"
+          onClick={() => { clearAuth(); clearModules(); navigate('/login'); }}
+        >
           <LogOut />
         </button>
       </div>

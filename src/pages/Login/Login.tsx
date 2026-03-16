@@ -22,17 +22,17 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const data = await authService.login(email);
+      const data = await authService.login(email.trim().toLowerCase());
 
       const user = {
-        id: data.userId,
-        email: data.email,
-        name: `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim(),
-        role: data.superAdmin ? 'super_admin' : (data.roleName ?? 'user'),
-        roles: data.superAdmin
-          ? ['super_admin']
-          : (data.roleName ? [data.roleName] : []),
-        orgId: data.orgId,
+        id:          data.userId,
+        email:       data.email,
+        name:        `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim(),
+        role:        data.superAdmin ? 'super_admin' : (data.roleName ?? 'user'),
+        roleId:      data.superAdmin ? undefined : data.roleId,
+        // Map all roles with their IDs so the role-switcher works
+        roles:       (data.roles ?? []).map((r) => ({ roleId: r.roleId, roleName: r.roleName })),
+        orgId:       data.orgId,
         isSuperAdmin: data.superAdmin,
       };
 
@@ -62,11 +62,8 @@ const Login = () => {
       </div>
 
       <div className={styles.authCard}>
-        {/* Logo */}
         <div className={styles.logoSection}>
-          <div className={styles.logoIcon}>
-            <Shield />
-          </div>
+          <div className={styles.logoIcon}><Shield /></div>
           <div className={styles.logoTitle}>InspectWisePro</div>
           <div className={styles.logoSubtitle}>Inspection & Quality Management</div>
         </div>

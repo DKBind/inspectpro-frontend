@@ -52,7 +52,7 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
   const location = useLocation();
   const { user } = useAuthStore();
   const { modules, accessModules } = useModuleStore();
-  const isSuperAdmin = user?.role === 'super_admin';
+  const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
