@@ -1,21 +1,26 @@
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useController, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
 import {
   Users as UsersIcon, Plus, RefreshCw, Eye, Pencil, Trash2,
-  ChevronLeft, ChevronRight, Loader2, UserCircle,
+  ChevronLeft, ChevronRight, UserCircle, Mail, Lock, User,
+  ChevronDown, Building2, Shield, Trash2 as DeleteIcon, Wand2,
 } from 'lucide-react';
 
 import { userService } from '@/services/userService';
 import { organisationService } from '@/services/organisationService';
 import type { UserResponse, RoleResponse } from '@/services/models/user';
 import type { OrganisationResponse } from '@/services/models/organisation';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,30 +36,96 @@ const schema = z.object({
   gender:    z.string().optional(),
   orgId:     z.string().min(1, 'Organisation is required'),
   roleId:    z.string().min(1, 'Role is required'),
+  statusId:  z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
 
+const EMPTY: FormValues = {
+  firstName: '', lastName: '', email: '', password: '',
+  gender: '', orgId: '', roleId: '', statusId: '1',
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function Sec({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-blue-400">{icon}</span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Fld({ label, required, error, children }: {
+  label: string; required?: boolean; error?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <Label className="text-slate-300 text-sm font-medium">{label}</Label>
+        {required && <span className="text-red-400 text-xs">*</span>}
+      </div>
+      {children}
+      {error && <p className="text-xs text-red-400">{error}</p>}
+    </div>
+  );
+}
+
+function IcoInput({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">{icon}</span>
+      <div className="[&_input]:pl-9">{children}</div>
+    </div>
+  );
+}
+
+const inp = (hasError: boolean) =>
+  `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
+
+const selectCls = (hasError = false) =>
+  `w-full inline-flex items-center justify-between h-10 rounded-md border bg-slate-950/60 px-3 text-sm font-normal text-white hover:bg-slate-900 focus:outline-none transition-all ${hasError ? 'border-red-500' : 'border-slate-700'}`;
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const Users = () => {
-  const [users,     setUsers]     = useState<UserResponse[]>([]);
-  const [total,     setTotal]     = useState(0);
-  const [roles,     setRoles]     = useState<RoleResponse[]>([]);
-  const [orgs,      setOrgs]      = useState<OrganisationResponse[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const { user: authUser } = useAuthStore();
+  const isSuperAdmin = authUser?.isSuperAdmin === true || authUser?.role === 'super_admin';
+
+  const [users,       setUsers]       = useState<UserResponse[]>([]);
+  const [total,       setTotal]       = useState(0);
+  const [roles,       setRoles]       = useState<RoleResponse[]>([]);
+  const [orgs,        setOrgs]        = useState<OrganisationResponse[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [submitting,  setSubmitting]  = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
-  const [viewUser,  setViewUser]  = useState<UserResponse | null>(null);
-  const [editTarget, setEditTarget] = useState<UserResponse | null>(null);
+  const [modalMode,   setModalMode]   = useState<'create' | 'edit' | null>(null);
+  const [viewUser,    setViewUser]    = useState<UserResponse | null>(null);
+  const [editTarget,  setEditTarget]  = useState<UserResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null);
-  const [deleting,  setDeleting]  = useState(false);
+  const [deleting,    setDeleting]    = useState(false);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  const { register, reset, handleSubmit, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { firstName: '', lastName: '', email: '', password: '', gender: '', orgId: '', roleId: '' },
-  });
+  const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY });
+  const { reset, handleSubmit, control, setValue, watch, formState: { errors } } = methods;
+
+  const { field: firstNameField } = useController({ name: 'firstName', control });
+  const { field: lastNameField  } = useController({ name: 'lastName',  control });
+  const { field: emailField     } = useController({ name: 'email',     control });
+  const { field: passwordField  } = useController({ name: 'password',  control });
+
+  const selectedOrgId  = watch('orgId');
+  const selectedRoleId = watch('roleId');
+  const selectedGender = watch('gender');
+  const selectedStatus = watch('statusId');
+
+  const selectedOrg  = orgs.find((o) => o.uuid === selectedOrgId);
+  const selectedRole = roles.find((r) => String(r.roleId) === selectedRoleId);
 
   // ─── Fetch ─────────────────────────────────────────────────────────────────
 
@@ -79,10 +150,24 @@ const Users = () => {
 
   useEffect(() => { fetchAll(); }, [currentPage]);
 
-  // ─── Open modals ───────────────────────────────────────────────────────────
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+    const pwd = Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    setValue('password', pwd);
+  };
+
+  const emptyForm = (): FormValues => ({
+    ...EMPTY,
+    // Auto-set org for non-super-admin users
+    orgId: !isSuperAdmin && authUser?.orgId ? authUser.orgId : '',
+  });
+
+  // ─── Open Modals ───────────────────────────────────────────────────────────
 
   const openCreate = () => {
-    reset({ firstName: '', lastName: '', email: '', password: '', gender: '', orgId: '', roleId: '' });
+    reset(emptyForm());
     setEditTarget(null);
     setModalMode('create');
   };
@@ -92,12 +177,20 @@ const Users = () => {
       firstName: u.firstName,
       lastName:  u.lastName,
       email:     u.email,
+      password:  '',
       gender:    u.gender ?? '',
       orgId:     u.orgId  ?? '',
       roleId:    u.roleId ? String(u.roleId) : '',
+      statusId:  u.statusId ? String(u.statusId) : '1',
     });
     setEditTarget(u);
     setModalMode('edit');
+  };
+
+  const closeModal = () => {
+    setModalMode(null);
+    setEditTarget(null);
+    reset(emptyForm());
   };
 
   // ─── Submit ────────────────────────────────────────────────────────────────
@@ -109,11 +202,11 @@ const Users = () => {
         firstName: values.firstName,
         lastName:  values.lastName,
         email:     values.email,
-        // Only send password if provided (never send empty string)
         ...(values.password?.trim() && { password: values.password.trim() }),
-        gender:    values.gender,
+        gender:    values.gender || undefined,
         orgId:     values.orgId,
         roleId:    Number(values.roleId),
+        statusId:  values.statusId ? Number(values.statusId) : 1,
       };
 
       if (modalMode === 'create') {
@@ -124,7 +217,7 @@ const Users = () => {
         toast.success('User updated successfully');
       }
 
-      setModalMode(null);
+      closeModal();
       fetchAll();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Something went wrong');
@@ -181,7 +274,7 @@ const Users = () => {
         <div className={styles.panelBody}>
           {loading ? (
             <div className={styles.emptyState}>
-              <Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} />
+              <div className={styles.spinner} />
             </div>
           ) : users.length === 0 ? (
             <div className={styles.emptyState}>
@@ -214,11 +307,9 @@ const Users = () => {
                     </td>
                     <td className={styles.mutedCell}>{u.email}</td>
                     <td>
-                      {u.roleName ? (
-                        <span className={`${styles.planBadge} ${styles.planPro}`}>{u.roleName}</span>
-                      ) : (
-                        <span className={styles.mutedCell}>—</span>
-                      )}
+                      {u.roleName
+                        ? <span className={`${styles.planBadge} ${styles.planPro}`}>{u.roleName}</span>
+                        : <span className={styles.mutedCell}>—</span>}
                     </td>
                     <td className={styles.mutedCell}>{u.orgName ?? '—'}</td>
                     <td>
@@ -232,27 +323,13 @@ const Users = () => {
                         >
                           {u.statusName}
                         </span>
-                      ) : (
-                        <span className={styles.mutedCell}>—</span>
-                      )}
+                      ) : <span className={styles.mutedCell}>—</span>}
                     </td>
                     <td>
                       <div className={styles.actionBtns} style={{ justifyContent: 'center' }}>
-                        <button
-                          className={styles.actionBtn}
-                          title="View"
-                          onClick={() => setViewUser(u)}
-                        ><Eye size={14} /></button>
-                        <button
-                          className={styles.actionBtn}
-                          title="Edit"
-                          onClick={() => openEdit(u)}
-                        ><Pencil size={14} /></button>
-                        <button
-                          className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
-                          title="Delete"
-                          onClick={() => setDeleteTarget(u)}
-                        ><Trash2 size={14} /></button>
+                        <button className={styles.actionBtn} title="View" onClick={() => setViewUser(u)}><Eye size={14} /></button>
+                        <button className={styles.actionBtn} title="Edit" onClick={() => openEdit(u)}><Pencil size={14} /></button>
+                        <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} title="Delete" onClick={() => setDeleteTarget(u)}><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -261,140 +338,200 @@ const Users = () => {
             </table>
           )}
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className={styles.paginationArea} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px' }}>
-              <button
-                className={styles.actionBtn}
-                disabled={currentPage === 0}
-                onClick={() => setCurrentPage((p) => p - 1)}
-              ><ChevronLeft size={14} /></button>
-              <span style={{ fontSize: 13, color: 'hsl(215,20%,60%)' }}>
-                Page {currentPage + 1} of {totalPages}
-              </span>
-              <button
-                className={styles.actionBtn}
-                disabled={currentPage >= totalPages - 1}
-                onClick={() => setCurrentPage((p) => p + 1)}
-              ><ChevronRight size={14} /></button>
+              <button className={styles.actionBtn} disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}><ChevronLeft size={14} /></button>
+              <span style={{ fontSize: 13, color: 'hsl(215,20%,60%)' }}>Page {currentPage + 1} of {totalPages}</span>
+              <button className={styles.actionBtn} disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage((p) => p + 1)}><ChevronRight size={14} /></button>
             </div>
           )}
         </div>
       </div>
 
       {/* ── Create / Edit Modal ─────────────────────────────────────────────── */}
-      <Dialog open={modalMode !== null} onOpenChange={(open) => !open && setModalMode(null)}>
-        <DialogContent style={{ maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
-          <DialogHeader>
-            <DialogTitle>{modalMode === 'create' ? 'Add User' : 'Edit User'}</DialogTitle>
-            <DialogDescription>
-              {modalMode === 'create'
-                ? 'Fill in the details to create a new user.'
-                : 'Update the user information below.'}
+      <Dialog open={modalMode !== null} onOpenChange={(open) => { if (!open) closeModal(); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
+                <UsersIcon size={18} className="text-blue-400" />
+              </div>
+              <DialogTitle className="text-xl font-bold text-white">
+                {modalMode === 'create' ? 'Add User' : 'Edit User'}
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-slate-400 text-sm pl-12">
+              {modalMode === 'create' ? 'Fill in the details to create a new user.' : 'Update the user information below.'}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <Label>First Name *</Label>
-                <Input {...register('firstName')} placeholder="John" />
-                {errors.firstName && <span style={{ color: 'hsl(0,84%,60%)', fontSize: 12 }}>{errors.firstName.message}</span>}
+          <FormProvider {...methods}>
+            <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
+              <div className="px-7 py-6 space-y-6">
+
+                {/* Personal Info */}
+                <Sec icon={<User size={13} />} label="Personal Information">
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Fld label="First Name" required error={errors.firstName?.message}>
+                        <IcoInput icon={<User size={15} />}>
+                          <Input placeholder="John" {...firstNameField} className={inp(!!errors.firstName)} />
+                        </IcoInput>
+                      </Fld>
+                      <Fld label="Last Name" required error={errors.lastName?.message}>
+                        <IcoInput icon={<User size={15} />}>
+                          <Input placeholder="Doe" {...lastNameField} className={inp(!!errors.lastName)} />
+                        </IcoInput>
+                      </Fld>
+                      <Fld label="Email" required error={errors.email?.message}>
+                        <IcoInput icon={<Mail size={15} />}>
+                          <Input type="email" autoComplete="off" placeholder="john@example.com" {...emailField} className={inp(!!errors.email)} />
+                        </IcoInput>
+                      </Fld>
+                      <Fld label={modalMode === 'create' ? 'Password' : 'New Password'}>
+                        <div className="flex gap-2">
+                          <IcoInput icon={<Lock size={15} />}>
+                            <Input
+                              type="text"
+                              autoComplete="new-password"
+                              placeholder={modalMode === 'create' ? 'Set a password' : 'Leave blank to keep current'}
+                              {...passwordField}
+                              className={inp(false)}
+                            />
+                          </IcoInput>
+                          <button
+                            type="button"
+                            onClick={generatePassword}
+                            title="Generate password"
+                            className="shrink-0 h-10 px-3 rounded-md border border-slate-700 bg-slate-900 text-slate-400 hover:text-blue-400 hover:border-blue-500 transition-all flex items-center gap-1.5 text-xs font-medium"
+                          >
+                            <Wand2 size={13} />
+                            Generate
+                          </button>
+                        </div>
+                      </Fld>
+                      <Fld label="Gender">
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger className={selectCls()}>
+                            <span className={selectedGender ? 'text-white' : 'text-slate-400'}>
+                              {selectedGender || '— Select gender —'}
+                            </span>
+                            <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="!bg-[#1e293b] border-slate-700 text-white z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                            {['Male', 'Female', 'Other'].map((g) => (
+                              <DropdownMenuItem key={g} onSelect={() => setValue('gender', g)} className="cursor-pointer focus:bg-slate-800 focus:text-white py-2.5">
+                                {g}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </Fld>
+                      <Fld label="Status">
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger className={selectCls()}>
+                            <span className="text-white">
+                              {selectedStatus === '2' ? 'Inactive' : 'Active'}
+                            </span>
+                            <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="!bg-[#1e293b] border-slate-700 text-white z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                            <DropdownMenuItem onSelect={() => setValue('statusId', '1')} className="cursor-pointer focus:bg-slate-800 focus:text-white py-2.5">Active</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setValue('statusId', '2')} className="cursor-pointer focus:bg-slate-800 focus:text-white py-2.5">Inactive</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </Fld>
+                    </div>
+                  </div>
+                </Sec>
+
+                {/* Organisation & Role */}
+                <Sec icon={<Shield size={13} />} label="Organisation & Role">
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {/* Org — show picker only for super_admin; others see their own org */}
+                      <Fld label="Organisation" required error={errors.orgId?.message}>
+                        {isSuperAdmin ? (
+                          <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger className={selectCls(!!errors.orgId)}>
+                              <span className={selectedOrg ? 'text-white' : 'text-slate-400'}>
+                                {selectedOrg ? selectedOrg.name : '— Select organisation —'}
+                              </span>
+                              <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="!bg-[#1e293b] border-slate-700 text-white z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                              {orgs.map((o) => (
+                                <DropdownMenuItem key={o.uuid} onSelect={() => setValue('orgId', o.uuid, { shouldValidate: true })} className="cursor-pointer focus:bg-slate-800 focus:text-white py-2.5">
+                                  {o.name}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          /* Non-super-admin: show their org read-only */
+                          <div className="h-10 rounded-md border border-slate-700 bg-slate-950/30 px-3 flex items-center gap-2 text-sm text-slate-300">
+                            <Building2 size={14} className="text-slate-500" />
+                            {orgs.find((o) => o.uuid === authUser?.orgId)?.name ?? authUser?.orgId ?? '—'}
+                          </div>
+                        )}
+                      </Fld>
+
+                      <Fld label="Role" required error={errors.roleId?.message}>
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger className={selectCls(!!errors.roleId)}>
+                            <span className={selectedRole ? 'text-white' : 'text-slate-400'}>
+                              {selectedRole ? selectedRole.name : '— Select role —'}
+                            </span>
+                            <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="!bg-[#1e293b] border-slate-700 text-white z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                            {roles.map((r) => (
+                              <DropdownMenuItem key={r.roleId} onSelect={() => setValue('roleId', String(r.roleId), { shouldValidate: true })} className="cursor-pointer focus:bg-slate-800 focus:text-white py-2.5">
+                                {r.name}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </Fld>
+                    </div>
+                  </div>
+                </Sec>
+
               </div>
-              <div>
-                <Label>Last Name *</Label>
-                <Input {...register('lastName')} placeholder="Doe" />
-                {errors.lastName && <span style={{ color: 'hsl(0,84%,60%)', fontSize: 12 }}>{errors.lastName.message}</span>}
-              </div>
-            </div>
 
-            <div>
-              <Label>Email *</Label>
-              <Input {...register('email')} type="email" placeholder="john@example.com" />
-              {errors.email && <span style={{ color: 'hsl(0,84%,60%)', fontSize: 12 }}>{errors.email.message}</span>}
-            </div>
-
-            <div>
-              <Label>{modalMode === 'create' ? 'Password' : 'New Password'}</Label>
-              <Input
-                {...register('password')}
-                type="password"
-                placeholder={modalMode === 'create' ? 'Set a password' : 'Leave blank to keep current'}
-              />
-            </div>
-
-            <div>
-              <Label>Gender</Label>
-              <select
-                {...register('gender')}
-                style={{
-                  width: '100%', padding: '8px 10px', borderRadius: 6, fontSize: 13,
-                  background: 'hsl(222,47%,8%)', border: '1px solid hsl(217,33%,18%)',
-                  color: 'hsl(210,40%,85%)', outline: 'none',
-                }}
-              >
-                <option value="">Select gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <Label>Organisation *</Label>
-              <select
-                {...register('orgId')}
-                style={{
-                  width: '100%', padding: '8px 10px', borderRadius: 6, fontSize: 13,
-                  background: 'hsl(222,47%,8%)', border: '1px solid hsl(217,33%,18%)',
-                  color: 'hsl(210,40%,85%)', outline: 'none',
-                }}
-              >
-                <option value="">Select organisation</option>
-                {orgs.map((o) => (
-                  <option key={o.uuid} value={o.uuid}>{o.name}</option>
-                ))}
-              </select>
-              {errors.orgId && <span style={{ color: 'hsl(0,84%,60%)', fontSize: 12 }}>{errors.orgId.message}</span>}
-            </div>
-
-            <div>
-              <Label>Role *</Label>
-              <select
-                {...register('roleId')}
-                style={{
-                  width: '100%', padding: '8px 10px', borderRadius: 6, fontSize: 13,
-                  background: 'hsl(222,47%,8%)', border: '1px solid hsl(217,33%,18%)',
-                  color: 'hsl(210,40%,85%)', outline: 'none',
-                }}
-              >
-                <option value="">Select role</option>
-                {roles.map((r) => (
-                  <option key={r.roleId} value={r.roleId}>{r.name}</option>
-                ))}
-              </select>
-              {errors.roleId && <span style={{ color: 'hsl(0,84%,60%)', fontSize: 12 }}>{errors.roleId.message}</span>}
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setModalMode(null)}>Cancel</Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting && <Loader2 size={14} style={{ marginRight: 6, animation: 'spin 1s linear infinite' }} />}
-                {modalMode === 'create' ? 'Create User' : 'Save Changes'}
-              </Button>
-            </DialogFooter>
-          </form>
+              <DialogFooter className="px-7 py-5 border-t border-slate-800 bg-slate-900/30 rounded-b-2xl flex gap-3">
+                <Button type="button" variant="ghost" onClick={closeModal} disabled={submitting}
+                  className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={submitting}
+                  className="flex-1 sm:flex-none sm:min-w-44 bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg active:scale-95">
+                  {submitting ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      {modalMode === 'create' ? 'Creating...' : 'Saving...'}
+                    </span>
+                  ) : modalMode === 'create' ? 'Create User' : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </FormProvider>
         </DialogContent>
       </Dialog>
 
       {/* ── View Modal ──────────────────────────────────────────────────────── */}
       <Dialog open={!!viewUser} onOpenChange={(open) => !open && setViewUser(null)}>
-        <DialogContent style={{ maxWidth: 460 }}>
+        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white">
           <DialogHeader>
-            <DialogTitle>User Details</DialogTitle>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
+                <UserCircle size={18} className="text-blue-400" />
+              </div>
+              <DialogTitle className="text-white text-lg font-bold">User Details</DialogTitle>
+            </div>
           </DialogHeader>
           {viewUser && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13.5 }}>
+            <div className="space-y-3 mt-2">
               {[
                 ['Name',         `${viewUser.firstName} ${viewUser.lastName}`],
                 ['Email',        viewUser.email],
@@ -403,35 +540,44 @@ const Users = () => {
                 ['Role',         viewUser.roleName ?? '—'],
                 ['Status',       viewUser.statusName ?? '—'],
               ].map(([label, value]) => (
-                <div key={label} style={{ display: 'flex', gap: 12 }}>
-                  <span style={{ color: 'hsl(215,20%,45%)', minWidth: 110 }}>{label}</span>
-                  <span style={{ color: 'hsl(210,40%,88%)', fontWeight: 500 }}>{value}</span>
+                <div key={label} className="flex gap-3 py-2 border-b border-slate-800 last:border-0">
+                  <span className="text-slate-500 min-w-28 text-sm">{label}</span>
+                  <span className="text-slate-200 font-medium text-sm">{value}</span>
                 </div>
               ))}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setViewUser(null)}>Close</Button>
+          <DialogFooter className="mt-4">
+            <Button variant="ghost" onClick={() => setViewUser(null)}
+              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ── Delete Confirm Modal ─────────────────────────────────────────────── */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent style={{ maxWidth: 400 }}>
+        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white">
           <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
-            <DialogDescription>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="h-10 w-10 rounded-xl bg-red-600/15 border border-red-500/30 flex items-center justify-center shrink-0">
+                <DeleteIcon size={18} className="text-red-400" />
+              </div>
+              <DialogTitle className="text-white">Delete User</DialogTitle>
+            </div>
+            <DialogDescription className="text-slate-400 pl-[52px]">
               Are you sure you want to delete{' '}
-              <strong>{deleteTarget?.firstName} {deleteTarget?.lastName}</strong>?
+              <span className="text-white font-medium">{deleteTarget?.firstName} {deleteTarget?.lastName}</span>?
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting && <Loader2 size={14} style={{ marginRight: 6, animation: 'spin 1s linear infinite' }} />}
-              Delete
+          <DialogFooter className="gap-3 mt-2">
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}
+              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Cancel</Button>
+            <Button onClick={handleDelete} disabled={deleting}
+              className="bg-red-600 hover:bg-red-500 text-white font-semibold min-w-28">
+              {deleting
+                ? <span className="flex items-center gap-2"><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Deleting...</span>
+                : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>

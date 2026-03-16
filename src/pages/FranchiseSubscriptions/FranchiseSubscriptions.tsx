@@ -1,3 +1,10 @@
+/**
+ * FranchiseSubscriptions.tsx
+ *
+ * Dedicated page for franchise users to manage the subscription plans
+ * they offer to their customers. Plans created here are tagged with
+ * createdByOrgId = authUser.orgId so they're isolated from global plans.
+ */
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
@@ -5,16 +12,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
 import {
-  CreditCard, Plus, RefreshCw, IndianRupee, Clock,
-  FileText, Loader2, Eye, Pencil, Trash2, ChevronLeft, ChevronRight,
-  CheckCircle, XCircle, Users, Package, LayoutGrid,
+  CreditCard, Plus, RefreshCw, IndianRupee, Clock, FileText, Loader2,
+  Eye, Pencil, Trash2, ChevronLeft, ChevronRight,
+  CheckCircle, XCircle, Users, Package, LayoutGrid, Sparkles,
 } from 'lucide-react';
 
 import { subscriptionService } from '@/services/subscriptionService';
 import { moduleService } from '@/services/moduleService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
-import { useAuthStore } from '@/store/useAuthStore';
 import type { ModuleResponse } from '@/services/models/module';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
@@ -22,25 +29,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import styles from './Subscriptions.module.css';
+import styles from '@/pages/Subscriptions/Subscriptions.module.css';
 
 const PAGE_SIZE = 10;
 
-// ─── Schema ───────────────────────────────────────────────────────────────────
-
 const schema = z.object({
   planName: z.string().min(1, 'Plan name is required'),
-  price: z
-    .string()
-    .min(1, 'Price is required')
+  price: z.string().min(1, 'Price is required')
     .refine((v) => /^\d+(\.\d{1,2})?$/.test(v), 'Enter a valid price (e.g. 999.00)'),
-  durationMonths: z
-    .string()
-    .min(1, 'Duration is required')
+  durationMonths: z.string().min(1, 'Duration is required')
     .refine((v) => /^\d+$/.test(v) && parseInt(v) > 0, 'Enter a valid number of months'),
-  maxUsers: z
-    .string()
-    .optional()
+  maxUsers: z.string().optional()
     .refine((v) => !v || (/^\d+$/.test(v) && parseInt(v) > 0), 'Enter a valid number'),
   billingCycle: z.enum(['MONTHLY', 'YEARLY']).optional(),
   isActive: z.boolean(),
@@ -49,27 +48,23 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 const isActivePlan = (plan: SubscriptionResponse) =>
   plan.status?.name?.toUpperCase() === 'ACTIVE';
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
-const Subscriptions = () => {
+const FranchiseSubscriptions = () => {
   const { user } = useAuthStore();
-  const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+  const orgId = user?.orgId ?? '';
 
-  const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
+  const [plans, setPlans]           = useState<SubscriptionResponse[]>([]);
   const [allModules, setAllModules] = useState<ModuleResponse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]       = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
-  const [viewPlan, setViewPlan] = useState<SubscriptionResponse | null>(null);
+  const [modalMode, setModalMode]   = useState<'create' | 'edit' | null>(null);
+  const [viewPlan, setViewPlan]     = useState<SubscriptionResponse | null>(null);
   const [editTarget, setEditTarget] = useState<SubscriptionResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SubscriptionResponse | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting, setDeleting]     = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [toggleTarget, setToggleTarget] = useState<{ plan: SubscriptionResponse; newActive: boolean } | null>(null);
   const [selectedModuleIds, setSelectedModuleIds] = useState<number[]>([]);
@@ -84,12 +79,11 @@ const Subscriptions = () => {
   // ─── Fetch ────────────────────────────────────────────────────────────────
 
   const fetchData = async () => {
+    if (!orgId) return;
     setLoading(true);
     try {
       const [p, m] = await Promise.all([
-        isSuperAdmin
-          ? subscriptionService.listSubscriptions()
-          : subscriptionService.listSubscriptionsByOrgId(user!.orgId!),
+        subscriptionService.listSubscriptionsByOrgId(orgId),
         moduleService.listModules(),
       ]);
       setPlans(p);
@@ -101,9 +95,9 @@ const Subscriptions = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [orgId]);
 
-  // ─── Create ───────────────────────────────────────────────────────────────
+  // ─── Create / Edit ────────────────────────────────────────────────────────
 
   const openCreate = () => {
     setEditTarget(null);
@@ -111,8 +105,6 @@ const Subscriptions = () => {
     reset({ planName: '', price: '', durationMonths: '', maxUsers: '', billingCycle: 'MONTHLY', isActive: true, notes: '' });
     setModalMode('create');
   };
-
-  // ─── Edit ─────────────────────────────────────────────────────────────────
 
   const openEdit = (plan: SubscriptionResponse) => {
     setEditTarget(plan);
@@ -129,15 +121,8 @@ const Subscriptions = () => {
     setModalMode('edit');
   };
 
-  // ─── Module toggle ────────────────────────────────────────────────────────
-
-  const toggleModule = (id: number) => {
-    setSelectedModuleIds((prev) =>
-      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id],
-    );
-  };
-
-  // ─── Submit (create / edit) ───────────────────────────────────────────────
+  const toggleModule = (id: number) =>
+    setSelectedModuleIds((prev) => prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]);
 
   const onSubmit = async (data: FormValues) => {
     setSubmitting(true);
@@ -150,32 +135,27 @@ const Subscriptions = () => {
       statusId: data.isActive ? 1 : 2,
       notes: data.notes || undefined,
       moduleIds: selectedModuleIds,
-      // Org users own the plan — tag it with their orgId
-      createdByOrgId: !isSuperAdmin && user?.orgId ? user.orgId : undefined,
+      createdByOrgId: orgId,   // tag plan as owned by this franchise
     };
     try {
       if (modalMode === 'edit' && editTarget) {
         const updated = await subscriptionService.updateSubscription(editTarget.id, payload);
         setPlans((prev) => prev.map((p) => p.id === editTarget.id ? updated : p));
-        toast.success('Subscription plan updated!');
+        toast.success('Plan updated!');
       } else {
         const created = await subscriptionService.createSubscription(payload);
         setPlans((prev) => [...prev, created]);
-        toast.success('Subscription plan created!');
+        toast.success('Plan created!');
       }
       setModalMode(null);
     } catch (e: any) {
-      toast.error(e.message || `Failed to ${modalMode === 'edit' ? 'update' : 'create'} subscription plan`);
+      toast.error(e.message || `Failed to ${modalMode === 'edit' ? 'update' : 'create'} plan`);
     } finally {
       setSubmitting(false);
     }
   };
 
   // ─── Toggle status ────────────────────────────────────────────────────────
-
-  const handleToggleStatus = (plan: SubscriptionResponse) => {
-    setToggleTarget({ plan, newActive: !isActivePlan(plan) });
-  };
 
   const confirmToggleStatus = async () => {
     if (!toggleTarget) return;
@@ -201,10 +181,10 @@ const Subscriptions = () => {
     try {
       await subscriptionService.deleteSubscription(deleteTarget.id);
       setPlans((prev) => prev.filter((p) => p.id !== deleteTarget.id));
-      toast.success('Subscription plan deleted');
+      toast.success('Plan deleted');
       setDeleteTarget(null);
     } catch (e: any) {
-      toast.error(e.message || 'Failed to delete subscription plan');
+      toast.error(e.message || 'Failed to delete plan');
     } finally {
       setDeleting(false);
     }
@@ -213,7 +193,7 @@ const Subscriptions = () => {
   // ─── Pagination ───────────────────────────────────────────────────────────
 
   const totalPages = Math.max(1, Math.ceil(plans.length / PAGE_SIZE));
-  const paginated = plans.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  const paginated  = plans.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -222,11 +202,9 @@ const Subscriptions = () => {
       {/* Header */}
       <div className={styles.pageHeader}>
         <div>
-          <h1 className={styles.pageTitle}>Subscription Plans</h1>
+          <h1 className={styles.pageTitle}>My Subscription Plans</h1>
           <p className={styles.pageSubtitle}>
-            {isSuperAdmin
-              ? 'Create and manage global subscription plans with features (modules) and user limits.'
-              : 'Create and manage subscription plans for your franchise branches.'}
+            Create and manage subscription plans to offer your customers. Each plan defines features and user limits.
           </p>
         </div>
         <button className={styles.createBtn} onClick={openCreate}>
@@ -239,7 +217,7 @@ const Subscriptions = () => {
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <h3 className={styles.panelTitle}>
-            <CreditCard style={{ display: 'inline', width: 16, height: 16, marginRight: 8, verticalAlign: 'middle' }} />
+            <Sparkles style={{ display: 'inline', width: 16, height: 16, marginRight: 8, verticalAlign: 'middle' }} />
             All Plans
           </h3>
           <button className={styles.refreshBtn} onClick={fetchData} title="Refresh">
@@ -257,7 +235,7 @@ const Subscriptions = () => {
             <div className={styles.emptyState}>
               <CreditCard style={{ width: 40, height: 40, marginBottom: 12, opacity: 0.3 }} />
               <p>No subscription plans yet.</p>
-              <p className={styles.emptySubtext}>Click "Create Plan" to add one.</p>
+              <p className={styles.emptySubtext}>Click "Create Plan" to add one for your customers.</p>
             </div>
           ) : (
             <>
@@ -267,7 +245,7 @@ const Subscriptions = () => {
                     <th>Plan Name</th>
                     <th>Price</th>
                     <th>Duration</th>
-                    <th>Max Users</th>
+                    <th>Max Customers</th>
                     <th>Modules</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -278,15 +256,15 @@ const Subscriptions = () => {
                     <tr key={p.id} className={styles.tableRow}>
                       <td><span className={styles.planName}>{p.planName}</span></td>
                       <td className={styles.mutedCell}>
-                        {p.price != null ? `\u20B9 ${Number(p.price).toLocaleString('en-IN')}` : '\u2014'}
+                        {p.price != null ? `₹ ${Number(p.price).toLocaleString('en-IN')}` : '—'}
                       </td>
                       <td className={styles.mutedCell}>
                         {p.durationMonths != null
-                          ? `${p.durationMonths} mo${p.billingCycle ? ` \u00B7 ${p.billingCycle.charAt(0) + p.billingCycle.slice(1).toLowerCase()}` : ''}`
-                          : '\u2014'}
+                          ? `${p.durationMonths} mo${p.billingCycle ? ` · ${p.billingCycle.charAt(0) + p.billingCycle.slice(1).toLowerCase()}` : ''}`
+                          : '—'}
                       </td>
                       <td className={styles.mutedCell}>
-                        {p.maxUsers != null ? p.maxUsers.toLocaleString() : '\u2014'}
+                        {p.maxUsers != null ? p.maxUsers.toLocaleString() : '—'}
                       </td>
                       <td className={styles.mutedCell}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#94a3b8' }}>
@@ -298,7 +276,7 @@ const Subscriptions = () => {
                         <StatusToggle
                           active={isActivePlan(p)}
                           loading={togglingId === p.id}
-                          onToggle={() => handleToggleStatus(p)}
+                          onToggle={() => setToggleTarget({ plan: p, newActive: !isActivePlan(p) })}
                         />
                       </td>
                       <td>
@@ -309,11 +287,7 @@ const Subscriptions = () => {
                           <button className={styles.actionBtn} title="Edit" onClick={() => openEdit(p)}>
                             <Pencil size={14} />
                           </button>
-                          <button
-                            className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
-                            title="Delete"
-                            onClick={() => setDeleteTarget(p)}
-                          >
+                          <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} title="Delete" onClick={() => setDeleteTarget(p)}>
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -325,30 +299,18 @@ const Subscriptions = () => {
 
               <div className={styles.pagination}>
                 <span className={styles.paginationInfo}>
-                  {`Showing ${currentPage * PAGE_SIZE + 1}\u2013${Math.min((currentPage + 1) * PAGE_SIZE, plans.length)} of ${plans.length}`}
+                  {`Showing ${currentPage * PAGE_SIZE + 1}–${Math.min((currentPage + 1) * PAGE_SIZE, plans.length)} of ${plans.length}`}
                 </span>
                 <div className={styles.paginationControls}>
-                  <button
-                    className={styles.pageBtn}
-                    disabled={currentPage === 0}
-                    onClick={() => setCurrentPage((prev) => prev - 1)}
-                  >
+                  <button className={styles.pageBtn} disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}>
                     <ChevronLeft size={14} />
                   </button>
                   {Array.from({ length: totalPages }, (_, i) => (
-                    <button
-                      key={i}
-                      className={`${styles.pageBtn} ${i === currentPage ? styles.pageBtnActive : ''}`}
-                      onClick={() => setCurrentPage(i)}
-                    >
+                    <button key={i} className={`${styles.pageBtn} ${i === currentPage ? styles.pageBtnActive : ''}`} onClick={() => setCurrentPage(i)}>
                       {i + 1}
                     </button>
                   ))}
-                  <button
-                    className={styles.pageBtn}
-                    disabled={currentPage === totalPages - 1}
-                    onClick={() => setCurrentPage((prev) => prev + 1)}
-                  >
+                  <button className={styles.pageBtn} disabled={currentPage === totalPages - 1} onClick={() => setCurrentPage((p) => p + 1)}>
                     <ChevronRight size={14} />
                   </button>
                 </div>
@@ -363,17 +325,15 @@ const Subscriptions = () => {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-                <CreditCard size={18} className="text-blue-400" />
+              <div className="h-9 w-9 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center">
+                <Sparkles size={18} className="text-purple-400" />
               </div>
               <DialogTitle className="text-xl font-bold text-white">
-                {modalMode === 'edit' ? 'Edit Subscription Plan' : 'Create Subscription Plan'}
+                {modalMode === 'edit' ? 'Edit Plan' : 'Create Subscription Plan'}
               </DialogTitle>
             </div>
             <DialogDescription className="text-slate-400 text-sm pl-12">
-              {modalMode === 'edit'
-                ? 'Update the plan details and its assigned modules.'
-                : 'Define a reusable plan with pricing, limits, and features.'}
+              {modalMode === 'edit' ? 'Update the plan details.' : 'Define a plan to offer your customers — set pricing, limits, and features.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -381,8 +341,7 @@ const Subscriptions = () => {
             <div className="px-7 py-6 space-y-5">
 
               <Fld label="Plan Name" required error={errors.planName?.message}>
-                <Input placeholder="e.g. Professional Plan" {...register('planName')}
-                  className={inputCls(!!errors.planName)} />
+                <Input placeholder="e.g. Basic Plan" {...register('planName')} className={inputCls(!!errors.planName)} />
               </Fld>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -391,8 +350,7 @@ const Subscriptions = () => {
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">
                       <IndianRupee size={14} />
                     </span>
-                    <Input placeholder="0.00" {...register('price')}
-                      className={inputCls(!!errors.price) + ' pl-9'} />
+                    <Input placeholder="0.00" {...register('price')} className={inputCls(!!errors.price) + ' pl-9'} />
                   </div>
                 </Fld>
                 <Fld label="Duration (Months)" required error={errors.durationMonths?.message}>
@@ -400,34 +358,25 @@ const Subscriptions = () => {
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">
                       <Clock size={14} />
                     </span>
-                    <Input placeholder="e.g. 12" {...register('durationMonths')}
-                      className={inputCls(!!errors.durationMonths) + ' pl-9'} />
+                    <Input placeholder="e.g. 12" {...register('durationMonths')} className={inputCls(!!errors.durationMonths) + ' pl-9'} />
                   </div>
                 </Fld>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Fld label="Max Users" hint="Optional" error={errors.maxUsers?.message}>
+                <Fld label="Max Customers" hint="Optional" error={errors.maxUsers?.message}>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">
                       <Users size={14} />
                     </span>
-                    <Input placeholder="e.g. 50" {...register('maxUsers')}
-                      className={inputCls(!!errors.maxUsers) + ' pl-9'} />
+                    <Input placeholder="e.g. 50" {...register('maxUsers')} className={inputCls(!!errors.maxUsers) + ' pl-9'} />
                   </div>
                 </Fld>
                 <Fld label="Billing Cycle">
                   <div className="flex gap-2">
                     {(['MONTHLY', 'YEARLY'] as const).map((cycle) => (
-                      <button
-                        key={cycle}
-                        type="button"
-                        onClick={() => setValue('billingCycle', cycle)}
-                        className={`flex-1 h-10 rounded-md text-sm font-medium border transition-all ${watch('billingCycle') === cycle
-                          ? 'bg-blue-600/20 border-blue-500/60 text-blue-400'
-                          : 'bg-slate-950/60 border-slate-700 text-slate-400 hover:border-slate-600'
-                          }`}
-                      >
+                      <button key={cycle} type="button" onClick={() => setValue('billingCycle', cycle)}
+                        className={`flex-1 h-10 rounded-md text-sm font-medium border transition-all ${watch('billingCycle') === cycle ? 'bg-purple-600/20 border-purple-500/60 text-purple-400' : 'bg-slate-950/60 border-slate-700 text-slate-400 hover:border-slate-600'}`}>
                         {cycle.charAt(0) + cycle.slice(1).toLowerCase()}
                       </button>
                     ))}
@@ -438,13 +387,9 @@ const Subscriptions = () => {
               {modalMode === 'edit' && (
                 <Fld label="Status">
                   <div className="flex items-center gap-3 py-1">
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={watchIsActive}
+                    <button type="button" role="switch" aria-checked={watchIsActive}
                       onClick={() => setValue('isActive', !watchIsActive)}
-                      className={`${styles.statusToggle} ${watchIsActive ? styles.toggleOn : styles.toggleOff}`}
-                    >
+                      className={`${styles.statusToggle} ${watchIsActive ? styles.toggleOn : styles.toggleOff}`}>
                       <span className={styles.toggleKnob}>
                         {watchIsActive ? <CheckCircle size={10} /> : <XCircle size={10} />}
                       </span>
@@ -458,48 +403,20 @@ const Subscriptions = () => {
 
               <Fld label="Features (Modules)" hint="Select which features this plan includes">
                 {allModules.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-2">
-                    No modules available. Create modules on the Modules page first.
-                  </p>
+                  <p className="text-xs text-slate-500 py-2">No modules available.</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 mt-1">
                     {allModules.map((m) => {
                       const checked = selectedModuleIds.includes(m.id);
                       return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => toggleModule(m.id)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 10,
-                            padding: '10px 12px',
-                            borderRadius: 8,
-                            border: `1px solid ${checked ? 'rgba(59,130,246,0.4)' : '#1e293b'}`,
-                            background: checked ? 'rgba(59,130,246,0.08)' : 'rgba(15,23,42,0.4)',
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                          }}
-                        >
-                          <span style={{
-                            marginTop: 2, flexShrink: 0, width: 16, height: 16,
-                            borderRadius: 4, border: `1px solid ${checked ? '#3b82f6' : '#475569'}`,
-                            background: checked ? '#3b82f6' : 'transparent',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}>
+                        <button key={m.id} type="button" onClick={() => toggleModule(m.id)}
+                          style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${checked ? 'rgba(139,92,246,0.4)' : '#1e293b'}`, background: checked ? 'rgba(139,92,246,0.08)' : 'rgba(15,23,42,0.4)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
+                          <span style={{ marginTop: 2, flexShrink: 0, width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? '#8b5cf6' : '#475569'}`, background: checked ? '#8b5cf6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {checked && <CheckCircle size={10} color="white" />}
                           </span>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: 12, fontWeight: 600, color: checked ? '#93c5fd' : '#94a3b8', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {m.name}
-                            </p>
-                            {m.category && (
-                              <p style={{ fontSize: 11, color: '#475569', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {m.category}
-                              </p>
-                            )}
+                            <p style={{ fontSize: 12, fontWeight: 600, color: checked ? '#c4b5fd' : '#94a3b8', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
+                            {m.category && <p style={{ fontSize: 11, color: '#475569', margin: 0 }}>{m.category}</p>}
                           </div>
                         </button>
                       );
@@ -507,41 +424,28 @@ const Subscriptions = () => {
                   </div>
                 )}
                 {selectedModuleIds.length > 0 && (
-                  <p style={{ fontSize: 12, color: '#60a5fa', marginTop: 8 }}>
+                  <p style={{ fontSize: 12, color: '#a78bfa', marginTop: 8 }}>
                     {selectedModuleIds.length} module{selectedModuleIds.length !== 1 ? 's' : ''} selected
                   </p>
                 )}
               </Fld>
 
-              <Fld label="Notes" hint="Optional" error={errors.notes?.message}>
+              <Fld label="Notes" hint="Optional">
                 <div className="relative">
-                  <span className="absolute left-3 top-3 text-slate-500 pointer-events-none z-10">
-                    <FileText size={14} />
-                  </span>
-                  <textarea
-                    rows={3}
-                    placeholder="Description or notes..."
-                    {...register('notes')}
-                    className="w-full rounded-md bg-slate-950/60 border border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-sm px-3 py-2 pl-9 resize-none outline-none"
-                  />
+                  <span className="absolute left-3 top-3 text-slate-500 pointer-events-none z-10"><FileText size={14} /></span>
+                  <textarea rows={3} placeholder="Description or notes..." {...register('notes')}
+                    className="w-full rounded-md bg-slate-950/60 border border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 transition-all text-sm px-3 py-2 pl-9 resize-none outline-none" />
                 </div>
               </Fld>
-
             </div>
 
             <DialogFooter className="px-7 py-5 border-t border-slate-800 bg-slate-900/30 rounded-b-2xl flex gap-3">
               <Button type="button" variant="ghost" onClick={() => setModalMode(null)} disabled={submitting}
-                className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
-                Cancel
-              </Button>
+                className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Cancel</Button>
               <Button type="submit" disabled={submitting}
-                className="flex-1 sm:flex-none sm:min-w-40 bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg active:scale-95">
-                {submitting ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin" />
-                    {modalMode === 'edit' ? 'Saving...' : 'Creating...'}
-                  </span>
-                ) : modalMode === 'edit' ? 'Save Changes' : 'Create Plan'}
+                className="flex-1 sm:flex-none sm:min-w-40 bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-lg active:scale-95">
+                {submitting ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />{modalMode === 'edit' ? 'Saving...' : 'Creating...'}</span>
+                  : modalMode === 'edit' ? 'Save Changes' : 'Create Plan'}
               </Button>
             </DialogFooter>
           </form>
@@ -553,8 +457,8 @@ const Subscriptions = () => {
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-                <CreditCard size={18} className="text-blue-400" />
+              <div className="h-9 w-9 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center">
+                <Sparkles size={18} className="text-purple-400" />
               </div>
               <DialogTitle className="text-xl font-bold text-white">Plan Details</DialogTitle>
             </div>
@@ -563,30 +467,25 @@ const Subscriptions = () => {
             <div className="px-7 py-6 space-y-5">
               <div>
                 <ViewRow label="Plan Name" value={viewPlan.planName} />
-                <ViewRow label="Price" value={viewPlan.price != null ? `\u20B9 ${Number(viewPlan.price).toLocaleString('en-IN')}` : '\u2014'} />
-                <ViewRow label="Duration" value={viewPlan.durationMonths != null ? `${viewPlan.durationMonths} month${viewPlan.durationMonths !== 1 ? 's' : ''}` : '\u2014'} />
-                <ViewRow label="Billing Cycle" value={viewPlan.billingCycle ?? '\u2014'} />
-                <ViewRow label="Max Users" value={viewPlan.maxUsers != null ? String(viewPlan.maxUsers) : 'Unlimited'} />
-                <ViewRow label="Status" value={viewPlan.status?.name ?? '\u2014'} />
-                <ViewRow label="Notes" value={viewPlan.notes ?? '\u2014'} />
+                <ViewRow label="Price" value={viewPlan.price != null ? `₹ ${Number(viewPlan.price).toLocaleString('en-IN')}` : '—'} />
+                <ViewRow label="Duration" value={viewPlan.durationMonths != null ? `${viewPlan.durationMonths} month${viewPlan.durationMonths !== 1 ? 's' : ''}` : '—'} />
+                <ViewRow label="Billing Cycle" value={viewPlan.billingCycle ?? '—'} />
+                <ViewRow label="Max Customers" value={viewPlan.maxUsers != null ? String(viewPlan.maxUsers) : 'Unlimited'} />
+                <ViewRow label="Status" value={viewPlan.status?.name ?? '—'} />
+                <ViewRow label="Notes" value={viewPlan.notes ?? '—'} />
               </div>
-
               <div>
                 <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <LayoutGrid size={12} />
-                  Features / Modules ({(viewPlan.modules ?? []).length})
+                  <LayoutGrid size={12} />Features / Modules ({(viewPlan.modules ?? []).length})
                 </p>
                 {(viewPlan.modules ?? []).length === 0 ? (
-                  <p style={{ fontSize: 12, color: '#475569' }}>No modules assigned to this plan.</p>
+                  <p style={{ fontSize: 12, color: '#475569' }}>No modules assigned.</p>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                     {viewPlan.modules!.map((m) => (
                       <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(15,23,42,0.4)', border: '1px solid #1e293b', borderRadius: 8, padding: '8px 12px' }}>
-                        <Package size={13} color="#60a5fa" style={{ flexShrink: 0 }} />
-                        <div style={{ minWidth: 0 }}>
-                          <p style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
-                          {m.category && <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>{m.category}</p>}
-                        </div>
+                        <Package size={13} color="#a78bfa" style={{ flexShrink: 0 }} />
+                        <p style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', margin: 0 }}>{m.name}</p>
                       </div>
                     ))}
                   </div>
@@ -596,57 +495,37 @@ const Subscriptions = () => {
           )}
           <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
             <Button variant="ghost" onClick={() => setViewPlan(null)}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
-              Close
-            </Button>
+              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Toggle Confirm Modal */}
+      {/* Toggle Confirm */}
       <Dialog open={toggleTarget !== null} onOpenChange={(open) => { if (!open) setToggleTarget(null); }}>
         <DialogContent className="sm:max-w-sm !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
             <div className="flex items-center gap-3 mb-1">
               <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${toggleTarget?.newActive ? 'bg-green-600/20 border border-green-500/30' : 'bg-orange-600/20 border border-orange-500/30'}`}>
-                {toggleTarget?.newActive
-                  ? <CheckCircle size={18} className="text-green-400" />
-                  : <XCircle size={18} className="text-orange-400" />}
+                {toggleTarget?.newActive ? <CheckCircle size={18} className="text-green-400" /> : <XCircle size={18} className="text-orange-400" />}
               </div>
-              <DialogTitle className="text-xl font-bold text-white">
-                {toggleTarget?.newActive ? 'Activate Plan' : 'Deactivate Plan'}
-              </DialogTitle>
+              <DialogTitle className="text-xl font-bold text-white">{toggleTarget?.newActive ? 'Activate Plan' : 'Deactivate Plan'}</DialogTitle>
             </div>
             <DialogDescription className="text-slate-400 text-sm pl-12">
-              Are you sure you want to{' '}
-              <strong className="text-white">{toggleTarget?.newActive ? 'activate' : 'deactivate'}</strong>{' '}
-              <strong className="text-white">{toggleTarget?.plan.planName}</strong>?
-              {!toggleTarget?.newActive && ' Inactive plans will not be available for new organisations.'}
+              Are you sure you want to <strong className="text-white">{toggleTarget?.newActive ? 'activate' : 'deactivate'}</strong> <strong className="text-white">{toggleTarget?.plan.planName}</strong>?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
             <Button variant="ghost" onClick={() => setToggleTarget(null)} disabled={!!togglingId}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
-              Cancel
-            </Button>
-            <Button
-              onClick={confirmToggleStatus}
-              disabled={!!togglingId}
-              className={toggleTarget?.newActive
-                ? 'bg-green-600 hover:bg-green-500 text-white font-semibold'
-                : 'bg-orange-600 hover:bg-orange-500 text-white font-semibold'}
-            >
-              {togglingId ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin" /> Updating...
-                </span>
-              ) : toggleTarget?.newActive ? 'Activate' : 'Deactivate'}
+              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Cancel</Button>
+            <Button onClick={confirmToggleStatus} disabled={!!togglingId}
+              className={toggleTarget?.newActive ? 'bg-green-600 hover:bg-green-500 text-white font-semibold' : 'bg-orange-600 hover:bg-orange-500 text-white font-semibold'}>
+              {togglingId ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Updating...</span> : toggleTarget?.newActive ? 'Activate' : 'Deactivate'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirm Modal */}
+      {/* Delete Confirm */}
       <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <DialogContent className="sm:max-w-sm !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
@@ -657,23 +536,14 @@ const Subscriptions = () => {
               <DialogTitle className="text-xl font-bold text-white">Delete Plan</DialogTitle>
             </div>
             <DialogDescription className="text-slate-400 text-sm pl-12">
-              Are you sure you want to delete{' '}
-              <strong className="text-white">{deleteTarget?.planName}</strong>?
-              This action cannot be undone.
+              Are you sure you want to delete <strong className="text-white">{deleteTarget?.planName}</strong>? This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
             <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
-              Cancel
-            </Button>
-            <Button onClick={confirmDelete} disabled={deleting}
-              className="bg-red-600 hover:bg-red-500 text-white font-semibold">
-              {deleting ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 size={14} className="animate-spin" /> Deleting...
-                </span>
-              ) : 'Delete'}
+              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Cancel</Button>
+            <Button onClick={confirmDelete} disabled={deleting} className="bg-red-600 hover:bg-red-500 text-white font-semibold">
+              {deleting ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Deleting...</span> : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -682,12 +552,12 @@ const Subscriptions = () => {
   );
 };
 
-export default Subscriptions;
+export default FranchiseSubscriptions;
 
 // ─── Micro helpers ─────────────────────────────────────────────────────────────
 
 const inputCls = (hasError?: boolean) =>
-  `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
+  `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
 
 function Fld({ label, required, hint, error, children }: {
   label: string; required?: boolean; hint?: string; error?: string; children: ReactNode;
@@ -714,19 +584,11 @@ function ViewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StatusToggle({ active, loading, onToggle }: {
-  active: boolean; loading: boolean; onToggle: () => void;
-}) {
+function StatusToggle({ active, loading, onToggle }: { active: boolean; loading: boolean; onToggle: () => void }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={active}
-      disabled={loading}
-      onClick={onToggle}
+    <button type="button" role="switch" aria-checked={active} disabled={loading} onClick={onToggle}
       title={active ? 'Click to deactivate' : 'Click to activate'}
-      className={`${styles.statusToggle} ${active ? styles.toggleOn : styles.toggleOff}`}
-    >
+      className={`${styles.statusToggle} ${active ? styles.toggleOn : styles.toggleOff}`}>
       <span className={styles.toggleKnob}>
         {active ? <CheckCircle size={8} /> : <XCircle size={8} />}
       </span>

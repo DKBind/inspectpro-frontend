@@ -16,6 +16,11 @@ export const ROUTES = {
   SUBSCRIPTIONS: '/subscriptions',
   USERS: '/users',
   PROFILE: '/profile',
+  FRANCHISE: '/franchise',
+  FRANCHISE_SUBSCRIPTIONS: '/franchise-subscriptions',
+  CUSTOMERS: '/customers',
+  USERS_ROLES: '/users-roles',
+  NOTIFICATIONS: '/notifications',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;

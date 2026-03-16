@@ -3,17 +3,9 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useModuleStore } from '@/store/useModuleStore';
 import { ROUTES } from '@/components/Constant/Route';
 import {
-  LayoutDashboard,
-  FolderKanban,
-  ClipboardCheck,
-  ListChecks,
-  Bug,
-  BarChart3,
-  Settings,
-  Shield,
-  Building2,
-  CreditCard,
-  Users,
+  LayoutDashboard, FolderKanban, ClipboardCheck, ListChecks, Bug,
+  BarChart3, Settings, Shield, Building2, CreditCard, GitBranch,
+  Sparkles, Users, Bell, UserCircle,
   type LucideIcon,
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
@@ -28,57 +20,95 @@ interface NavItem {
   icon: LucideIcon;
   path: string;
   badge?: number;
-  /** roles allowed to see this item regardless of subscription modules */
-  roles?: string[];
 }
 
-const mainNavItems: NavItem[] = [
+// ─── Static fallback list (used for super_admin who bypasses DB filtering) ────
+const ALL_MAIN_ITEMS: NavItem[] = [
   { label: 'Dashboard',   icon: LayoutDashboard, path: ROUTES.DASHBOARD },
   { label: 'Projects',    icon: FolderKanban,    path: ROUTES.PROJECTS },
-  { label: 'Inspections', icon: ClipboardCheck,  path: ROUTES.INSPECTIONS, badge: 5 },
+  { label: 'Inspections', icon: ClipboardCheck,  path: ROUTES.INSPECTIONS },
   { label: 'Checklists',  icon: ListChecks,      path: ROUTES.CHECKLISTS },
-  { label: 'Defects',     icon: Bug,             path: ROUTES.DEFECTS, badge: 12 },
+  { label: 'Defects',     icon: Bug,             path: ROUTES.DEFECTS },
 ];
 
-const systemNavItems: NavItem[] = [
-  { label: 'Reports',       icon: BarChart3,  path: ROUTES.REPORTS },
-  { label: 'Users',         icon: Users,      path: ROUTES.USERS },
-  { label: 'Organisation',  icon: Building2,  path: ROUTES.ORGANISATION },
-  { label: 'Subscriptions', icon: CreditCard, path: ROUTES.SUBSCRIPTIONS },
-  { label: 'Settings',      icon: Settings,   path: ROUTES.SETTINGS },
+const ALL_SYSTEM_ITEMS: NavItem[] = [
+  { label: 'Reports',       icon: BarChart3,   path: ROUTES.REPORTS },
+  { label: 'Organisation',  icon: Building2,   path: ROUTES.ORGANISATION },
+  { label: 'Franchise',     icon: GitBranch,   path: ROUTES.FRANCHISE },
+  { label: 'Subscriptions', icon: CreditCard,  path: ROUTES.SUBSCRIPTIONS },
+  { label: 'Users & Roles', icon: Users,       path: ROUTES.USERS_ROLES },
+  { label: 'Notifications', icon: Bell,        path: ROUTES.NOTIFICATIONS },
+  { label: 'Profile',       icon: UserCircle,  path: ROUTES.PROFILE },
+  { label: 'Settings',      icon: Settings,    path: ROUTES.SETTINGS },
 ];
+
+// ─── Route → icon / label / section metadata (drives dynamic sidebar) ─────────
+type SectionKey = 'main' | 'system';
+const MODULE_META: Record<string, { label: string; icon: LucideIcon; section: SectionKey }> = {
+  '/dashboard':     { label: 'Dashboard',     icon: LayoutDashboard, section: 'main'   },
+  '/projects':      { label: 'Projects',      icon: FolderKanban,    section: 'main'   },
+  '/inspections':   { label: 'Inspections',   icon: ClipboardCheck,  section: 'main'   },
+  '/checklists':    { label: 'Checklists',    icon: ListChecks,      section: 'main'   },
+  '/defects':       { label: 'Defects',       icon: Bug,             section: 'main'   },
+  '/reports':       { label: 'Reports',       icon: BarChart3,       section: 'system' },
+  '/organisation':  { label: 'Organisation',  icon: Building2,       section: 'system' },
+  '/franchise':     { label: 'Franchise',     icon: GitBranch,       section: 'system' },
+  '/subscriptions':           { label: 'Subscriptions',          icon: CreditCard,  section: 'system' },
+  '/franchise-subscriptions': { label: 'Franchise Subscriptions', icon: Sparkles,    section: 'system' },
+  '/customers':               { label: 'Customers',               icon: Users,       section: 'system' },
+  '/users-roles':             { label: 'Users & Roles',           icon: Users,       section: 'system' },
+  '/notifications':           { label: 'Notifications',           icon: Bell,        section: 'system' },
+  '/profile':                 { label: 'Profile',                 icon: UserCircle,  section: 'system' },
+  '/settings':                { label: 'Settings',                icon: Settings,    section: 'system' },
+};
 
 const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
   const location = useLocation();
   const { user } = useAuthStore();
-  const { modules, accessModules } = useModuleStore();
+  const { accessModules } = useModuleStore();
   const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
-  // DB module routes (e.g. "/organisation/create") vs sidebar paths (e.g. "/organisation")
-  // Use prefix matching: a module route "/organisation/create" grants access to sidebar "/organisation"
-  const matchesAnyRoute = (sidebarPath: string, routes: Set<string>): boolean => {
-    if (routes.size === 0) return true; // filter inactive when no routes loaded
-    for (const route of routes) {
-      if (route === sidebarPath || route.startsWith(sidebarPath + '/')) return true;
-    }
-    return false;
+  // ─── Build nav items from DB modules ──────────────────────────────────────
+  const buildFromDB = () => {
+    const seen = new Set<string>();
+    const main: NavItem[]   = [];
+    const system: NavItem[] = [];
+
+    accessModules.forEach((m) => {
+      // Map fine-grained DB routes (/organisation/create) to top-level paths (/organisation)
+      const topPath = '/' + m.route.split('/').filter(Boolean)[0];
+      if (seen.has(topPath)) return;
+      seen.add(topPath);
+      const meta = MODULE_META[topPath];
+      if (!meta) return;
+      const item: NavItem = { label: meta.label, icon: meta.icon, path: topPath };
+      if (meta.section === 'main') main.push(item);
+      else system.push(item);
+    });
+
+    // Always ensure Profile is visible
+    if (!seen.has('/profile')) system.push({ label: 'Profile', icon: UserCircle, path: ROUTES.PROFILE });
+
+    return { main, system };
   };
 
-  const subscriptionRoutes = new Set(modules.map((m) => m.route));
-  const roleRoutes         = new Set(accessModules.map((m) => m.route));
+  let visibleMain: NavItem[];
+  let visibleSystem: NavItem[];
 
-  const isVisible = (item: NavItem): boolean => {
-    if (isSuperAdmin) return true;
-    if (item.roles && !item.roles.includes(user?.role ?? '')) return false;
-    if (!matchesAnyRoute(item.path, roleRoutes)) return false;
-    if (!matchesAnyRoute(item.path, subscriptionRoutes)) return false;
-    return true;
-  };
-
-  const visibleMain   = mainNavItems.filter(isVisible);
-  const visibleSystem = systemNavItems.filter(isVisible);
+  if (isSuperAdmin) {
+    visibleMain   = ALL_MAIN_ITEMS;
+    visibleSystem = ALL_SYSTEM_ITEMS;
+  } else if (accessModules.length > 0) {
+    const built = buildFromDB();
+    visibleMain   = built.main;
+    visibleSystem = built.system;
+  } else {
+    // Not yet loaded — show nothing except Profile
+    visibleMain   = [];
+    visibleSystem = [{ label: 'Profile', icon: UserCircle, path: ROUTES.PROFILE }];
+  }
 
   const renderNavItem = (item: NavItem) => (
     <NavLink

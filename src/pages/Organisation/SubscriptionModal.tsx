@@ -110,7 +110,7 @@ export default function SubscriptionModal({
   const selectedPlanId = watch('subscriptionId');
   useEffect(() => {
     if (!selectedPlanId || isEdit) return;
-    const plan:any = plans.find((p:any) => p.id === selectedPlanId);
+    const plan: any = plans.find((p: any) => p.id === selectedPlanId);
     if (!plan) return;
     if (plan.price != null) setValue('priceOverride', String(plan.price));
     if (plan.currency) setValue('currency', plan.currency);
