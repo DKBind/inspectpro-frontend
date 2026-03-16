@@ -14,6 +14,7 @@ import {
   Building2,
   CreditCard,
   Users,
+  GitBranch,
   type LucideIcon,
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
@@ -41,11 +42,12 @@ const mainNavItems: NavItem[] = [
 ];
 
 const systemNavItems: NavItem[] = [
-  { label: 'Reports',       icon: BarChart3,  path: ROUTES.REPORTS },
-  { label: 'Users',         icon: Users,      path: ROUTES.USERS },
-  { label: 'Organisation',  icon: Building2,  path: ROUTES.ORGANISATION },
-  { label: 'Subscriptions', icon: CreditCard, path: ROUTES.SUBSCRIPTIONS },
-  { label: 'Settings',      icon: Settings,   path: ROUTES.SETTINGS },
+  { label: 'Reports',       icon: BarChart3,   path: ROUTES.REPORTS },
+  { label: 'Users',         icon: Users,       path: ROUTES.USERS },
+  { label: 'Organisation',  icon: Building2,   path: ROUTES.ORGANISATION },
+  { label: 'Franchise',     icon: GitBranch,   path: ROUTES.FRANCHISE },
+  { label: 'Subscriptions', icon: CreditCard,  path: ROUTES.SUBSCRIPTIONS },
+  { label: 'Settings',      icon: Settings,    path: ROUTES.SETTINGS },
 ];
 
 const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {

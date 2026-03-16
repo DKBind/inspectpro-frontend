@@ -284,7 +284,7 @@ const Users = () => {
 
       {/* ── Create / Edit Modal ─────────────────────────────────────────────── */}
       <Dialog open={modalMode !== null} onOpenChange={(open) => !open && setModalMode(null)}>
-        <DialogContent style={{ maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white">
           <DialogHeader>
             <DialogTitle>{modalMode === 'create' ? 'Add User' : 'Edit User'}</DialogTitle>
             <DialogDescription>
@@ -389,7 +389,7 @@ const Users = () => {
 
       {/* ── View Modal ──────────────────────────────────────────────────────── */}
       <Dialog open={!!viewUser} onOpenChange={(open) => !open && setViewUser(null)}>
-        <DialogContent style={{ maxWidth: 460 }}>
+        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white">
           <DialogHeader>
             <DialogTitle>User Details</DialogTitle>
           </DialogHeader>
@@ -418,7 +418,7 @@ const Users = () => {
 
       {/* ── Delete Confirm Modal ─────────────────────────────────────────────── */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent style={{ maxWidth: 400 }}>
+        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white">
           <DialogHeader>
             <DialogTitle>Delete User</DialogTitle>
             <DialogDescription>

@@ -11,6 +11,7 @@ import Organisation from './pages/Organisation/Organisation';
 import OrganisationDetail from './pages/Organisation/OrganisationDetail';
 import OrganisationOnboarding from './pages/OrganisationOnboarding';
 import OrganisationCreate from './pages/OrganisationCreate';
+import Franchise from './pages/Franchise/Franchise';
 import Subscriptions from './pages/Subscriptions/Subscriptions';
 import Users from './pages/Users/Users';
 import NotFound from './components/ui/NotFound/NotFound';
@@ -47,6 +48,7 @@ function App() {
             <Route path={ROUTES.PROFILE} element={<Settings />} />
             <Route path={ROUTES.SUBSCRIPTIONS} element={<Subscriptions />} />
             <Route path={ROUTES.USERS} element={<Users />} />
+            <Route path={ROUTES.FRANCHISE} element={<Franchise />} />
           </Route>
         </Route>
 

@@ -16,6 +16,7 @@ export const ROUTES = {
   SUBSCRIPTIONS: '/subscriptions',
   USERS: '/users',
   PROFILE: '/profile',
+  FRANCHISE: '/franchise',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;

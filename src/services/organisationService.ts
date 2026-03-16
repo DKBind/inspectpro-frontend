@@ -56,4 +56,17 @@ export const organisationService = {
     if (!response.status) throw new Error(response.message || 'Failed to update status');
     return response.object as OrganisationResponse;
   },
+
+  getFranchises: async (
+    page = 0,
+    size = 10,
+    parentOrgId?: string
+  ): Promise<PageResponse<OrganisationResponse>> => {
+    const url = parentOrgId
+      ? `/organisations/franchises?page=${page}&size=${size}&parentOrgId=${parentOrgId}`
+      : `/organisations/franchises?page=${page}&size=${size}`;
+    const response = await api.get<ApiResponse<PageResponse<OrganisationResponse>>>(url);
+    if (!response.status) throw new Error(response.message || 'Failed to fetch franchises');
+    return response.object as PageResponse<OrganisationResponse>;
+  },
 };
