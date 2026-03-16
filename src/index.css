@@ -5,67 +5,148 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ================================================================
+   InspectPro Design System — Global CSS Custom Properties
+   Palette: Gentellela Alela! Light Theme
+   ================================================================ */
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
+    /* ── shadcn / Tailwind tokens (raw H S L numbers) ── */
+    --background: 220 16% 96%;
+    --foreground: 210 35% 23%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
+    --card-foreground: 210 35% 23%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
+    --popover-foreground: 210 35% 23%;
+    --primary: 168 55% 44%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 18% 93%;
+    --secondary-foreground: 210 35% 23%;
+    --muted: 214 18% 93%;
+    --muted-foreground: 210 16% 53%;
+    --accent: 214 18% 93%;
+    --accent-foreground: 210 35% 23%;
+    --destructive: 4 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 18% 91%;
+    --input: 214 18% 91%;
+    --ring: 168 55% 44%;
     --radius: 0.5rem;
-  }
+    --chart-1: 168 55% 44%;
+    --chart-2: 221 83% 53%;
+    --chart-3: 38 89% 48%;
+    --chart-4: 262 83% 58%;
+    --chart-5: 4 72% 55%;
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 210 35% 23%;
+    --sidebar-primary: 168 55% 44%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 214 18% 93%;
+    --sidebar-accent-foreground: 210 35% 23%;
+    --sidebar-border: 214 18% 91%;
+    --sidebar-ring: 168 55% 44%;
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* ── InspectPro Extended Design Tokens (hex) ── */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    /* Brand / Primary Teal */
+    --ip-brand:            #33AE95;
+    --ip-brand-light:      rgba(51,174,149,0.10);
+    --ip-brand-hover:      #298E7A;
+    --ip-brand-dark:       #227766;
+    --ip-brand-border:     rgba(51,174,149,0.18);
+    --ip-brand-subtle:     rgba(51,174,149,0.07);
+    --ip-brand-hover-bg:   rgba(51,174,149,0.16);
+    --ip-brand-press-bg:   rgba(51,174,149,0.20);
+    --ip-brand-hover-shadow: rgba(51,174,149,0.28);
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    /* Blue (secondary actions) */
+    --ip-blue:         #2463EB;
+    --ip-blue-light:   rgba(36,99,235,0.10);
+    --ip-blue-hover:   #1450D2;
+    --ip-blue-text:    #1555E0;
+    --ip-blue-lighter: #5284EF;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Page surfaces */
+    --ip-page-bg:       #F3F4F6;
+    --ip-surface:       #FFFFFF;
+    --ip-surface-raised: #F9FAFB;
+    --ip-surface-hover: #F6F7F9;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    /* Text */
+    --ip-text-primary:   #263B4F;
+    --ip-text-secondary: #74879A;
+    --ip-text-muted:     #919EAC;
+    --ip-text-disabled:  #B9BFC6;
+    --ip-text-inverse:   #FFFFFF;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    /* Borders */
+    --ip-border:       #E4E8EC;
+    --ip-border-strong: #CFD5DE;
+    --ip-border-focus: #33AE95;
+    --ip-border-panel: #DBE0E6;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    /* Status: Green */
+    --ip-green:         #29A356;
+    --ip-green-light:   rgba(41,163,86,0.10);
+    --ip-green-border:  rgba(41,163,86,0.25);
+    --ip-green-lighter: #3BCE71;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    /* Status: Orange */
+    --ip-orange:         #E7970E;
+    --ip-orange-light:   rgba(231,151,14,0.10);
+    --ip-orange-border:  rgba(231,151,14,0.25);
+    --ip-orange-lighter: #F4813E;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* Status: Red */
+    --ip-red:        #DF453A;
+    --ip-red-light:  rgba(223,69,58,0.10);
+    --ip-red-border: rgba(223,69,58,0.25);
+
+    /* Status: Purple */
+    --ip-purple:         #7C3BED;
+    --ip-purple-light:   rgba(124,59,237,0.10);
+    --ip-purple-lighter: #9B6AF1;
+
+    /* Status: Teal / Cyan */
+    --ip-teal:       #17A4BA;
+    --ip-teal-light: rgba(23,164,186,0.10);
+
+    /* Status: Yellow */
+    --ip-yellow:       #E7B008;
+    --ip-yellow-light: rgba(231,176,8,0.10);
+
+    /* Toggle controls */
+    --ip-toggle-on-bg:   #9CE2D4;
+    --ip-toggle-off-bg:  #F2B5B0;
+    --ip-neutral-light:  rgba(105,124,151,0.12);
+
+    /* Sidebar (light) */
+    --ip-sidebar-bg:          #FFFFFF;
+    --ip-sidebar-border:      #E4E8EC;
+    --ip-sidebar-label:       #919EAC;
+    --ip-sidebar-text:        #74879A;
+    --ip-sidebar-text-active: #298E7A;
+    --ip-sidebar-active-bg:   rgba(51,174,149,0.10);
+    --ip-sidebar-active-border: #33AE95;
+    --ip-sidebar-hover-bg:    #F0F1F2;
+    --ip-sidebar-hover-text:  #263B4F;
+
+    /* Header */
+    --ip-header-bg:     #FFFFFF;
+    --ip-header-border: #E4E8EC;
+
+    /* Shadows */
+    --ip-shadow-xs: 0 1px 2px rgba(38,59,79,0.05);
+    --ip-shadow-sm: 0 1px 3px rgba(38,59,79,0.07), 0 1px 2px rgba(38,59,79,0.04);
+    --ip-shadow-md: 0 4px 12px rgba(38,59,79,0.09), 0 2px 6px rgba(38,59,79,0.05);
+    --ip-shadow-lg: 0 8px 24px rgba(38,59,79,0.11), 0 4px 12px rgba(38,59,79,0.06);
+    --ip-shadow-xl: 0 16px 40px rgba(38,59,79,0.13), 0 8px 20px rgba(38,59,79,0.07);
+
+    /* Gradients */
+    --ip-gradient-brand: linear-gradient(135deg, #33AE95, #17A4BA);
+    --ip-gradient-blue:  linear-gradient(135deg, #2463EB, #7C3BED);
+    --ip-gradient-card:  linear-gradient(135deg, rgba(51,174,149,0.08) 0%, rgba(23,164,186,0.04) 100%);
   }
 }
 
@@ -73,18 +154,15 @@
   *, ::after, ::before, ::backdrop, ::file-selector-button {
     border-color: var(--border, currentColor);
   }
-
   * {
     @apply border-border;
     outline-color: hsl(var(--ring) / 0.5);
   }
-
   html {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-
   body {
     @apply bg-background text-foreground;
     overflow-x: hidden;
@@ -92,26 +170,10 @@
 }
 
 /* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: hsl(217, 33%, 20%);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(217, 33%, 28%);
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F3F4F6; }
+::-webkit-scrollbar-thumb { background: #CFD5DE; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #33AE95; }
 
 /* Selection */
-::selection {
-  background: hsla(221, 83%, 53%, 0.25);
-  color: hsl(210, 40%, 98%);
-}
+::selection { background: rgba(51,174,149,0.20); color: #263B4F; }

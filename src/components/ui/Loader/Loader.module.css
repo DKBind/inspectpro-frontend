@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: hsla(222, 47%, 5%, 0.8);
+  background: hsla(220, 16%, 96%, 0.80);
   backdrop-filter: blur(4px);
   z-index: 50;
 }
@@ -36,8 +36,8 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 3px solid hsl(217, 33%, 17%);
-  border-top-color: hsl(221, 83%, 53%);
+  border: 3px solid var(--ip-border-strong);
+  border-top-color: var(--ip-brand);
   animation: spin 0.8s linear infinite;
 }
 
@@ -45,7 +45,7 @@
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  background: radial-gradient(circle, hsla(221, 83%, 53%, 0.15), transparent 70%);
+  background: radial-gradient(circle, var(--ip-brand-light), transparent 70%);
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -60,7 +60,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: hsl(221, 83%, 53%);
+  background: var(--ip-brand);
   animation: dotPulse 1.4s ease-in-out infinite;
 }
 
@@ -75,7 +75,7 @@
 /* Loading text */
 .loadingText {
   font-size: 13px;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-secondary);
   font-weight: 500;
 }
 

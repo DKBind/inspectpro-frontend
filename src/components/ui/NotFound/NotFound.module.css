@@ -16,9 +16,9 @@
   line-height: 1;
   background: linear-gradient(
     135deg,
-    hsl(221, 83%, 53%) 0%,
-    hsl(262, 83%, 58%) 50%,
-    hsl(340, 82%, 52%) 100%
+    var(--ip-brand) 0%,
+    var(--ip-blue) 50%,
+    var(--ip-purple) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -35,8 +35,8 @@
   inset: 0;
   background: linear-gradient(
     135deg,
-    hsla(221, 83%, 53%, 0.15) 0%,
-    hsla(262, 83%, 58%, 0.1) 100%
+    var(--ip-brand-light) 0%,
+    var(--ip-blue-light) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -48,13 +48,13 @@
 .title {
   font-size: 24px;
   font-weight: 700;
-  color: hsl(210, 40%, 93%);
+  color: var(--ip-text-primary);
   letter-spacing: -0.01em;
 }
 
 .description {
   font-size: 15px;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-secondary);
   max-width: 400px;
   line-height: 1.7;
 }
@@ -73,18 +73,18 @@
   padding: 12px 24px;
   border-radius: 10px;
   border: none;
-  background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(262, 83%, 58%));
+  background: var(--ip-gradient-brand);
   color: white;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s ease;
-  box-shadow: 0 4px 16px hsla(221, 83%, 53%, 0.3);
+  box-shadow: 0 4px 16px var(--ip-brand-light);
 }
 
 .primaryBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px hsla(221, 83%, 53%, 0.4);
+  box-shadow: 0 6px 24px var(--ip-brand-hover-shadow);
 }
 
 .primaryBtn svg {
@@ -98,9 +98,9 @@
   gap: 8px;
   padding: 12px 24px;
   border-radius: 10px;
-  border: 1px solid hsl(217, 33%, 20%);
-  background: hsla(217, 33%, 12%, 0.5);
-  color: hsl(215, 20%, 70%);
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-secondary);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -108,9 +108,9 @@
 }
 
 .secondaryBtn:hover {
-  border-color: hsl(217, 33%, 28%);
-  background: hsla(215, 25%, 27%, 0.35);
-  color: hsl(210, 40%, 90%);
+  border-color: var(--ip-border-strong);
+  background: var(--ip-page-bg);
+  color: var(--ip-text-primary);
 }
 
 .secondaryBtn svg {
@@ -128,14 +128,14 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(60px);
-  opacity: 0.15;
+  opacity: 0.08;
   animation: float 6s ease-in-out infinite;
 }
 
 .orb1 {
   width: 200px;
   height: 200px;
-  background: hsl(221, 83%, 53%);
+  background: var(--ip-brand);
   top: 10%;
   left: 20%;
 }
@@ -143,7 +143,7 @@
 .orb2 {
   width: 150px;
   height: 150px;
-  background: hsl(262, 83%, 58%);
+  background: var(--ip-blue);
   bottom: 20%;
   right: 15%;
   animation-delay: -3s;

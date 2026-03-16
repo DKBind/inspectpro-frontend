@@ -11,8 +11,8 @@
   justify-content: space-between;
   padding: 28px 32px;
   border-radius: 16px;
-  background: linear-gradient(135deg, hsla(221, 83%, 53%, 0.12) 0%, hsla(262, 83%, 58%, 0.08) 100%);
-  border: 1px solid hsla(221, 83%, 53%, 0.15);
+  background: var(--ip-gradient-card);
+  border: 1px solid var(--ip-brand-border);
   position: relative;
   overflow: hidden;
 }
@@ -25,25 +25,25 @@
   width: 300px;
   height: 300px;
   border-radius: 50%;
-  background: radial-gradient(circle, hsla(221, 83%, 53%, 0.08), transparent 70%);
+  background: radial-gradient(circle, var(--ip-brand-subtle), transparent 70%);
   pointer-events: none;
 }
 
 .welcomeText h2 {
   font-size: 22px;
   font-weight: 700;
-  color: hsl(210, 40%, 95%);
+  color: var(--ip-text-primary);
   margin-bottom: 4px;
 }
 
 .welcomeText p {
   font-size: 14px;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-secondary);
 }
 
 .welcomeDate {
   font-size: 13px;
-  color: hsl(215, 20%, 50%);
+  color: var(--ip-text-secondary);
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -65,14 +65,15 @@
 .statCard {
   padding: 24px;
   border-radius: 14px;
-  background: hsla(222, 47%, 8%, 0.6);
-  border: 1px solid hsl(217, 33%, 15%);
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
   display: flex;
   flex-direction: column;
   gap: 16px;
   transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--ip-shadow-sm);
 }
 
 .statCard::before {
@@ -84,13 +85,13 @@
   height: 3px;
   border-radius: 14px 14px 0 0;
   transition: opacity 0.25s ease;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .statCard:hover {
-  border-color: hsl(217, 33%, 22%);
+  border-color: var(--ip-border-strong);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--ip-shadow-md);
 }
 
 .statCard:hover::before {
@@ -98,19 +99,19 @@
 }
 
 .statCardBlue::before {
-  background: linear-gradient(90deg, hsl(221, 83%, 53%), hsl(221, 83%, 63%));
+  background: linear-gradient(90deg, var(--ip-blue), var(--ip-blue-lighter));
 }
 
 .statCardGreen::before {
-  background: linear-gradient(90deg, hsl(142, 71%, 45%), hsl(142, 71%, 55%));
+  background: linear-gradient(90deg, var(--ip-green), var(--ip-green-lighter));
 }
 
 .statCardOrange::before {
-  background: linear-gradient(90deg, hsl(25, 95%, 53%), hsl(25, 95%, 63%));
+  background: linear-gradient(90deg, var(--ip-orange), var(--ip-orange-lighter));
 }
 
 .statCardPurple::before {
-  background: linear-gradient(90deg, hsl(262, 83%, 58%), hsl(262, 83%, 68%));
+  background: linear-gradient(90deg, var(--ip-purple), var(--ip-purple-lighter));
 }
 
 .statHeader {
@@ -122,7 +123,7 @@
 .statLabel {
   font-size: 13px;
   font-weight: 500;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -142,23 +143,23 @@
 }
 
 .statIconBlue {
-  background: hsla(221, 83%, 53%, 0.12);
-  color: hsl(221, 83%, 63%);
+  background: var(--ip-blue-light);
+  color: var(--ip-blue-text);
 }
 
 .statIconGreen {
-  background: hsla(142, 71%, 45%, 0.12);
-  color: hsl(142, 71%, 55%);
+  background: var(--ip-green-light);
+  color: var(--ip-green);
 }
 
 .statIconOrange {
-  background: hsla(25, 95%, 53%, 0.12);
-  color: hsl(25, 95%, 63%);
+  background: var(--ip-orange-light);
+  color: var(--ip-orange);
 }
 
 .statIconPurple {
-  background: hsla(262, 83%, 58%, 0.12);
-  color: hsl(262, 83%, 68%);
+  background: var(--ip-purple-light);
+  color: var(--ip-purple);
 }
 
 .statBody {
@@ -171,7 +172,7 @@
   font-size: 32px;
   font-weight: 800;
   line-height: 1;
-  color: hsl(210, 40%, 98%);
+  color: var(--ip-text-primary);
   letter-spacing: -0.02em;
 }
 
@@ -189,11 +190,11 @@
 }
 
 .trendUp {
-  color: hsl(142, 71%, 55%);
+  color: var(--ip-green);
 }
 
 .trendDown {
-  color: hsl(0, 84%, 60%);
+  color: var(--ip-red);
 }
 
 /* Content Area */
@@ -212,9 +213,10 @@
 /* Panel / Card Style */
 .panel {
   border-radius: 14px;
-  background: hsla(222, 47%, 8%, 0.6);
-  border: 1px solid hsl(217, 33%, 15%);
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
   overflow: hidden;
+  box-shadow: var(--ip-shadow-sm);
 }
 
 .panelHeader {
@@ -222,19 +224,19 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid hsl(217, 33%, 13%);
+  border-bottom: 1px solid var(--ip-border);
 }
 
 .panelTitle {
   font-size: 15px;
   font-weight: 600;
-  color: hsl(210, 40%, 93%);
+  color: var(--ip-text-primary);
 }
 
 .panelAction {
   font-size: 12.5px;
   font-weight: 500;
-  color: hsl(221, 83%, 63%);
+  color: var(--ip-brand);
   background: none;
   border: none;
   cursor: pointer;
@@ -244,7 +246,8 @@
 }
 
 .panelAction:hover {
-  background: hsla(221, 83%, 53%, 0.1);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand-hover);
 }
 
 .panelBody {
@@ -264,16 +267,16 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: hsl(215, 20%, 45%);
-  background: hsla(217, 33%, 10%, 0.5);
-  border-bottom: 1px solid hsl(217, 33%, 13%);
+  color: var(--ip-text-muted);
+  background: var(--ip-surface-raised);
+  border-bottom: 1px solid var(--ip-border);
 }
 
 .table td {
   padding: 14px 24px;
   font-size: 13.5px;
-  color: hsl(215, 20%, 75%);
-  border-bottom: 1px solid hsl(217, 33%, 11%);
+  color: var(--ip-text-secondary);
+  border-bottom: 1px solid var(--ip-border);
 }
 
 .table tr:last-child td {
@@ -281,7 +284,7 @@
 }
 
 .table tr:hover td {
-  background: hsla(215, 25%, 27%, 0.1);
+  background: var(--ip-surface-hover);
 }
 
 .statusBadge {
@@ -295,23 +298,23 @@
 }
 
 .statusPassed {
-  background: hsla(142, 71%, 45%, 0.12);
-  color: hsl(142, 71%, 55%);
+  background: var(--ip-green-light);
+  color: var(--ip-green);
 }
 
 .statusFailed {
-  background: hsla(0, 84%, 60%, 0.12);
-  color: hsl(0, 84%, 60%);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
 }
 
 .statusPending {
-  background: hsla(45, 93%, 47%, 0.12);
-  color: hsl(45, 93%, 57%);
+  background: var(--ip-yellow-light);
+  color: var(--ip-orange);
 }
 
 .statusInProgress {
-  background: hsla(221, 83%, 53%, 0.12);
-  color: hsl(221, 83%, 63%);
+  background: var(--ip-blue-light);
+  color: var(--ip-blue-text);
 }
 
 /* Activity Feed */
@@ -326,7 +329,7 @@
   align-items: flex-start;
   gap: 12px;
   padding: 16px 24px;
-  border-bottom: 1px solid hsl(217, 33%, 11%);
+  border-bottom: 1px solid var(--ip-border);
   transition: background 0.15s ease;
 }
 
@@ -335,7 +338,7 @@
 }
 
 .activityItem:hover {
-  background: hsla(215, 25%, 27%, 0.08);
+  background: var(--ip-surface-hover);
 }
 
 .activityDot {
@@ -347,19 +350,19 @@
 }
 
 .dotBlue {
-  background: hsl(221, 83%, 53%);
+  background: var(--ip-blue);
 }
 
 .dotGreen {
-  background: hsl(142, 71%, 45%);
+  background: var(--ip-green);
 }
 
 .dotOrange {
-  background: hsl(25, 95%, 53%);
+  background: var(--ip-orange);
 }
 
 .dotRed {
-  background: hsl(0, 84%, 60%);
+  background: var(--ip-red);
 }
 
 .activityContent {
@@ -369,18 +372,18 @@
 
 .activityText {
   font-size: 13px;
-  color: hsl(215, 20%, 70%);
+  color: var(--ip-text-secondary);
   line-height: 1.4;
 }
 
 .activityText strong {
-  color: hsl(210, 40%, 90%);
+  color: var(--ip-text-primary);
   font-weight: 600;
 }
 
 .activityTime {
   font-size: 11.5px;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-muted);
   margin-top: 2px;
 }
 
@@ -398,9 +401,9 @@
   gap: 10px;
   padding: 14px 16px;
   border-radius: 10px;
-  border: 1px solid hsl(217, 33%, 17%);
-  background: hsla(217, 33%, 12%, 0.4);
-  color: hsl(215, 20%, 70%);
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-secondary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -408,10 +411,11 @@
 }
 
 .quickActionBtn:hover {
-  border-color: hsl(221, 83%, 53%);
-  background: hsla(221, 83%, 53%, 0.08);
-  color: hsl(221, 83%, 68%);
+  border-color: var(--ip-brand);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand-hover);
   transform: translateY(-1px);
+  box-shadow: var(--ip-shadow-sm);
 }
 
 .quickActionBtn svg {

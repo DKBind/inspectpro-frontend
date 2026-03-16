@@ -164,7 +164,17 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
           {/* Role Switcher Dropdown */}
           {showRoleMenu && hasMultipleRoles && (
             <div className={styles.roleDropdown}>
-              <div className={styles.dropdownHeader}>Switch Role</div>
+              <div className={styles.rdUserCard}>
+                <div className={styles.rdAvatar}>
+                  {getInitials(user?.name, user?.email)}
+                </div>
+                <div className={styles.rdUserInfo}>
+                  <div className={styles.rdUserName}>{user?.name || user?.email || 'User'}</div>
+                  <div className={styles.rdUserEmail}>{user?.email}</div>
+                </div>
+              </div>
+              <div className={styles.rdDivider} />
+              <div className={styles.rdLabel}>Switch Role</div>
               <div className={styles.roleList}>
                 {user!.roles.map((r) => (
                   <button
@@ -172,7 +182,10 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
                     className={`${styles.roleItem} ${user!.role === r.roleName ? styles.roleItemActive : ''}`}
                     onClick={() => handleRoleSwitch(r.roleName, r.roleId)}
                   >
-                    <span>{r.roleName}</span>
+                    <span className={styles.roleItemLeft}>
+                      <span className={styles.roleItemBadge} />
+                      <span>{r.roleName}</span>
+                    </span>
                     {user!.role === r.roleName && <Check className={styles.checkIcon} />}
                   </button>
                 ))}

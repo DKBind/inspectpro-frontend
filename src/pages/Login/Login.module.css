@@ -3,7 +3,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: hsl(222, 47%, 5%);
+  background: var(--ip-page-bg);
   position: relative;
   overflow: hidden;
   padding: 24px;
@@ -21,13 +21,13 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(100px);
-  opacity: 0.1;
+  opacity: 0.06;
 }
 
 .bgOrb1 {
   width: 500px;
   height: 500px;
-  background: hsl(221, 83%, 53%);
+  background: var(--ip-brand);
   top: -15%;
   left: -10%;
   animation: orbFloat 8s ease-in-out infinite;
@@ -36,7 +36,7 @@
 .bgOrb2 {
   width: 400px;
   height: 400px;
-  background: hsl(262, 83%, 58%);
+  background: var(--ip-blue);
   bottom: -15%;
   right: -10%;
   animation: orbFloat 10s ease-in-out infinite reverse;
@@ -50,10 +50,9 @@
   max-width: 420px;
   padding: 40px;
   border-radius: 20px;
-  background: hsla(222, 47%, 8%, 0.75);
-  border: 1px solid hsl(217, 33%, 15%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  box-shadow: var(--ip-shadow-xl);
 }
 
 /* Logo */
@@ -68,12 +67,12 @@
   width: 56px;
   height: 56px;
   border-radius: 14px;
-  background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(262, 83%, 58%));
+  background: var(--ip-gradient-brand);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 16px;
-  box-shadow: 0 8px 32px hsla(221, 83%, 53%, 0.3);
+  box-shadow: 0 8px 32px var(--ip-brand-light);
 }
 
 .logoIcon svg {
@@ -85,13 +84,13 @@
 .logoTitle {
   font-size: 22px;
   font-weight: 800;
-  color: hsl(210, 40%, 98%);
+  color: var(--ip-text-primary);
   letter-spacing: -0.03em;
 }
 
 .logoSubtitle {
   font-size: 13px;
-  color: hsl(215, 20%, 50%);
+  color: var(--ip-text-secondary);
   margin-top: 2px;
 }
 
@@ -99,14 +98,14 @@
 .formTitle {
   font-size: 18px;
   font-weight: 700;
-  color: hsl(210, 40%, 98%);
+  color: var(--ip-text-primary);
   margin-bottom: 4px;
   text-align: center;
 }
 
 .formSubtitle {
   font-size: 13px;
-  color: hsl(215, 20%, 50%);
+  color: var(--ip-text-secondary);
   margin-bottom: 28px;
   text-align: center;
 }
@@ -121,16 +120,16 @@
 .formLabel {
   font-size: 13px;
   font-weight: 500;
-  color: hsl(215, 20%, 65%);
+  color: var(--ip-text-secondary);
 }
 
 .formInput {
   height: 44px;
   padding: 0 14px;
   border-radius: 10px;
-  border: 1px solid hsl(217, 33%, 17%);
-  background: hsla(217, 33%, 10%, 0.6);
-  color: hsl(210, 40%, 98%);
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-primary);
   font-size: 14px;
   outline: none;
   transition: all 0.2s ease;
@@ -138,12 +137,12 @@
 }
 
 .formInput::placeholder {
-  color: hsl(215, 20%, 35%);
+  color: var(--ip-text-disabled);
 }
 
 .formInput:focus {
-  border-color: hsl(221, 83%, 53%);
-  box-shadow: 0 0 0 3px hsla(221, 83%, 53%, 0.15);
+  border-color: var(--ip-brand);
+  box-shadow: 0 0 0 3px var(--ip-brand-light);
 }
 
 .formOptions {
@@ -158,20 +157,20 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: hsl(215, 20%, 60%);
+  color: var(--ip-text-secondary);
   cursor: pointer;
 }
 
 .rememberMe input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: hsl(221, 83%, 53%);
+  accent-color: var(--ip-brand);
   cursor: pointer;
 }
 
 .forgotLink {
   font-size: 13px;
-  color: hsl(221, 83%, 63%);
+  color: var(--ip-brand);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.15s ease;
@@ -182,7 +181,7 @@
 }
 
 .forgotLink:hover {
-  color: hsl(221, 83%, 73%);
+  color: var(--ip-brand-hover);
 }
 
 .submitBtn {
@@ -190,18 +189,18 @@
   height: 44px;
   border-radius: 10px;
   border: none;
-  background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(262, 83%, 58%));
+  background: var(--ip-gradient-brand);
   color: white;
   font-size: 14.5px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s ease;
-  box-shadow: 0 4px 16px hsla(221, 83%, 53%, 0.3);
+  box-shadow: 0 4px 16px var(--ip-brand-light);
 }
 
 .submitBtn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 24px hsla(221, 83%, 53%, 0.4);
+  box-shadow: 0 6px 24px var(--ip-brand-hover-shadow);
 }
 
 .submitBtn:active {
@@ -224,12 +223,12 @@
 .dividerLine {
   flex: 1;
   height: 1px;
-  background: hsl(217, 33%, 17%);
+  background: var(--ip-border);
 }
 
 .dividerText {
   font-size: 11.5px;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-muted);
   text-transform: uppercase;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -239,9 +238,9 @@
   width: 100%;
   height: 44px;
   border-radius: 10px;
-  border: 1px solid hsl(217, 33%, 17%);
-  background: hsla(217, 33%, 12%, 0.4);
-  color: hsl(215, 20%, 70%);
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-secondary);
   font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
@@ -253,9 +252,9 @@
 }
 
 .secondaryBtn:hover {
-  border-color: hsl(217, 33%, 25%);
-  background: hsla(215, 25%, 27%, 0.25);
-  color: hsl(210, 40%, 90%);
+  border-color: var(--ip-border-strong);
+  background: var(--ip-page-bg);
+  color: var(--ip-text-primary);
 }
 
 .secondaryBtn svg {
@@ -268,12 +267,12 @@
   text-align: center;
   margin-top: 24px;
   font-size: 13px;
-  color: hsl(215, 20%, 50%);
+  color: var(--ip-text-secondary);
 }
 
 .footerLink a,
 .footerLink button {
-  color: hsl(221, 83%, 63%);
+  color: var(--ip-brand);
   text-decoration: none;
   font-weight: 500;
   background: none;
@@ -285,7 +284,7 @@
 
 .footerLink a:hover,
 .footerLink button:hover {
-  color: hsl(221, 83%, 73%);
+  color: var(--ip-brand-hover);
 }
 
 /* Success/error messages */
@@ -295,9 +294,9 @@
   gap: 8px;
   padding: 12px 16px;
   border-radius: 10px;
-  background: hsla(142, 71%, 45%, 0.1);
-  border: 1px solid hsla(142, 71%, 45%, 0.2);
-  color: hsl(142, 71%, 55%);
+  background: var(--ip-green-light);
+  border: 1px solid var(--ip-green-border);
+  color: var(--ip-green);
   font-size: 13px;
   font-weight: 500;
   margin-bottom: 20px;
@@ -315,9 +314,9 @@
   gap: 8px;
   padding: 12px 16px;
   border-radius: 10px;
-  background: hsla(0, 84%, 60%, 0.1);
-  border: 1px solid hsla(0, 84%, 60%, 0.2);
-  color: hsl(0, 84%, 65%);
+  background: var(--ip-red-light);
+  border: 1px solid var(--ip-red-border);
+  color: var(--ip-red);
   font-size: 13px;
   font-weight: 500;
   margin-bottom: 20px;
@@ -340,13 +339,13 @@
   flex: 1;
   height: 3px;
   border-radius: 2px;
-  background: hsl(217, 33%, 17%);
+  background: var(--ip-border);
   transition: background 0.3s ease;
 }
 
-.strengthWeak { background: hsl(0, 84%, 60%); }
-.strengthMedium { background: hsl(45, 93%, 47%); }
-.strengthStrong { background: hsl(142, 71%, 45%); }
+.strengthWeak { background: var(--ip-red); }
+.strengthMedium { background: var(--ip-orange); }
+.strengthStrong { background: var(--ip-green); }
 
 .strengthLabel {
   font-size: 11px;
@@ -367,18 +366,18 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: hsl(217, 33%, 20%);
+  background: var(--ip-border-strong);
   transition: all 0.3s ease;
 }
 
 .stepActive {
-  background: hsl(221, 83%, 53%);
+  background: var(--ip-brand);
   width: 24px;
   border-radius: 4px;
 }
 
 .stepDone {
-  background: hsl(142, 71%, 45%);
+  background: var(--ip-green);
 }
 
 /* Back button */
@@ -387,7 +386,7 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-secondary);
   background: none;
   border: none;
   cursor: pointer;
@@ -397,10 +396,47 @@
 }
 
 .backBtn:hover {
-  color: hsl(210, 40%, 90%);
+  color: var(--ip-text-primary);
 }
 
 .backBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Password field with eye toggle */
+.passwordWrapper {
+  position: relative;
+}
+
+.passwordWrapper .formInput {
+  padding-right: 42px;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ip-text-muted);
+  border-radius: 6px;
+  transition: color 0.15s ease;
+  padding: 0;
+}
+
+.eyeBtn:hover {
+  color: var(--ip-text-secondary);
+}
+
+.eyeBtn svg {
   width: 16px;
   height: 16px;
 }

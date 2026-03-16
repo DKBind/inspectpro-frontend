@@ -7,10 +7,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: hsla(222, 47%, 6%, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid hsl(217, 33%, 15%);
+  background: var(--ip-header-bg);
+  border-bottom: 1px solid var(--ip-header-border);
+  box-shadow: var(--ip-shadow-xs);
 }
 
 .leftSection {
@@ -28,14 +27,14 @@
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: hsl(215, 20%, 65%);
+  color: var(--ip-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .menuBtn:hover {
-  background: hsla(215, 25%, 27%, 0.35);
-  color: hsl(210, 40%, 90%);
+  background: var(--ip-page-bg);
+  color: var(--ip-text-primary);
 }
 
 .menuBtn svg {
@@ -59,14 +58,14 @@
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: hsl(215, 20%, 65%);
+  color: var(--ip-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .sidebarToggleBtn:hover {
-  background: hsla(215, 25%, 27%, 0.35);
-  color: hsl(210, 40%, 90%);
+  background: var(--ip-page-bg);
+  color: var(--ip-text-primary);
 }
 
 .sidebarToggleBtn svg {
@@ -86,7 +85,7 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-secondary);
 }
 
 .breadcrumbItem {
@@ -96,22 +95,22 @@
 }
 
 .breadcrumbLink {
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-secondary);
   text-decoration: none;
   transition: color 0.15s ease;
 }
 
 .breadcrumbLink:hover {
-  color: hsl(210, 40%, 90%);
+  color: var(--ip-text-primary);
 }
 
 .breadcrumbCurrent {
-  color: hsl(210, 40%, 98%);
+  color: var(--ip-text-primary);
   font-weight: 500;
 }
 
 .breadcrumbSep {
-  color: hsl(215, 20%, 35%);
+  color: var(--ip-text-disabled);
   font-size: 11px;
 }
 
@@ -128,28 +127,28 @@
   height: 36px;
   padding: 0 12px 0 36px;
   border-radius: 8px;
-  border: 1px solid hsl(217, 33%, 17%);
-  background: hsla(217, 33%, 12%, 0.6);
-  color: hsl(210, 40%, 98%);
+  border: 1px solid var(--ip-border);
+  background: var(--ip-page-bg);
+  color: var(--ip-text-primary);
   font-size: 13px;
   outline: none;
   transition: all 0.2s ease;
 }
 
 .searchInput::placeholder {
-  color: hsl(215, 20%, 40%);
+  color: var(--ip-text-disabled);
 }
 
 .searchInput:focus {
-  border-color: hsl(221, 83%, 53%);
-  background: hsla(217, 33%, 14%, 0.8);
-  box-shadow: 0 0 0 3px hsla(221, 83%, 53%, 0.15);
+  border-color: var(--ip-brand);
+  background: var(--ip-surface);
+  box-shadow: 0 0 0 3px var(--ip-brand-light);
 }
 
 .searchIcon {
   position: absolute;
   left: 10px;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-muted);
   width: 16px;
   height: 16px;
   pointer-events: none;
@@ -161,9 +160,9 @@
   font-size: 10px;
   font-family: inherit;
   font-weight: 600;
-  color: hsl(215, 20%, 40%);
-  background: hsla(215, 20%, 20%, 0.5);
-  border: 1px solid hsl(217, 33%, 22%);
+  color: var(--ip-text-muted);
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
   border-radius: 4px;
   padding: 1px 5px;
   line-height: 1.4;
@@ -186,14 +185,14 @@
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: hsl(215, 20%, 65%);
+  color: var(--ip-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .iconBtn:hover {
-  background: hsla(215, 25%, 27%, 0.35);
-  color: hsl(210, 40%, 90%);
+  background: var(--ip-page-bg);
+  color: var(--ip-text-primary);
 }
 
 .iconBtn svg {
@@ -208,8 +207,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: hsl(0, 84%, 60%);
-  border: 2px solid hsl(222, 47%, 6%);
+  background: var(--ip-red);
+  border: 2px solid var(--ip-surface);
 }
 
 .userMenuWrapper {
@@ -233,14 +232,14 @@
 }
 
 .userMenuClickable:hover {
-  background: hsla(215, 25%, 27%, 0.35);
+  background: var(--ip-page-bg);
 }
 
 .avatar {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(262, 83%, 58%));
+  background: var(--ip-gradient-brand);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -260,19 +259,19 @@
 .userName {
   font-size: 13px;
   font-weight: 600;
-  color: hsl(210, 40%, 98%);
+  color: var(--ip-text-primary);
 }
 
 .userRole {
   font-size: 11px;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-secondary);
   text-transform: capitalize;
 }
 
 .chevron {
   width: 14px;
   height: 14px;
-  color: hsl(215, 20%, 55%);
+  color: var(--ip-text-muted);
   transition: transform 0.2s ease;
   margin-left: 4px;
 }
@@ -285,12 +284,12 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 200px;
-  background: hsl(222, 47%, 8%);
-  border: 1px solid hsl(217, 33%, 17%);
+  width: 240px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
   border-radius: 12px;
   padding: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--ip-shadow-lg);
   z-index: 50;
   animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -306,14 +305,77 @@
   }
 }
 
+/* User card inside dropdown */
+.rdUserCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--ip-surface-raised);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.rdAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--ip-gradient-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.rdUserInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.rdUserName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ip-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rdUserEmail {
+  font-size: 11px;
+  color: var(--ip-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.rdDivider {
+  height: 1px;
+  background: var(--ip-border);
+  margin: 4px 0 6px;
+}
+
+.rdLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ip-text-muted);
+  padding: 0 6px 6px;
+}
+
 .dropdownHeader {
   font-size: 11px;
   font-weight: 600;
-  color: hsl(215, 20%, 45%);
+  color: var(--ip-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 8px 12px 12px;
-  border-bottom: 1px solid hsl(217, 33%, 15%);
+  border-bottom: 1px solid var(--ip-border);
   margin-bottom: 8px;
 }
 
@@ -332,7 +394,7 @@
   border-radius: 8px;
   background: transparent;
   border: none;
-  color: hsl(215, 20%, 65%);
+  color: var(--ip-text-secondary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -341,30 +403,50 @@
 }
 
 .roleItem:hover {
-  background: hsla(215, 25%, 27%, 0.35);
-  color: hsl(210, 40%, 90%);
+  background: var(--ip-page-bg);
+  color: var(--ip-text-primary);
 }
 
 .roleItemActive {
-  background: hsla(221, 83%, 53%, 0.12);
-  color: hsl(221, 83%, 68%);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand-hover);
 }
 
 .roleItemActive:hover {
-  background: hsla(221, 83%, 53%, 0.18);
-  color: hsl(221, 83%, 68%);
+  background: var(--ip-brand-hover-bg);
+  color: var(--ip-brand-hover);
+}
+
+.roleItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.roleItemBadge {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ip-text-muted);
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.roleItemActive .roleItemBadge {
+  background: var(--ip-brand);
 }
 
 .checkIcon {
   width: 14px;
   height: 14px;
-  color: hsl(221, 83%, 68%);
+  color: var(--ip-brand);
 }
 
 .divider {
   width: 1px;
   height: 24px;
-  background: hsl(217, 33%, 17%);
+  background: var(--ip-border);
   margin: 0 4px;
 }
 
