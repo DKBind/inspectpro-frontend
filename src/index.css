@@ -177,3 +177,216 @@
 
 /* Selection */
 ::selection { background: rgba(51,174,149,0.20); color: #263B4F; }
+
+/* ── Component Size Tokens ── */
+:root {
+  --ip-input-height: 40px;
+  --ip-btn-height-sm: 32px;
+  --ip-btn-height-md: 40px;
+  --ip-btn-height-lg: 48px;
+  --ip-dropdown-height: 40px;
+  --ip-radius-sm: 6px;
+  --ip-radius-md: 8px;
+  --ip-radius-lg: 12px;
+  --ip-radius-xl: 16px;
+  --ip-radius-2xl: 20px;
+  --ip-radius-pill: 9999px;
+  --ip-radius-card: 14px;
+  --ip-radius-modal: 16px;
+}
+
+/* ================================================================
+   Global Switch / Toggle Button
+   ================================================================ */
+.ip-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 44px;
+  height: 24px;
+  border-radius: var(--ip-radius-pill);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.ip-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ip-switch[data-checked="true"],
+.ip-switch.is-on {
+  background: var(--ip-brand);
+  justify-content: flex-end;
+  padding-right: 3px;
+}
+
+.ip-switch[data-checked="false"],
+.ip-switch.is-off {
+  background: var(--ip-border-strong);
+  justify-content: flex-start;
+  padding-left: 3px;
+}
+
+.ip-switch-knob {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+/* ================================================================
+   Global Radio Button
+   ================================================================ */
+.ip-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ip-radio-group.horizontal {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ip-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--ip-text-secondary);
+  user-select: none;
+}
+
+.ip-radio-label input[type="radio"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--ip-border-strong);
+  background: var(--ip-surface);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ip-radio-label input[type="radio"]:checked {
+  border-color: var(--ip-brand);
+  background: var(--ip-brand);
+  box-shadow: inset 0 0 0 3px white;
+}
+
+.ip-radio-label input[type="radio"]:hover:not(:checked) {
+  border-color: var(--ip-brand);
+}
+
+.ip-radio-label input[type="radio"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ip-brand-light);
+}
+
+.ip-radio-label.is-checked {
+  color: var(--ip-text-primary);
+  font-weight: 500;
+}
+
+/* ================================================================
+   Global Checkbox
+   ================================================================ */
+.ip-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--ip-text-secondary);
+  user-select: none;
+}
+
+.ip-checkbox-label input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--ip-radius-sm);
+  border: 2px solid var(--ip-border-strong);
+  background: var(--ip-surface);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ip-checkbox-label input[type="checkbox"]:checked {
+  background: var(--ip-brand);
+  border-color: var(--ip-brand);
+}
+
+.ip-checkbox-label input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 5px;
+  height: 9px;
+  border: 2px solid white;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+
+.ip-checkbox-label input[type="checkbox"]:hover:not(:checked) {
+  border-color: var(--ip-brand);
+}
+
+.ip-checkbox-label input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ip-brand-light);
+}
+
+.ip-checkbox-label.is-checked {
+  color: var(--ip-text-primary);
+}
+
+/* Indeterminate state */
+.ip-checkbox-label input[type="checkbox"]:indeterminate {
+  background: var(--ip-brand);
+  border-color: var(--ip-brand);
+}
+
+.ip-checkbox-label input[type="checkbox"]:indeterminate::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  width: 10px;
+  height: 2px;
+  background: white;
+  transform: none;
+  border: none;
+}
+
+/* ================================================================
+   Global Responsive Utilities
+   ================================================================ */
+@media (max-width: 1024px) {
+  :root {
+    --ip-sidebar-width: 220px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --ip-input-height: 38px;
+    --ip-btn-height-md: 38px;
+    --ip-dropdown-height: 38px;
+  }
+}

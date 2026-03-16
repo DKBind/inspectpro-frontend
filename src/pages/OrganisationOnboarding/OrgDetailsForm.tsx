@@ -1,8 +1,8 @@
 import { useFormContext, useController } from 'react-hook-form';
 import { Building2, Mail, Phone, User, Globe, FileText, MapPin } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/shared-ui/Input/input';
+import { Label } from '@/components/shared-ui/Label/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared-ui/Card/card';
 
 export function OrgDetailsForm() {
   const { control, register, formState: { errors } } = useFormContext();

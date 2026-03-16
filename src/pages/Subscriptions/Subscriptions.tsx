@@ -18,10 +18,10 @@ import type { ModuleResponse } from '@/services/models/module';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@/components/shared-ui/Dialog/dialog';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Input } from '@/components/shared-ui/Input/input';
+import { Label } from '@/components/shared-ui/Label/label';
 import styles from './Subscriptions.module.css';
 
 const PAGE_SIZE = 10;

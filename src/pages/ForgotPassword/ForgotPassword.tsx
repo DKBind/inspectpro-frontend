@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/components/Constant/Route';
-import { Shield, ArrowLeft, CheckCircle } from 'lucide-react';
+import { authService } from '@/services/authService';
+import { Shield, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import styles from '../Login/Login.module.css';
 
 type Step = 'email' | 'otp' | 'reset' | 'success';
@@ -11,34 +12,69 @@ const ForgotPassword = () => {
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const stepIndex = { email: 0, otp: 1, reset: 2, success: 3 };
+  const stepIndex: Record<Step, number> = { email: 0, otp: 1, reset: 2, success: 3 };
 
-  const handleSendOtp = (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('otp');
+    setError('');
+    setLoading(true);
+    try {
+      await authService.sendOtp(email.trim().toLowerCase());
+      setStep('otp');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('reset');
+    setError('');
+    setLoading(true);
+    try {
+      const token = await authService.verifyOtp(email.trim().toLowerCase(), otp.trim());
+      setResetToken(token);
+      setStep('reset');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Invalid OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword !== confirmPassword) return;
-    setStep('success');
+    setError('');
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    setLoading(true);
+    try {
+      await authService.resetPassword(resetToken, newPassword);
+      setStep('success');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to reset password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className={styles.authPage}>
-      <div className={styles.bgDecoration}>
-        <div className={`${styles.bgOrb} ${styles.bgOrb1}`} />
-        <div className={`${styles.bgOrb} ${styles.bgOrb2}`} />
-      </div>
-
+    <div className={styles.authPage} style={{ background: 'var(--ip-page-bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
       <div className={styles.authCard}>
         <div className={styles.logoSection}>
           <div className={styles.logoIcon}>
@@ -50,12 +86,10 @@ const ForgotPassword = () => {
         {/* Step indicators */}
         {step !== 'success' && (
           <div className={styles.steps}>
-            {['email', 'otp', 'reset'].map((s, i) => (
+            {(['email', 'otp', 'reset'] as const).map((s, i) => (
               <div
                 key={s}
-                className={`${styles.step} ${
-                  i === stepIndex[step] ? styles.stepActive : ''
-                } ${i < stepIndex[step] ? styles.stepDone : ''}`}
+                className={`${styles.step} ${i === stepIndex[step] ? styles.stepActive : ''} ${i < stepIndex[step] ? styles.stepDone : ''}`}
               />
             ))}
           </div>
@@ -69,8 +103,9 @@ const ForgotPassword = () => {
             </button>
             <h2 className={styles.formTitle}>Forgot password?</h2>
             <p className={styles.formSubtitle}>
-              Enter your email and we'll send you an OTP to reset your password
+              Enter your email and we'll send you an OTP to reset your password.
             </p>
+            {error && <div className={styles.errorMsg}>{error}</div>}
             <form onSubmit={handleSendOtp}>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Email address</label>
@@ -81,10 +116,11 @@ const ForgotPassword = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={loading}
                 />
               </div>
-              <button type="submit" className={styles.submitBtn}>
-                Send OTP
+              <button type="submit" className={styles.submitBtn} disabled={loading}>
+                {loading ? 'Sending OTP…' : 'Send OTP'}
               </button>
             </form>
           </>
@@ -93,13 +129,14 @@ const ForgotPassword = () => {
         {/* Step: OTP */}
         {step === 'otp' && (
           <>
-            <button className={styles.backBtn} onClick={() => setStep('email')}>
+            <button className={styles.backBtn} onClick={() => { setStep('email'); setError(''); }}>
               <ArrowLeft /> Back
             </button>
             <h2 className={styles.formTitle}>Verify OTP</h2>
             <p className={styles.formSubtitle}>
               Enter the 6-digit code sent to <strong>{email}</strong>
             </p>
+            {error && <div className={styles.errorMsg}>{error}</div>}
             <form onSubmit={handleVerifyOtp}>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>OTP Code</label>
@@ -108,18 +145,22 @@ const ForgotPassword = () => {
                   className={styles.formInput}
                   placeholder="Enter 6-digit OTP"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   maxLength={6}
                   required
+                  disabled={loading}
+                  autoComplete="one-time-code"
                 />
               </div>
-              <button type="submit" className={styles.submitBtn}>
-                Verify OTP
+              <button type="submit" className={styles.submitBtn} disabled={loading || otp.length < 6}>
+                {loading ? 'Verifying…' : 'Verify OTP'}
               </button>
             </form>
             <div className={styles.footerLink}>
               Didn't receive a code?{' '}
-              <button onClick={() => setStep('email')}>Resend</button>
+              <button onClick={() => { setError(''); handleSendOtp({ preventDefault: () => {} } as React.FormEvent); }}>
+                Resend
+              </button>
             </div>
           </>
         )}
@@ -127,38 +168,49 @@ const ForgotPassword = () => {
         {/* Step: New Password */}
         {step === 'reset' && (
           <>
-            <button className={styles.backBtn} onClick={() => setStep('otp')}>
+            <button className={styles.backBtn} onClick={() => { setStep('otp'); setError(''); }}>
               <ArrowLeft /> Back
             </button>
             <h2 className={styles.formTitle}>Set new password</h2>
-            <p className={styles.formSubtitle}>
-              Create a strong password for your account
-            </p>
+            <p className={styles.formSubtitle}>Create a strong password for your account</p>
+            {error && <div className={styles.errorMsg}>{error}</div>}
             <form onSubmit={handleResetPassword}>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>New Password</label>
-                <input
-                  type="password"
-                  className={styles.formInput}
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                />
+                <div className={styles.passwordWrapper}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className={styles.formInput}
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                  <button type="button" className={styles.eyeBtn} onClick={() => setShowPassword(!showPassword)} tabIndex={-1}>
+                    {showPassword ? <EyeOff /> : <Eye />}
+                  </button>
+                </div>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Confirm Password</label>
-                <input
-                  type="password"
-                  className={styles.formInput}
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
+                <div className={styles.passwordWrapper}>
+                  <input
+                    type={showConfirm ? 'text' : 'password'}
+                    className={styles.formInput}
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                  <button type="button" className={styles.eyeBtn} onClick={() => setShowConfirm(!showConfirm)} tabIndex={-1}>
+                    {showConfirm ? <EyeOff /> : <Eye />}
+                  </button>
+                </div>
               </div>
-              <button type="submit" className={styles.submitBtn}>
-                Reset Password
+              <button type="submit" className={styles.submitBtn} disabled={loading}>
+                {loading ? 'Resetting…' : 'Reset Password'}
               </button>
             </form>
           </>
@@ -175,10 +227,7 @@ const ForgotPassword = () => {
             <p className={styles.formSubtitle}>
               Your password has been reset. You can now sign in with your new password.
             </p>
-            <button
-              className={styles.submitBtn}
-              onClick={() => navigate(ROUTES.LOGIN)}
-            >
+            <button className={styles.submitBtn} onClick={() => navigate(ROUTES.LOGIN)}>
               Back to Sign In
             </button>
           </>

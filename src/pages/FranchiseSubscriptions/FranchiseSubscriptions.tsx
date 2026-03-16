@@ -25,10 +25,10 @@ import { useAuthStore } from '@/store/useAuthStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@/components/shared-ui/Dialog/dialog';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Input } from '@/components/shared-ui/Input/input';
+import { Label } from '@/components/shared-ui/Label/label';
 import styles from '@/pages/Subscriptions/Subscriptions.module.css';
 
 const PAGE_SIZE = 10;
@@ -267,7 +267,7 @@ const FranchiseSubscriptions = () => {
                         {p.maxUsers != null ? p.maxUsers.toLocaleString() : '—'}
                       </td>
                       <td className={styles.mutedCell}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#94a3b8' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#6B7280' }}>
                           <Package style={{ width: 12, height: 12 }} />
                           {p.modules?.length ?? 0}
                         </span>
@@ -322,17 +322,17 @@ const FranchiseSubscriptions = () => {
 
       {/* Create / Edit Modal */}
       <Dialog open={modalMode !== null} onOpenChange={(open) => { if (!open) setModalMode(null); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center">
-                <Sparkles size={18} className="text-purple-400" />
+              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
+                <Sparkles size={18} className="text-[#33AE95]" />
               </div>
-              <DialogTitle className="text-xl font-bold text-white">
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">
                 {modalMode === 'edit' ? 'Edit Plan' : 'Create Subscription Plan'}
               </DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 text-sm pl-12">
+            <DialogDescription className="text-[#6B7280] text-sm pl-12">
               {modalMode === 'edit' ? 'Update the plan details.' : 'Define a plan to offer your customers — set pricing, limits, and features.'}
             </DialogDescription>
           </DialogHeader>
@@ -347,7 +347,7 @@ const FranchiseSubscriptions = () => {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Fld label="Price" required error={errors.price?.message}>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">
                       <IndianRupee size={14} />
                     </span>
                     <Input placeholder="0.00" {...register('price')} className={inputCls(!!errors.price) + ' pl-9'} />
@@ -355,7 +355,7 @@ const FranchiseSubscriptions = () => {
                 </Fld>
                 <Fld label="Duration (Months)" required error={errors.durationMonths?.message}>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">
                       <Clock size={14} />
                     </span>
                     <Input placeholder="e.g. 12" {...register('durationMonths')} className={inputCls(!!errors.durationMonths) + ' pl-9'} />
@@ -366,7 +366,7 @@ const FranchiseSubscriptions = () => {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Fld label="Max Customers" hint="Optional" error={errors.maxUsers?.message}>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">
                       <Users size={14} />
                     </span>
                     <Input placeholder="e.g. 50" {...register('maxUsers')} className={inputCls(!!errors.maxUsers) + ' pl-9'} />
@@ -376,7 +376,7 @@ const FranchiseSubscriptions = () => {
                   <div className="flex gap-2">
                     {(['MONTHLY', 'YEARLY'] as const).map((cycle) => (
                       <button key={cycle} type="button" onClick={() => setValue('billingCycle', cycle)}
-                        className={`flex-1 h-10 rounded-md text-sm font-medium border transition-all ${watch('billingCycle') === cycle ? 'bg-purple-600/20 border-purple-500/60 text-purple-400' : 'bg-slate-950/60 border-slate-700 text-slate-400 hover:border-slate-600'}`}>
+                        className={`flex-1 h-10 rounded-md text-sm font-medium border transition-all ${watch('billingCycle') === cycle ? 'bg-[#33AE95]/10 border-[#33AE95]/60 text-[#33AE95]' : 'bg-white border-[#E5E7EB] text-[#6B7280] hover:border-[#33AE95]/40'}`}>
                         {cycle.charAt(0) + cycle.slice(1).toLowerCase()}
                       </button>
                     ))}
@@ -394,7 +394,7 @@ const FranchiseSubscriptions = () => {
                         {watchIsActive ? <CheckCircle size={10} /> : <XCircle size={10} />}
                       </span>
                     </button>
-                    <span className={`text-sm font-medium ${watchIsActive ? 'text-green-400' : 'text-slate-500'}`}>
+                    <span className={`text-sm font-medium ${watchIsActive ? 'text-[#33AE95]' : 'text-[#6B7280]'}`}>
                       {watchIsActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
@@ -403,20 +403,20 @@ const FranchiseSubscriptions = () => {
 
               <Fld label="Features (Modules)" hint="Select which features this plan includes">
                 {allModules.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-2">No modules available.</p>
+                  <p className="text-xs text-[#6B7280] py-2">No modules available.</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 mt-1">
                     {allModules.map((m) => {
                       const checked = selectedModuleIds.includes(m.id);
                       return (
                         <button key={m.id} type="button" onClick={() => toggleModule(m.id)}
-                          style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${checked ? 'rgba(139,92,246,0.4)' : '#1e293b'}`, background: checked ? 'rgba(139,92,246,0.08)' : 'rgba(15,23,42,0.4)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
-                          <span style={{ marginTop: 2, flexShrink: 0, width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? '#8b5cf6' : '#475569'}`, background: checked ? '#8b5cf6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${checked ? 'rgba(51,174,149,0.4)' : '#E5E7EB'}`, background: checked ? 'rgba(51,174,149,0.08)' : '#F3F4F6', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
+                          <span style={{ marginTop: 2, flexShrink: 0, width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? '#33AE95' : '#E5E7EB'}`, background: checked ? '#33AE95' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {checked && <CheckCircle size={10} color="white" />}
                           </span>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: 12, fontWeight: 600, color: checked ? '#c4b5fd' : '#94a3b8', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
-                            {m.category && <p style={{ fontSize: 11, color: '#475569', margin: 0 }}>{m.category}</p>}
+                            <p style={{ fontSize: 12, fontWeight: 600, color: checked ? '#33AE95' : '#6B7280', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
+                            {m.category && <p style={{ fontSize: 11, color: '#6B7280', margin: 0 }}>{m.category}</p>}
                           </div>
                         </button>
                       );
@@ -424,7 +424,7 @@ const FranchiseSubscriptions = () => {
                   </div>
                 )}
                 {selectedModuleIds.length > 0 && (
-                  <p style={{ fontSize: 12, color: '#a78bfa', marginTop: 8 }}>
+                  <p style={{ fontSize: 12, color: '#33AE95', marginTop: 8 }}>
                     {selectedModuleIds.length} module{selectedModuleIds.length !== 1 ? 's' : ''} selected
                   </p>
                 )}
@@ -432,18 +432,17 @@ const FranchiseSubscriptions = () => {
 
               <Fld label="Notes" hint="Optional">
                 <div className="relative">
-                  <span className="absolute left-3 top-3 text-slate-500 pointer-events-none z-10"><FileText size={14} /></span>
+                  <span className="absolute left-3 top-3 text-[#6B7280] pointer-events-none z-10"><FileText size={14} /></span>
                   <textarea rows={3} placeholder="Description or notes..." {...register('notes')}
-                    className="w-full rounded-md bg-slate-950/60 border border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 transition-all text-sm px-3 py-2 pl-9 resize-none outline-none" />
+                    className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#6B7280] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 transition-all text-sm px-3 py-2 pl-9 resize-none outline-none" />
                 </div>
               </Fld>
             </div>
 
-            <DialogFooter className="px-7 py-5 border-t border-slate-800 bg-slate-900/30 rounded-b-2xl flex gap-3">
-              <Button type="button" variant="ghost" onClick={() => setModalMode(null)} disabled={submitting}
-                className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Cancel</Button>
+            <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl flex gap-3">
+              <Button type="button" variant="outline" onClick={() => setModalMode(null)} disabled={submitting}>Cancel</Button>
               <Button type="submit" disabled={submitting}
-                className="flex-1 sm:flex-none sm:min-w-40 bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-lg active:scale-95">
+                className="flex-1 sm:flex-none sm:min-w-40 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95">
                 {submitting ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />{modalMode === 'edit' ? 'Saving...' : 'Creating...'}</span>
                   : modalMode === 'edit' ? 'Save Changes' : 'Create Plan'}
               </Button>
@@ -454,13 +453,13 @@ const FranchiseSubscriptions = () => {
 
       {/* View Modal */}
       <Dialog open={viewPlan !== null} onOpenChange={(open) => { if (!open) setViewPlan(null); }}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center">
-                <Sparkles size={18} className="text-purple-400" />
+              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
+                <Sparkles size={18} className="text-[#33AE95]" />
               </div>
-              <DialogTitle className="text-xl font-bold text-white">Plan Details</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">Plan Details</DialogTitle>
             </div>
           </DialogHeader>
           {viewPlan && (
@@ -475,17 +474,17 @@ const FranchiseSubscriptions = () => {
                 <ViewRow label="Notes" value={viewPlan.notes ?? '—'} />
               </div>
               <div>
-                <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <LayoutGrid size={12} />Features / Modules ({(viewPlan.modules ?? []).length})
                 </p>
                 {(viewPlan.modules ?? []).length === 0 ? (
-                  <p style={{ fontSize: 12, color: '#475569' }}>No modules assigned.</p>
+                  <p style={{ fontSize: 12, color: '#6B7280' }}>No modules assigned.</p>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                     {viewPlan.modules!.map((m) => (
-                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(15,23,42,0.4)', border: '1px solid #1e293b', borderRadius: 8, padding: '8px 12px' }}>
-                        <Package size={13} color="#a78bfa" style={{ flexShrink: 0 }} />
-                        <p style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', margin: 0 }}>{m.name}</p>
+                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 12px' }}>
+                        <Package size={13} color="#33AE95" style={{ flexShrink: 0 }} />
+                        <p style={{ fontSize: 12, fontWeight: 600, color: '#263B4F', margin: 0 }}>{m.name}</p>
                       </div>
                     ))}
                   </div>
@@ -493,32 +492,30 @@ const FranchiseSubscriptions = () => {
               </div>
             </div>
           )}
-          <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
-            <Button variant="ghost" onClick={() => setViewPlan(null)}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Close</Button>
+          <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">
+            <Button variant="outline" onClick={() => setViewPlan(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Toggle Confirm */}
       <Dialog open={toggleTarget !== null} onOpenChange={(open) => { if (!open) setToggleTarget(null); }}>
-        <DialogContent className="sm:max-w-sm !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-sm shadow-2xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${toggleTarget?.newActive ? 'bg-green-600/20 border border-green-500/30' : 'bg-orange-600/20 border border-orange-500/30'}`}>
-                {toggleTarget?.newActive ? <CheckCircle size={18} className="text-green-400" /> : <XCircle size={18} className="text-orange-400" />}
+              <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${toggleTarget?.newActive ? 'bg-[#33AE95]/10 border border-[#33AE95]/30' : 'bg-[#E7970E]/10 border border-[#E7970E]/30'}`}>
+                {toggleTarget?.newActive ? <CheckCircle size={18} className="text-[#33AE95]" /> : <XCircle size={18} className="text-[#E7970E]" />}
               </div>
-              <DialogTitle className="text-xl font-bold text-white">{toggleTarget?.newActive ? 'Activate Plan' : 'Deactivate Plan'}</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">{toggleTarget?.newActive ? 'Activate Plan' : 'Deactivate Plan'}</DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 text-sm pl-12">
-              Are you sure you want to <strong className="text-white">{toggleTarget?.newActive ? 'activate' : 'deactivate'}</strong> <strong className="text-white">{toggleTarget?.plan.planName}</strong>?
+            <DialogDescription className="text-[#6B7280] text-sm pl-12">
+              Are you sure you want to <strong className="text-[#263B4F]">{toggleTarget?.newActive ? 'activate' : 'deactivate'}</strong> <strong className="text-[#263B4F]">{toggleTarget?.plan.planName}</strong>?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
-            <Button variant="ghost" onClick={() => setToggleTarget(null)} disabled={!!togglingId}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Cancel</Button>
+          <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">
+            <Button variant="outline" onClick={() => setToggleTarget(null)} disabled={!!togglingId}>Cancel</Button>
             <Button onClick={confirmToggleStatus} disabled={!!togglingId}
-              className={toggleTarget?.newActive ? 'bg-green-600 hover:bg-green-500 text-white font-semibold' : 'bg-orange-600 hover:bg-orange-500 text-white font-semibold'}>
+              className={toggleTarget?.newActive ? 'bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold' : 'bg-[#E7970E] hover:bg-[#d08a0d] text-white font-semibold'}>
               {togglingId ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Updating...</span> : toggleTarget?.newActive ? 'Activate' : 'Deactivate'}
             </Button>
           </DialogFooter>
@@ -527,22 +524,21 @@ const FranchiseSubscriptions = () => {
 
       {/* Delete Confirm */}
       <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
-        <DialogContent className="sm:max-w-sm !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-sm shadow-2xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center">
-                <Trash2 size={18} className="text-red-400" />
+              <div className="h-9 w-9 rounded-xl bg-[#DF453A]/10 border border-[#DF453A]/30 flex items-center justify-center">
+                <Trash2 size={18} className="text-[#DF453A]" />
               </div>
-              <DialogTitle className="text-xl font-bold text-white">Delete Plan</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">Delete Plan</DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 text-sm pl-12">
-              Are you sure you want to delete <strong className="text-white">{deleteTarget?.planName}</strong>? This cannot be undone.
+            <DialogDescription className="text-[#6B7280] text-sm pl-12">
+              Are you sure you want to delete <strong className="text-[#263B4F]">{deleteTarget?.planName}</strong>? This cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Cancel</Button>
-            <Button onClick={confirmDelete} disabled={deleting} className="bg-red-600 hover:bg-red-500 text-white font-semibold">
+          <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+            <Button onClick={confirmDelete} disabled={deleting} className="bg-[#DF453A] hover:bg-[#c73c32] text-white font-semibold">
               {deleting ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Deleting...</span> : 'Delete'}
             </Button>
           </DialogFooter>
@@ -557,7 +553,7 @@ export default FranchiseSubscriptions;
 // ─── Micro helpers ─────────────────────────────────────────────────────────────
 
 const inputCls = (hasError?: boolean) =>
-  `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
+  `border border-[#E5E7EB] rounded-lg px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-[#33AE95]/30 focus:border-[#33AE95] text-[#263B4F] bg-white text-sm ${hasError ? 'border-[#DF453A]' : ''}`;
 
 function Fld({ label, required, hint, error, children }: {
   label: string; required?: boolean; hint?: string; error?: string; children: ReactNode;
@@ -565,21 +561,21 @@ function Fld({ label, required, hint, error, children }: {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
-        <Label className="text-slate-300 text-sm font-medium">{label}</Label>
-        {required && <span className="text-red-400 text-xs">*</span>}
-        {hint && <span className="text-slate-500 text-xs">({hint})</span>}
+        <Label className="text-[#263B4F] text-sm font-medium">{label}</Label>
+        {required && <span className="text-[#DF453A] text-xs">*</span>}
+        {hint && <span className="text-[#6B7280] text-xs">({hint})</span>}
       </div>
       {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-[#DF453A]">{error}</p>}
     </div>
   );
 }
 
 function ViewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-2.5 border-b border-slate-800 last:border-0">
-      <span className="text-xs text-slate-500 uppercase tracking-wide font-medium shrink-0 w-28">{label}</span>
-      <span className="text-sm text-slate-200 text-right">{value}</span>
+    <div className="flex items-start justify-between gap-4 py-2.5 border-b border-[#E5E7EB] last:border-0">
+      <span className="text-xs text-[#6B7280] uppercase tracking-wide font-medium shrink-0 w-28">{label}</span>
+      <span className="text-sm text-[#263B4F] text-right">{value}</span>
     </div>
   );
 }

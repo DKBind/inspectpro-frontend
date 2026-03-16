@@ -11,16 +11,16 @@ import { subscriptionService } from '@/services/subscriptionService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
 import { ROUTES } from '@/components/Constant/Route';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Input } from '@/components/shared-ui/Input/input';
+import { Label } from '@/components/shared-ui/Label/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/shared-ui/Card/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 

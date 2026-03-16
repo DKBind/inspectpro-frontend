@@ -21,6 +21,7 @@ export const ROUTES = {
   CUSTOMERS: '/customers',
   USERS_ROLES: '/users-roles',
   NOTIFICATIONS: '/notifications',
+  UNAUTHORIZED: '/unauthorized',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;

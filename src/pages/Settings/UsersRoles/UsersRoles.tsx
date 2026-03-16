@@ -15,13 +15,13 @@ import type { UserResponse, RoleResponse, RoleModuleAssignment } from '@/service
 import type { OrganisationResponse } from '@/services/models/organisation';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/shared-ui/Dialog/dialog';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Input } from '@/components/shared-ui/Input/input';
+import { Label } from '@/components/shared-ui/Label/label';
 import styles from './UsersRoles.module.css';
 
 // ─── Permission badge ─────────────────────────────────────────────────────────

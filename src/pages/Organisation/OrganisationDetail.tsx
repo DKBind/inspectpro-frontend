@@ -12,8 +12,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+} from '@/components/shared-ui/Dialog/dialog';
+import { Button } from '@/components/shared-ui/Button/button';
 import { CheckCircle, XCircle } from 'lucide-react';
 import SubscriptionModal from './SubscriptionModal';
 import type { OrgSubscriptionResponse } from '@/services/models/subscription';
@@ -158,7 +158,7 @@ const OrganisationDetail = () => {
         </div>
         {/* Status Toggle */}
         <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-slate-400">
+          <span className="text-xs font-medium text-[#6B7280]">
             {org.isActive ? 'Active' : 'Inactive'}
           </span>
           <button
@@ -302,34 +302,33 @@ const OrganisationDetail = () => {
 
       {/* Status Confirmation Dialog */}
       <Dialog open={showStatusConfirm} onOpenChange={(open) => { if (!open) { setShowStatusConfirm(false); setPendingStatus(null); } }}>
-        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-10 w-10 rounded-xl bg-yellow-600/15 border border-yellow-500/30 flex items-center justify-center shrink-0">
-                <AlertTriangle size={18} className="text-yellow-400" />
+              <div className="h-10 w-10 rounded-xl bg-[#E7970E]/10 border border-[#E7970E]/30 flex items-center justify-center shrink-0">
+                <AlertTriangle size={18} className="text-[#E7970E]" />
               </div>
-              <DialogTitle className="text-white">Confirm Status Change</DialogTitle>
+              <DialogTitle className="text-[#263B4F]">Confirm Status Change</DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 pl-[52px]">
+            <DialogDescription className="text-[#6B7280] pl-[52px]">
               {pendingStatus
-                ? <>Activating <span className="text-white font-medium">{org.name}</span> will restore access for this organisation. Are you sure?</>
-                : <>Deactivating <span className="text-white font-medium">{org.name}</span> may impact reporting and access. Are you sure?</>
+                ? <>Activating <span className="text-[#263B4F] font-medium">{org.name}</span> will restore access for this organisation. Are you sure?</>
+                : <>Deactivating <span className="text-[#263B4F] font-medium">{org.name}</span> may impact reporting and access. Are you sure?</>
               }
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-3 mt-2">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => { setShowStatusConfirm(false); setPendingStatus(null); }}
               disabled={toggling}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700"
             >
               Cancel
             </Button>
             <Button
               onClick={doToggle}
               disabled={toggling}
-              className="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold min-w-28"
+              className="bg-[#E7970E] hover:bg-[#d08a0d] text-white font-semibold min-w-28"
             >
               {toggling ? (
                 <span className="flex items-center gap-2">

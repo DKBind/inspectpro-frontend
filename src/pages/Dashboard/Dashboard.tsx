@@ -12,7 +12,7 @@ import {
   BarChart3,
   Activity,
 } from 'lucide-react';
-import Pagination from '@/components/ui/Pagination/Pagination';
+import Pagination from '@/components/shared-ui/Pagination/Pagination';
 import styles from './Dashboard.module.css';
 
 // ─── Dummy Data ────────────────────────────────────────────────────────

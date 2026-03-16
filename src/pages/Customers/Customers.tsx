@@ -20,17 +20,17 @@ import { subscriptionService } from '@/services/subscriptionService';
 import type { CustomerResponse } from '@/services/models/customer';
 import type { SubscriptionResponse } from '@/services/models/subscription';
 import { useAuthStore } from '@/store/useAuthStore';
-import Pagination from '@/components/ui/Pagination/Pagination';
+import Pagination from '@/components/shared-ui/Pagination/Pagination';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/shared-ui/Dialog/dialog';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Input } from '@/components/shared-ui/Input/input';
+import { Label } from '@/components/shared-ui/Label/label';
 import styles from '@/pages/Organisation/Organisation.module.css';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────

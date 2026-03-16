@@ -450,7 +450,24 @@
   margin: 0 4px;
 }
 
+/* ── Responsive: Tablet (768px – 1024px) ── */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .searchBar {
+    max-width: 200px;
+  }
+
+  .header {
+    padding: 0 16px;
+  }
+}
+
+/* ── Responsive: Mobile (≤ 640px) ── */
 @media (max-width: 640px) {
+  .header {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
   .searchBar {
     display: none;
   }
@@ -460,6 +477,10 @@
   }
 
   .breadcrumb {
+    display: none;
+  }
+
+  .divider {
     display: none;
   }
 }

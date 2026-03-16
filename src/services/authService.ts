@@ -20,10 +20,11 @@ export interface LoginResponse {
   orgName?: string;
   roleId?: number;
   roleName?: string;
-  roles: RoleItem[];   // all roles assigned to the user
+  roles: RoleItem[];
   superAdmin: boolean;
   accessToken: string;
   refreshToken: string;
+  isFirstLogin?: boolean;
 }
 
 export const authService = {
@@ -31,5 +32,26 @@ export const authService = {
     const res = await api.post<ApiResponse<LoginResponse>>('/auth/login', { email, password });
     if (!res.status) throw new Error(res.message || 'Login failed');
     return res.object as LoginResponse;
+  },
+
+  sendOtp: async (email: string): Promise<void> => {
+    const res = await api.post<ApiResponse<null>>('/auth/forgot-password', { email });
+    if (!res.status) throw new Error(res.message || 'Failed to send OTP');
+  },
+
+  verifyOtp: async (email: string, otp: string): Promise<string> => {
+    const res = await api.post<ApiResponse<{ resetToken: string }>>('/auth/verify-otp', { email, otp });
+    if (!res.status) throw new Error(res.message || 'Invalid OTP');
+    return res.object!.resetToken;
+  },
+
+  resetPassword: async (resetToken: string, newPassword: string): Promise<void> => {
+    const res = await api.post<ApiResponse<null>>('/auth/reset-password', { resetToken, newPassword });
+    if (!res.status) throw new Error(res.message || 'Failed to reset password');
+  },
+
+  changePassword: async (newPassword: string): Promise<void> => {
+    const res = await api.post<ApiResponse<null>>('/auth/change-password', { newPassword });
+    if (!res.status) throw new Error(res.message || 'Failed to change password');
   },
 };
