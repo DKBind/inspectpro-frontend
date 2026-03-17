@@ -10,22 +10,20 @@ import { toast } from 'sonner';
 import { Lock, Eye, EyeOff, KeyRound, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { userService } from '@/services/userService';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Fld } from '@/components/ui/form-helpers';
+import { Fld } from '@/components/shared-ui/form-helpers';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/shared-ui/Dialog/dialog';
+import { Input } from '@/components/shared-ui/Input/input';
+import { Button } from '@/components/shared-ui/Button/button';
 
 const SetPasswordModal = () => {
   const { isFirstLogin, setFirstLoginDone } = useAuthStore();
 
-  const [newPassword,     setNewPassword]     = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNew,         setShowNew]         = useState(false);
-  const [showConfirm,     setShowConfirm]     = useState(false);
-  const [submitting,      setSubmitting]      = useState(false);
-  const [error,           setError]           = useState('');
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
