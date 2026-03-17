@@ -6,11 +6,12 @@ import { toast } from 'sonner';
 import {
   Shield, Loader2, Eye, Pencil, Trash2, Plus, UserCircle,
   Mail, Lock, User, ChevronDown, Wand2, RefreshCw, AlertTriangle,
+  Check, Package, MapPin, FileText, Home,
 } from 'lucide-react';
 
 import { userService } from '@/services/userService';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { UserResponse, RoleResponse, RoleModuleAssignment } from '@/services/models/user';
+import type { UserResponse, RoleResponse, RoleModuleAssignment, UserAddressRequest } from '@/services/models/user';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/shared-ui/Dialog/dialog';
@@ -33,6 +34,15 @@ const PERM_STYLE: Record<string, { bg: string; color: string }> = {
 };
 const permStyle = (name?: string) => PERM_STYLE[name ?? ''] ?? PERM_STYLE.None;
 
+// ─── Role card accent colours (cycles if more roles than palette) ──────────────
+const ROLE_ACCENTS = [
+  { icon: '#33AE95', bg: 'rgba(51,174,149,0.10)', border: 'rgba(51,174,149,0.25)', grad: 'linear-gradient(135deg,rgba(51,174,149,0.10) 0%,rgba(51,174,149,0.03) 100%)' },
+  { icon: '#3b82f6', bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.25)', grad: 'linear-gradient(135deg,rgba(59,130,246,0.10) 0%,rgba(59,130,246,0.03) 100%)' },
+  { icon: '#8b5cf6', bg: 'rgba(139,92,246,0.10)', border: 'rgba(139,92,246,0.25)', grad: 'linear-gradient(135deg,rgba(139,92,246,0.10) 0%,rgba(139,92,246,0.03) 100%)' },
+  { icon: '#f59e0b', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.25)', grad: 'linear-gradient(135deg,rgba(245,158,11,0.10) 0%,rgba(245,158,11,0.03) 100%)' },
+  { icon: '#ec4899', bg: 'rgba(236,72,153,0.10)', border: 'rgba(236,72,153,0.25)', grad: 'linear-gradient(135deg,rgba(236,72,153,0.10) 0%,rgba(236,72,153,0.03) 100%)' },
+];
+
 // ─── Group module assignments by moduleId (Set deduplicates same permission) ──
 const groupByModule = (mods: RoleModuleAssignment[]) => {
   const map = new Map<number, { moduleName: string; permissions: Set<string> }>();
@@ -49,16 +59,32 @@ const groupByModule = (mods: RoleModuleAssignment[]) => {
 
 // ─── Schema (no org required) ─────────────────────────────────────────────────
 const schema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName:  z.string().min(1, 'Last name is required'),
-  email:     z.string().email('Enter a valid email'),
-  password:  z.string().optional(),
-  gender:    z.string().optional(),
-  roleId:    z.string().min(1, 'Role is required'),
+  firstName:    z.string().min(1, 'First name is required'),
+  middleName:   z.string().optional(),
+  lastName:     z.string().min(1, 'Last name is required'),
+  email:        z.string().email('Enter a valid email'),
+  password:     z.string().optional(),
+  gender:       z.string().optional(),
+  bio:          z.string().optional(),
+  remark:       z.string().optional(),
+  roleId:       z.string().min(1, 'Role is required'),
+  // Address fields
+  addressLine1: z.string().optional(),
+  addressLine2: z.string().optional(),
+  street:       z.string().optional(),
+  district:     z.string().optional(),
+  state:        z.string().optional(),
+  country:      z.string().optional(),
+  pincode:      z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
-const EMPTY: FormValues = { firstName: '', lastName: '', email: '', password: '', gender: '', roleId: '' };
+const EMPTY: FormValues = {
+  firstName: '', middleName: '', lastName: '', email: '', password: '',
+  gender: '', bio: '', remark: '', roleId: '',
+  addressLine1: '', addressLine2: '', street: '', district: '',
+  state: '', country: '', pincode: '',
+};
 
 const selectCls = (hasError = false) =>
   `w-full inline-flex items-center justify-between h-10 rounded-md border bg-white px-3 text-sm font-normal text-[#263B4F] hover:bg-[#F3F4F6] focus:outline-none transition-all ${hasError ? 'border-red-500' : 'border-[#E5E7EB]'}`;
@@ -98,12 +124,13 @@ const UsersRoles = () => {
 
   // ── Form ────────────────────────────────────────────────────────────────────
   const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY });
-  const { reset, handleSubmit, control, setValue, watch, formState: { errors } } = methods;
+  const { reset, handleSubmit, control, setValue, watch, register, formState: { errors } } = methods;
 
-  const { field: firstNameField } = useController({ name: 'firstName', control });
-  const { field: lastNameField }  = useController({ name: 'lastName',  control });
-  const { field: emailField }     = useController({ name: 'email',     control });
-  const { field: passwordField }  = useController({ name: 'password',  control });
+  const { field: firstNameField }  = useController({ name: 'firstName',  control });
+  const { field: middleNameField } = useController({ name: 'middleName', control });
+  const { field: lastNameField }   = useController({ name: 'lastName',   control });
+  const { field: emailField }      = useController({ name: 'email',      control });
+  const { field: passwordField }   = useController({ name: 'password',   control });
 
   const selectedRoleId  = watch('roleId');
   const selectedGender  = watch('gender');
@@ -158,7 +185,19 @@ const UsersRoles = () => {
   const openCreate = () => { reset(EMPTY); setEditTarget(null); setModalMode('create'); };
 
   const openEdit = (u: UserResponse) => {
-    reset({ firstName: u.firstName, lastName: u.lastName, email: u.email, password: '', gender: u.gender ?? '', roleId: u.roleId ? String(u.roleId) : '' });
+    reset({
+      firstName: u.firstName, middleName: u.middleName ?? '', lastName: u.lastName,
+      email: u.email, password: '', gender: u.gender ?? '',
+      bio: u.bio ?? '', remark: u.remark ?? '',
+      roleId: u.roleId ? String(u.roleId) : '',
+      addressLine1: u.address?.addressLine1 ?? '',
+      addressLine2: u.address?.addressLine2 ?? '',
+      street:       u.address?.street       ?? '',
+      district:     u.address?.district     ?? '',
+      state:        u.address?.state        ?? '',
+      country:      u.address?.country      ?? '',
+      pincode:      u.address?.pincode      ?? '',
+    });
     setEditTarget(u);
     setModalMode('edit');
   };
@@ -169,15 +208,30 @@ const UsersRoles = () => {
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
+      // Build address object only if at least one field has a value
+      const addressFields: UserAddressRequest = {
+        addressLine1: values.addressLine1?.trim() || undefined,
+        addressLine2: values.addressLine2?.trim() || undefined,
+        street:       values.street?.trim()       || undefined,
+        district:     values.district?.trim()     || undefined,
+        state:        values.state?.trim()        || undefined,
+        country:      values.country?.trim()      || undefined,
+        pincode:      values.pincode?.trim()      || undefined,
+      };
+      const hasAddress = Object.values(addressFields).some(Boolean);
+
       const payload = {
-        firstName: values.firstName,
-        lastName:  values.lastName,
-        email:     values.email,
+        firstName:  values.firstName,
+        middleName: values.middleName?.trim() || undefined,
+        lastName:   values.lastName,
+        email:      values.email,
         ...(values.password?.trim() && { password: values.password.trim() }),
-        gender:    values.gender || undefined,
-        roleId:    Number(values.roleId),
-        statusId:  1,
-        // Org is auto-set on backend from caller context; non-super-admin users inherit their org
+        gender:  values.gender  || undefined,
+        bio:     values.bio?.trim()    || undefined,
+        remark:  values.remark?.trim() || undefined,
+        address: hasAddress ? addressFields : undefined,
+        roleId:   Number(values.roleId),
+        statusId: 1,
         ...(!isSuperAdmin && authUser?.orgId ? { orgId: authUser.orgId } : {}),
       };
       if (modalMode === 'create') {
@@ -276,8 +330,9 @@ const UsersRoles = () => {
                   <tr>
                     <th>User</th>
                     <th>Email</th>
+                    <th>Location / Address</th>
                     <th>Role</th>
-                    <th>Organisation</th>
+                    {isSuperAdmin && <th>Organisation</th>}
                     <th>Status</th>
                     <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
@@ -288,24 +343,47 @@ const UsersRoles = () => {
                     return (
                       <tr key={u.id}>
                         <td>
-                          <div className={styles.userName}>{u.firstName} {u.lastName}</div>
+                          <div className={styles.userName}>
+                            {[u.firstName, u.middleName, u.lastName].filter(Boolean).join(' ')}
+                          </div>
                           {u.gender && <div className={styles.userEmail}>{u.gender}</div>}
                         </td>
-                        <td style={{ color: 'hsl(210,40%,75%)', fontSize: 13 }}>{u.email}</td>
+                        <td>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#4B5563' }}>
+                            <Mail size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+                            {u.email}
+                          </span>
+                        </td>
+                        <td className={styles.mutedCell}>
+                          {u.address
+                            ? (() => {
+                                const city  = u.address.district || u.address.street;
+                                const state = u.address.state;
+                                const label = [city, state].filter(Boolean).join(', ') || u.address.addressLine1;
+                                return label
+                                  ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                      <MapPin size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+                                      {label}
+                                    </span>
+                                  : <span style={{ color: '#D1D5DB' }}>—</span>;
+                              })()
+                            : <span style={{ color: '#D1D5DB' }}>—</span>}
+                        </td>
                         <td>
                           {u.roleName
                             ? <span className={styles.roleBadge}>{u.roleName}</span>
-                            : <span style={{ color: 'hsl(215,20%,40%)', fontSize: 12.5 }}>—</span>}
+                            : <span style={{ color: '#D1D5DB', fontSize: 12.5 }}>—</span>}
                         </td>
-                        <td style={{ color: 'hsl(215,20%,60%)', fontSize: 13 }}>{u.orgName ?? '—'}</td>
+                        {isSuperAdmin && (
+                          <td className={styles.mutedCell}>{u.orgName ?? '—'}</td>
+                        )}
                         <td>
                           <button
                             className={`${styles.statusToggle} ${isActive ? styles.toggleOn : styles.toggleOff}`}
                             onClick={() => handleToggleStatus(u)}
                             disabled={toggling}
                             title={isActive ? 'Click to deactivate' : 'Click to activate'}
-                          >
-                            </button>
+                          />
                         </td>
                         <td>
                           <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
@@ -340,80 +418,94 @@ const UsersRoles = () => {
       {subTab === 'roles' && (
         <div className={styles.panel}>
           <div className={styles.panelHeader}>
-            <h3 className={styles.panelTitle} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <h3 className={styles.panelTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Shield size={15} />
               Role Definitions
             </h3>
+            {!rolesLoading && visibleRoles.length > 0 && (
+              <span className={styles.roleCountBadge}>
+                {visibleRoles.length} role{visibleRoles.length !== 1 ? 's' : ''}
+              </span>
+            )}
           </div>
 
           {rolesLoading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-              <Loader2 size={22} style={{ animation: 'spin 1s linear infinite', color: 'hsl(215,20%,45%)' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '56px 24px', gap: 12 }}>
+              <Loader2 size={28} style={{ color: '#33AE95', animation: 'spin 1s linear infinite' }} />
+              <span style={{ fontSize: 13, color: '#9CA3AF' }}>Loading roles…</span>
             </div>
           ) : visibleRoles.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: 'hsl(215,20%,45%)', fontSize: 13.5 }}>No roles found.</div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '56px 24px', gap: 12 }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(51,174,149,0.10)', border: '1px solid rgba(51,174,149,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Shield size={24} style={{ color: '#33AE95', opacity: 0.7 }} />
+              </div>
+              <span style={{ fontSize: 13.5, color: '#6B7280' }}>No roles assigned to your account.</span>
+            </div>
           ) : (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: 180 }}>Role</th>
-                  <th>Module</th>
-                  <th style={{ width: 220 }}>Permissions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRoles.map((role) => {
-                  const grouped = groupByModule(roleModules[role.roleId] ?? []);
-                  if (grouped.length === 0) {
-                    return (
-                      <tr key={role.roleId}>
-                        <td>
-                          <span className={styles.roleBadge}>
-                            <Shield size={11} style={{ marginRight: 5, verticalAlign: 'middle' }} />
-                            {role.name}
-                          </span>
-                        </td>
-                        <td colSpan={2} style={{ color: 'hsl(215,20%,38%)', fontSize: 12.5, fontStyle: 'italic' }}>
-                          No modules assigned
-                        </td>
-                      </tr>
-                    );
-                  }
-                  return grouped.map((m, idx) => (
-                    <tr key={`${role.roleId}-${m.moduleId}`}>
-                      <td>
-                        {idx === 0 ? (
-                          <span className={styles.roleBadge}>
-                            <Shield size={11} style={{ marginRight: 5, verticalAlign: 'middle' }} />
-                            {role.name}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td style={{ color: 'hsl(210,40%,75%)', fontSize: 13 }}>{m.moduleName}</td>
-                      <td>
-                        <div className={styles.permBadges}>
-                          {m.permissions.map((p) => {
-                            const ps = permStyle(p);
-                            return (
-                              <span key={p} className={styles.permBadge} style={{ background: ps.bg, color: ps.color }}>
-                                {p}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </td>
-                    </tr>
-                  ));
-                })}
-              </tbody>
-            </table>
+            <div className={styles.rolesCardGrid}>
+              {visibleRoles.map((role, idx) => {
+                const grouped = groupByModule(roleModules[role.roleId] ?? []);
+                const ac = ROLE_ACCENTS[idx % ROLE_ACCENTS.length];
+                return (
+                  <div key={role.roleId} className={styles.newRoleCard}>
+                    {/* Card header */}
+                    <div className={styles.newRoleCardHeader} style={{ background: ac.grad }}>
+                      <div className={styles.newRoleCardIconWrap} style={{ background: ac.bg, border: `1px solid ${ac.border}` }}>
+                        <Shield size={18} style={{ color: ac.icon }} />
+                      </div>
+                      <div className={styles.newRoleCardInfo}>
+                        <h4 className={styles.newRoleCardName}>{role.name}</h4>
+                        <span className={styles.newRoleCardMeta}>
+                          <Package size={11} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
+                          {grouped.length} module{grouped.length !== 1 ? 's' : ''} assigned
+                        </span>
+                      </div>
+                      <div className={styles.newRoleCardBubble} style={{ background: ac.bg, color: ac.icon, border: `1px solid ${ac.border}` }}>
+                        {grouped.length}
+                      </div>
+                    </div>
+
+                    {/* Module rows */}
+                    <div className={styles.newRoleCardBody}>
+                      {grouped.length === 0 ? (
+                        <div className={styles.roleNoModules}>No modules assigned to this role</div>
+                      ) : (
+                        grouped.map((m) => (
+                          <div key={m.moduleId} className={styles.moduleRow}>
+                            <div className={styles.moduleRowName}>
+                              <span className={styles.moduleDot} style={{ background: ac.icon }} />
+                              {m.moduleName}
+                            </div>
+                            <div className={styles.moduleRowPerms}>
+                              {m.permissions.map((p) => {
+                                const ps = permStyle(p);
+                                return (
+                                  <span key={p} className={styles.permChip}
+                                    style={{ background: ps.bg, color: ps.color, border: `1px solid ${ps.color}33` }}>
+                                    {p === 'All'    && <Check   size={9} />}
+                                    {p === 'Write'  && <Pencil  size={9} />}
+                                    {p === 'Read'   && <Eye     size={9} />}
+                                    {p === 'Delete' && <Trash2  size={9} />}
+                                    {p}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
 
       {/* ── Create / Edit Modal ──────────────────────────────────────────────── */}
       <Dialog open={modalMode !== null} onOpenChange={(open) => { if (!open) closeModal(); }}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto shadow-xl rounded-2xl p-0">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
               <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
@@ -430,17 +522,22 @@ const UsersRoles = () => {
 
           <FormProvider {...methods}>
             <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-              <div className="px-7 py-6 space-y-5">
+              <div className="px-7 py-6 space-y-4">
 
-                {/* Name row */}
-                <div className="grid gap-4 sm:grid-cols-2">
+                {/* Name row — 3 cols */}
+                <div className="grid gap-4 sm:grid-cols-3">
                   <Fld label="First Name" required error={errors.firstName?.message}>
-                    <IcoInput icon={<User size={15} />}>
+                    <IcoInput icon={<User size={14} />}>
                       <Input placeholder="John" {...firstNameField} className={inputCls(!!errors.firstName)} />
                     </IcoInput>
                   </Fld>
+                  <Fld label="Middle Name">
+                    <IcoInput icon={<User size={14} />}>
+                      <Input placeholder="A." {...middleNameField} className={inputCls(false)} />
+                    </IcoInput>
+                  </Fld>
                   <Fld label="Last Name" required error={errors.lastName?.message}>
-                    <IcoInput icon={<User size={15} />}>
+                    <IcoInput icon={<User size={14} />}>
                       <Input placeholder="Doe" {...lastNameField} className={inputCls(!!errors.lastName)} />
                     </IcoInput>
                   </Fld>
@@ -449,16 +546,18 @@ const UsersRoles = () => {
                 {/* Email + Password row */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Fld label="Email" required error={errors.email?.message}>
-                    <IcoInput icon={<Mail size={15} />}>
+                    <IcoInput icon={<Mail size={14} />}>
                       <Input type="email" autoComplete="off" placeholder="john@example.com" {...emailField} className={inputCls(!!errors.email)} />
                     </IcoInput>
                   </Fld>
                   <Fld label={modalMode === 'create' ? 'Password' : 'New Password'}>
                     <div className="flex gap-2">
-                      <IcoInput icon={<Lock size={15} />}>
-                        <Input type="text" autoComplete="new-password" placeholder={modalMode === 'create' ? 'Set a password' : 'Leave blank to keep current'} {...passwordField} className={inputCls(false)} />
+                      <IcoInput icon={<Lock size={14} />}>
+                        <Input type="text" autoComplete="new-password"
+                          placeholder={modalMode === 'create' ? 'Set a password' : 'Leave blank to keep current'}
+                          {...passwordField} className={inputCls(false)} />
                       </IcoInput>
-                      <button type="button" onClick={generatePassword} title="Generate"
+                      <button type="button" onClick={generatePassword} title="Generate password"
                         className="shrink-0 h-10 px-3 rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#33AE95] hover:border-[#33AE95] transition-all flex items-center gap-1.5 text-xs font-medium">
                         <Wand2 size={13} />
                       </button>
@@ -466,12 +565,12 @@ const UsersRoles = () => {
                   </Fld>
                 </div>
 
-                {/* Gender + Role row */}
+                {/* Gender + Role */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Fld label="Gender">
                     <DropdownMenu modal={false}>
                       <DropdownMenuTrigger className={selectCls()}>
-                        <span className={selectedGender ? 'text-[#263B4F]' : 'text-[#6B7280]'}>{selectedGender || '— Select gender —'}</span>
+                        <span className={selectedGender ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>{selectedGender || '— Select —'}</span>
                         <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
@@ -484,7 +583,7 @@ const UsersRoles = () => {
                   <Fld label="Role" required error={errors.roleId?.message}>
                     <DropdownMenu modal={false}>
                       <DropdownMenuTrigger className={selectCls(!!errors.roleId)}>
-                        <span className={selectedRole ? 'text-[#263B4F]' : 'text-[#6B7280]'}>{selectedRole ? selectedRole.name : '— Select role —'}</span>
+                        <span className={selectedRole ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>{selectedRole ? selectedRole.name : '— Select —'}</span>
                         <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
@@ -493,6 +592,60 @@ const UsersRoles = () => {
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                  </Fld>
+                </div>
+
+                {/* ── Address section ────────────────────────────────────────────── */}
+                <div className={styles.addressSection}>
+                  <div className={styles.addressSectionTitle}>
+                    <Home size={13} />
+                    Address
+                    <span className={styles.addressSectionHint}>Optional</span>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Fld label="Address Line 1">
+                      <Input placeholder="Building / Flat no." {...register('addressLine1')} className={inputCls(false)} />
+                    </Fld>
+                    <Fld label="Address Line 2">
+                      <Input placeholder="Society / Colony" {...register('addressLine2')} className={inputCls(false)} />
+                    </Fld>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 mt-3">
+                    <Fld label="Street">
+                      <Input placeholder="Street name" {...register('street')} className={inputCls(false)} />
+                    </Fld>
+                    <Fld label="District">
+                      <Input placeholder="District" {...register('district')} className={inputCls(false)} />
+                    </Fld>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3 mt-3">
+                    <Fld label="State">
+                      <Input placeholder="State" {...register('state')} className={inputCls(false)} />
+                    </Fld>
+                    <Fld label="Country">
+                      <Input placeholder="Country" {...register('country')} className={inputCls(false)} />
+                    </Fld>
+                    <Fld label="Pincode">
+                      <Input placeholder="000000" {...register('pincode')} className={inputCls(false)} />
+                    </Fld>
+                  </div>
+                </div>
+
+                {/* Bio + Remark */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Fld label="Bio" hint="Optional">
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-slate-400 pointer-events-none z-10"><FileText size={14} /></span>
+                      <textarea rows={2} placeholder="Short bio or description…" {...register('bio')}
+                        className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 text-sm px-3 py-2 pl-9 resize-none outline-none" />
+                    </div>
+                  </Fld>
+                  <Fld label="Remark" hint="Optional">
+                    <textarea rows={2} placeholder="Internal notes or remarks…" {...register('remark')}
+                      className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 text-sm px-3 py-2 resize-none outline-none" />
                   </Fld>
                 </div>
 
@@ -515,34 +668,53 @@ const UsersRoles = () => {
 
       {/* ── View Modal ────────────────────────────────────────────────────────── */}
       <Dialog open={!!viewUser} onOpenChange={(open) => !open && setViewUser(null)}>
-        <DialogContent className="sm:max-w-md shadow-xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg shadow-xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
               <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
                 <UserCircle size={18} className="text-blue-400" />
               </div>
-              <DialogTitle className="text-[#263B4F] text-lg font-bold">User Details</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">User Details</DialogTitle>
             </div>
           </DialogHeader>
           {viewUser && (
-            <div className="space-y-1 mt-2">
+            <div className="px-7 py-2 space-y-0">
               {([
-                ['Name',         `${viewUser.firstName} ${viewUser.lastName}`],
-                ['Email',        viewUser.email],
-                ['Gender',       viewUser.gender ?? '—'],
-                ['Organisation', viewUser.orgName ?? '—'],
-                ['Role',         viewUser.roleName ?? '—'],
-                ['Status',       viewUser.statusName ?? '—'],
+                ['Full Name', [viewUser.firstName, viewUser.middleName, viewUser.lastName].filter(Boolean).join(' ')],
+                ['Email',    viewUser.email],
+                ['Gender',   viewUser.gender ?? '—'],
+                ['Role',     viewUser.roleName ?? '—'],
+                ...(isSuperAdmin ? [['Organisation', viewUser.orgName ?? '—'] as [string, string]] : []),
+                ['Status',   viewUser.statusName ?? '—'],
+                ...(viewUser.address ? [
+                  ['Address', [
+                    viewUser.address.addressLine1,
+                    viewUser.address.addressLine2,
+                    viewUser.address.street,
+                    viewUser.address.district,
+                    viewUser.address.state,
+                    viewUser.address.country,
+                    viewUser.address.pincode,
+                  ].filter(Boolean).join(', ')] as [string, string],
+                ] : []),
+                ...(viewUser.bio    ? [['Bio',    viewUser.bio]    as [string, string]] : []),
+                ...(viewUser.remark ? [['Remark', viewUser.remark] as [string, string]] : []),
               ] as [string, string][]).map(([label, value]) => (
-                <div key={label} className="flex gap-3 py-2 border-b border-[#E5E7EB] last:border-0">
-                  <span className="text-[#9CA3AF] min-w-28 text-sm">{label}</span>
+                <div key={label} className="flex gap-3 py-2.5 border-b border-[#E5E7EB] last:border-0">
+                  <span className="text-[#9CA3AF] min-w-28 text-xs uppercase tracking-wide font-semibold pt-0.5">{label}</span>
                   <span className="text-[#263B4F] font-medium text-sm">{value}</span>
                 </div>
               ))}
             </div>
           )}
-          <DialogFooter className="mt-4">
-            <Button variant="ghost" onClick={() => setViewUser(null)} className="text-[#6B7280] hover:text-[#263B4F] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Close</Button>
+          <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl">
+            <Button variant="ghost" onClick={() => setViewUser(null)} className="text-[#6B7280] hover:text-[#263B4F] hover:bg-white border border-[#E5E7EB]">Close</Button>
+            {viewUser && (
+              <Button onClick={() => { openEdit(viewUser); setViewUser(null); }}
+                className="bg-blue-600 hover:bg-blue-500 text-white font-semibold">
+                <Pencil size={13} className="mr-2" /> Edit
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

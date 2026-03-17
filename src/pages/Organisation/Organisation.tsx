@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Plus, Globe, Crown, RefreshCw, Eye, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Building2, Plus, Globe, Crown, RefreshCw, Eye, Pencil, Trash2, AlertTriangle, Phone, Hash } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { organisationService } from '@/services/organisationService';
@@ -190,7 +190,8 @@ const Organisation = () => {
                   <tr>
                     <th>Organisation</th>
                     <th>Contact Person</th>
-                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>GSTIN</th>
                     <th>Plan</th>
                     <th>Status</th>
                     <th style={{ width: 120, textAlign: 'center' }}>Actions</th>
@@ -215,8 +216,28 @@ const Organisation = () => {
                           </div>
                         </div>
                       </td>
-                      <td className={styles.mutedCell}>{org.contactedPersonName ?? '—'}</td>
-                      <td className={styles.mutedCell}>{org.email ?? '—'}</td>
+                      <td className={styles.mutedCell}>
+                        <div>{org.contactedPersonName ?? '—'}</div>
+                        {org.email && (
+                          <div className={styles.orgMeta} style={{ marginTop: 2 }}>{org.email}</div>
+                        )}
+                      </td>
+                      <td className={styles.mutedCell}>
+                        {org.phoneNumber
+                          ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <Phone size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+                              {org.phoneNumber}
+                            </span>
+                          : <span style={{ color: '#D1D5DB' }}>—</span>}
+                      </td>
+                      <td className={styles.mutedCell}>
+                        {org.gstin
+                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: 'rgba(99,102,241,0.08)', color: '#6366f1', border: '1px solid rgba(99,102,241,0.2)', fontFamily: 'monospace', letterSpacing: '0.03em' }}>
+                              <Hash size={10} />
+                              {org.gstin}
+                            </span>
+                          : <span style={{ color: '#D1D5DB' }}>—</span>}
+                      </td>
                       <td>
                         <span className={`${styles.planBadge} ${getPlanBadgeClass(org.planType)}`}>
                           <Crown style={{ display: 'inline', width: 11, height: 11, marginRight: 4, verticalAlign: 'middle' }} />
