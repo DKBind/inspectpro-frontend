@@ -49,7 +49,7 @@ const Login = () => {
 
       navigate(ROUTES.DASHBOARD);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      setError(err instanceof Error ? 'Login failed. Please try again.' : 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
