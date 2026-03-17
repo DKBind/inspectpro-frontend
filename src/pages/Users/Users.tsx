@@ -17,26 +17,27 @@ import { useAuthStore } from '@/store/useAuthStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/shared-ui/Dialog/dialog';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Sec, Fld, IcoInput, inputCls } from '@/components/ui/form-helpers';
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Input } from '@/components/shared-ui/Input/input';
+import { Label } from '@/components/shared-ui/Label/label';
 import styles from './Users.module.css';
+import { inputCls } from '@/components/shared-ui/form-helpers';
 
 const PAGE_SIZE = 10;
 
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
-  lastName:  z.string().min(1, 'Last name is required'),
-  email:     z.string().email('Enter a valid email'),
-  password:  z.string().optional(),
-  gender:    z.string().optional(),
-  orgId:     z.string().min(1, 'Organisation is required'),
-  roleId:    z.string().min(1, 'Role is required'),
-  statusId:  z.string().optional(),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Enter a valid email'),
+  password: z.string().optional(),
+  gender: z.string().optional(),
+  orgId: z.string().min(1, 'Organisation is required'),
+  roleId: z.string().min(1, 'Role is required'),
+  statusId: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -46,8 +47,46 @@ const EMPTY: FormValues = {
   gender: '', orgId: '', roleId: '', statusId: '1',
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function Sec({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[#33AE95]">{icon}</span>
+        <span className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">{label}</span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Fld({ label, required, error, children }: {
+  label: string; required?: boolean; error?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <Label className="text-[#263B4F] text-sm font-medium">{label}</Label>
+        {required && <span className="text-[#DF453A] text-xs">*</span>}
+      </div>
+      {children}
+      {error && <p className="text-xs text-[#DF453A]">{error}</p>}
+    </div>
+  );
+}
+
+function IcoInput({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">{icon}</span>
+      <div className="[&_input]:pl-9">{children}</div>
+    </div>
+  );
+}
+
 const selectCls = (hasError = false) =>
-  `w-full inline-flex items-center justify-between h-10 rounded-md border bg-slate-950/60 px-3 text-sm font-normal text-white hover:bg-slate-900 focus:outline-none transition-all ${hasError ? 'border-red-500' : 'border-slate-700'}`;
+  `w-full inline-flex items-center justify-between h-10 rounded-md border bg-white px-3 text-sm font-normal text-[#263B4F] hover:bg-[#F3F4F6] focus:outline-none transition-all ${hasError ? 'border-[#DF453A]' : 'border-[#E5E7EB]'}`;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -55,18 +94,18 @@ const Users = () => {
   const { user: authUser } = useAuthStore();
   const isSuperAdmin = authUser?.isSuperAdmin === true || authUser?.role === 'super_admin';
 
-  const [users,       setUsers]       = useState<UserResponse[]>([]);
-  const [total,       setTotal]       = useState(0);
-  const [roles,       setRoles]       = useState<RoleResponse[]>([]);
-  const [orgs,        setOrgs]        = useState<OrganisationResponse[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [submitting,  setSubmitting]  = useState(false);
+  const [users, setUsers] = useState<UserResponse[]>([]);
+  const [total, setTotal] = useState(0);
+  const [roles, setRoles] = useState<RoleResponse[]>([]);
+  const [orgs, setOrgs] = useState<OrganisationResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
-  const [modalMode,   setModalMode]   = useState<'create' | 'edit' | null>(null);
-  const [viewUser,    setViewUser]    = useState<UserResponse | null>(null);
-  const [editTarget,  setEditTarget]  = useState<UserResponse | null>(null);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [viewUser, setViewUser] = useState<UserResponse | null>(null);
+  const [editTarget, setEditTarget] = useState<UserResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null);
-  const [deleting,    setDeleting]    = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -74,16 +113,16 @@ const Users = () => {
   const { reset, handleSubmit, control, setValue, watch, formState: { errors } } = methods;
 
   const { field: firstNameField } = useController({ name: 'firstName', control });
-  const { field: lastNameField  } = useController({ name: 'lastName',  control });
-  const { field: emailField     } = useController({ name: 'email',     control });
-  const { field: passwordField  } = useController({ name: 'password',  control });
+  const { field: lastNameField } = useController({ name: 'lastName', control });
+  const { field: emailField } = useController({ name: 'email', control });
+  const { field: passwordField } = useController({ name: 'password', control });
 
-  const selectedOrgId  = watch('orgId');
+  const selectedOrgId = watch('orgId');
   const selectedRoleId = watch('roleId');
   const selectedGender = watch('gender');
   const selectedStatus = watch('statusId');
 
-  const selectedOrg  = orgs.find((o) => o.uuid === selectedOrgId);
+  const selectedOrg = orgs.find((o) => o.uuid === selectedOrgId);
   const selectedRole = roles.find((r) => String(r.roleId) === selectedRoleId);
 
   // ─── Fetch ─────────────────────────────────────────────────────────────────
@@ -134,13 +173,13 @@ const Users = () => {
   const openEdit = (u: UserResponse) => {
     reset({
       firstName: u.firstName,
-      lastName:  u.lastName,
-      email:     u.email,
-      password:  '',
-      gender:    u.gender ?? '',
-      orgId:     u.orgId  ?? '',
-      roleId:    u.roleId ? String(u.roleId) : '',
-      statusId:  u.statusId ? String(u.statusId) : '1',
+      lastName: u.lastName,
+      email: u.email,
+      password: '',
+      gender: u.gender ?? '',
+      orgId: u.orgId ?? '',
+      roleId: u.roleId ? String(u.roleId) : '',
+      statusId: u.statusId ? String(u.statusId) : '1',
     });
     setEditTarget(u);
     setModalMode('edit');
@@ -159,13 +198,13 @@ const Users = () => {
     try {
       const payload = {
         firstName: values.firstName,
-        lastName:  values.lastName,
-        email:     values.email,
+        lastName: values.lastName,
+        email: values.email,
         ...(values.password?.trim() && { password: values.password.trim() }),
-        gender:    values.gender || undefined,
-        orgId:     values.orgId,
-        roleId:    Number(values.roleId),
-        statusId:  values.statusId ? Number(values.statusId) : 1,
+        gender: values.gender || undefined,
+        orgId: values.orgId,
+        roleId: Number(values.roleId),
+        statusId: values.statusId ? Number(values.statusId) : 1,
       };
 
       if (modalMode === 'create') {
@@ -300,7 +339,7 @@ const Users = () => {
           {totalPages > 1 && (
             <div className={styles.paginationArea} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px' }}>
               <button className={styles.actionBtn} disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}><ChevronLeft size={14} /></button>
-              <span style={{ fontSize: 13, color: 'hsl(215,20%,60%)' }}>Page {currentPage + 1} of {totalPages}</span>
+              <span style={{ fontSize: 13, color: '#6B7280' }}>Page {currentPage + 1} of {totalPages}</span>
               <button className={styles.actionBtn} disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage((p) => p + 1)}><ChevronRight size={14} /></button>
             </div>
           )}
@@ -309,17 +348,17 @@ const Users = () => {
 
       {/* ── Create / Edit Modal ─────────────────────────────────────────────── */}
       <Dialog open={modalMode !== null} onOpenChange={(open) => { if (!open) closeModal(); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-                <UsersIcon size={18} className="text-blue-400" />
+              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
+                <UsersIcon size={18} className="text-[#33AE95]" />
               </div>
-              <DialogTitle className="text-xl font-bold text-white">
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">
                 {modalMode === 'create' ? 'Add User' : 'Edit User'}
               </DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 text-sm pl-12">
+            <DialogDescription className="text-[#6B7280] text-sm pl-12">
               {modalMode === 'create' ? 'Fill in the details to create a new user.' : 'Update the user information below.'}
             </DialogDescription>
           </DialogHeader>
@@ -330,7 +369,7 @@ const Users = () => {
 
                 {/* Personal Info */}
                 <Sec icon={<User size={13} />} label="Personal Information">
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Fld label="First Name" required error={errors.firstName?.message}>
                         <IcoInput icon={<User size={15} />}>
@@ -362,7 +401,7 @@ const Users = () => {
                             type="button"
                             onClick={generatePassword}
                             title="Generate password"
-                            className="shrink-0 h-10 px-3 rounded-md border border-slate-700 bg-slate-900 text-slate-400 hover:text-blue-400 hover:border-blue-500 transition-all flex items-center gap-1.5 text-xs font-medium"
+                            className="shrink-0 h-10 px-3 rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#33AE95] hover:border-[#33AE95] transition-all flex items-center gap-1.5 text-xs font-medium"
                           >
                             <Wand2 size={13} />
                             Generate
@@ -372,14 +411,14 @@ const Users = () => {
                       <Fld label="Gender">
                         <DropdownMenu modal={false}>
                           <DropdownMenuTrigger className={selectCls()}>
-                            <span className={selectedGender ? 'text-white' : 'text-slate-400'}>
+                            <span className={selectedGender ? 'text-[#263B4F]' : 'text-[#6B7280]'}>
                               {selectedGender || '— Select gender —'}
                             </span>
                             <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="!bg-[#1e293b] border-slate-700 text-white z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                          <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
                             {['Male', 'Female', 'Other'].map((g) => (
-                              <DropdownMenuItem key={g} onSelect={() => setValue('gender', g)} className="cursor-pointer focus:bg-slate-800 focus:text-white py-2.5">
+                              <DropdownMenuItem key={g} onSelect={() => setValue('gender', g)} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">
                                 {g}
                               </DropdownMenuItem>
                             ))}
@@ -389,14 +428,14 @@ const Users = () => {
                       <Fld label="Status">
                         <DropdownMenu modal={false}>
                           <DropdownMenuTrigger className={selectCls()}>
-                            <span className="text-white">
+                            <span className="text-[#263B4F]">
                               {selectedStatus === '2' ? 'Inactive' : 'Active'}
                             </span>
                             <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="!bg-[#1e293b] border-slate-700 text-white z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
-                            <DropdownMenuItem onSelect={() => setValue('statusId', '1')} className="cursor-pointer focus:bg-slate-800 focus:text-white py-2.5">Active</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => setValue('statusId', '2')} className="cursor-pointer focus:bg-slate-800 focus:text-white py-2.5">Inactive</DropdownMenuItem>
+                          <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                            <DropdownMenuItem onSelect={() => setValue('statusId', '1')} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">Active</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setValue('statusId', '2')} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">Inactive</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </Fld>
@@ -406,21 +445,21 @@ const Users = () => {
 
                 {/* Organisation & Role */}
                 <Sec icon={<Shield size={13} />} label="Organisation & Role">
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
                     <div className="grid gap-4 sm:grid-cols-2">
                       {/* Org — show picker only for super_admin; others see their own org */}
                       <Fld label="Organisation" required error={errors.orgId?.message}>
                         {isSuperAdmin ? (
                           <DropdownMenu modal={false}>
                             <DropdownMenuTrigger className={selectCls(!!errors.orgId)}>
-                              <span className={selectedOrg ? 'text-white' : 'text-slate-400'}>
+                              <span className={selectedOrg ? 'text-[#263B4F]' : 'text-[#6B7280]'}>
                                 {selectedOrg ? selectedOrg.name : '— Select organisation —'}
                               </span>
                               <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className="!bg-[#1e293b] border-slate-700 text-white z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                            <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
                               {orgs.map((o) => (
-                                <DropdownMenuItem key={o.uuid} onSelect={() => setValue('orgId', o.uuid, { shouldValidate: true })} className="cursor-pointer focus:bg-slate-800 focus:text-white py-2.5">
+                                <DropdownMenuItem key={o.uuid} onSelect={() => setValue('orgId', o.uuid, { shouldValidate: true })} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">
                                   {o.name}
                                 </DropdownMenuItem>
                               ))}
@@ -428,8 +467,8 @@ const Users = () => {
                           </DropdownMenu>
                         ) : (
                           /* Non-super-admin: show their org read-only */
-                          <div className="h-10 rounded-md border border-slate-700 bg-slate-950/30 px-3 flex items-center gap-2 text-sm text-slate-300">
-                            <Building2 size={14} className="text-slate-500" />
+                          <div className="h-10 rounded-md border border-[#E5E7EB] bg-[#F3F4F6] px-3 flex items-center gap-2 text-sm text-[#263B4F]">
+                            <Building2 size={14} className="text-[#6B7280]" />
                             {orgs.find((o) => o.uuid === authUser?.orgId)?.name ?? authUser?.orgId ?? '—'}
                           </div>
                         )}
@@ -438,14 +477,14 @@ const Users = () => {
                       <Fld label="Role" required error={errors.roleId?.message}>
                         <DropdownMenu modal={false}>
                           <DropdownMenuTrigger className={selectCls(!!errors.roleId)}>
-                            <span className={selectedRole ? 'text-white' : 'text-slate-400'}>
+                            <span className={selectedRole ? 'text-[#263B4F]' : 'text-[#6B7280]'}>
                               {selectedRole ? selectedRole.name : '— Select role —'}
                             </span>
                             <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="!bg-[#1e293b] border-slate-700 text-white z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                          <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
                             {roles.map((r) => (
-                              <DropdownMenuItem key={r.roleId} onSelect={() => setValue('roleId', String(r.roleId), { shouldValidate: true })} className="cursor-pointer focus:bg-slate-800 focus:text-white py-2.5">
+                              <DropdownMenuItem key={r.roleId} onSelect={() => setValue('roleId', String(r.roleId), { shouldValidate: true })} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">
                                 {r.name}
                               </DropdownMenuItem>
                             ))}
@@ -458,13 +497,12 @@ const Users = () => {
 
               </div>
 
-              <DialogFooter className="px-7 py-5 border-t border-slate-800 bg-slate-900/30 rounded-b-2xl flex gap-3">
-                <Button type="button" variant="ghost" onClick={closeModal} disabled={submitting}
-                  className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+              <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl flex gap-3">
+                <Button type="button" variant="outline" onClick={closeModal} disabled={submitting}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={submitting}
-                  className="flex-1 sm:flex-none sm:min-w-44 bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg active:scale-95">
+                  className="flex-1 sm:flex-none sm:min-w-44 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95">
                   {submitting ? (
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -480,60 +518,58 @@ const Users = () => {
 
       {/* ── View Modal ──────────────────────────────────────────────────────── */}
       <Dialog open={!!viewUser} onOpenChange={(open) => !open && setViewUser(null)}>
-        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-                <UserCircle size={18} className="text-blue-400" />
+              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
+                <UserCircle size={18} className="text-[#33AE95]" />
               </div>
-              <DialogTitle className="text-white text-lg font-bold">User Details</DialogTitle>
+              <DialogTitle className="text-[#263B4F] text-lg font-bold">User Details</DialogTitle>
             </div>
           </DialogHeader>
           {viewUser && (
             <div className="space-y-3 mt-2">
               {[
-                ['Name',         `${viewUser.firstName} ${viewUser.lastName}`],
-                ['Email',        viewUser.email],
-                ['Gender',       viewUser.gender  ?? '—'],
+                ['Name', `${viewUser.firstName} ${viewUser.lastName}`],
+                ['Email', viewUser.email],
+                ['Gender', viewUser.gender ?? '—'],
                 ['Organisation', viewUser.orgName ?? '—'],
-                ['Role',         viewUser.roleName ?? '—'],
-                ['Status',       viewUser.statusName ?? '—'],
+                ['Role', viewUser.roleName ?? '—'],
+                ['Status', viewUser.statusName ?? '—'],
               ].map(([label, value]) => (
-                <div key={label} className="flex gap-3 py-2 border-b border-slate-800 last:border-0">
-                  <span className="text-slate-500 min-w-28 text-sm">{label}</span>
-                  <span className="text-slate-200 font-medium text-sm">{value}</span>
+                <div key={label} className="flex gap-3 py-2 border-b border-[#E5E7EB] last:border-0">
+                  <span className="text-[#6B7280] min-w-28 text-sm">{label}</span>
+                  <span className="text-[#263B4F] font-medium text-sm">{value}</span>
                 </div>
               ))}
             </div>
           )}
           <DialogFooter className="mt-4">
-            <Button variant="ghost" onClick={() => setViewUser(null)}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Close</Button>
+            <Button variant="outline" onClick={() => setViewUser(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ── Delete Confirm Modal ─────────────────────────────────────────────── */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-10 w-10 rounded-xl bg-red-600/15 border border-red-500/30 flex items-center justify-center shrink-0">
-                <DeleteIcon size={18} className="text-red-400" />
+              <div className="h-10 w-10 rounded-xl bg-[#DF453A]/10 border border-[#DF453A]/30 flex items-center justify-center shrink-0">
+                <DeleteIcon size={18} className="text-[#DF453A]" />
               </div>
-              <DialogTitle className="text-white">Delete User</DialogTitle>
+              <DialogTitle className="text-[#263B4F]">Delete User</DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 pl-[52px]">
+            <DialogDescription className="text-[#6B7280] pl-[52px]">
               Are you sure you want to delete{' '}
-              <span className="text-white font-medium">{deleteTarget?.firstName} {deleteTarget?.lastName}</span>?
+              <span className="text-[#263B4F] font-medium">{deleteTarget?.firstName} {deleteTarget?.lastName}</span>?
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-3 mt-2">
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
             <Button onClick={handleDelete} disabled={deleting}
-              className="bg-red-600 hover:bg-red-500 text-white font-semibold min-w-28">
+              className="bg-[#DF453A] hover:bg-[#c73c32] text-white font-semibold min-w-28">
               {deleting
                 ? <span className="flex items-center gap-2"><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Deleting...</span>
                 : 'Delete'}

@@ -15,35 +15,35 @@ import type { UserResponse, RoleResponse, RoleModuleAssignment } from '@/service
 import type { OrganisationResponse } from '@/services/models/organisation';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/shared-ui/Dialog/dialog';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Fld, IcoInput, inputCls } from '@/components/ui/form-helpers';
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Input } from '@/components/shared-ui/Input/input';
 import styles from './UsersRoles.module.css';
+import { Fld, IcoInput, inputCls } from '@/components/shared-ui/form-helpers';
 
 // ─── Permission badge ─────────────────────────────────────────────────────────
 const PERM_STYLE: Record<string, { bg: string; color: string }> = {
-  All:    { bg: 'hsla(262,83%,58%,0.15)', color: 'hsl(262,83%,72%)' },
-  Write:  { bg: 'hsla(221,83%,53%,0.15)', color: 'hsl(221,83%,68%)' },
-  Read:   { bg: 'hsla(142,71%,45%,0.15)', color: 'hsl(142,71%,55%)' },
-  Delete: { bg: 'hsla(0,84%,60%,0.15)',   color: 'hsl(0,84%,65%)'   },
-  None:   { bg: 'hsla(215,20%,40%,0.15)', color: 'hsl(215,20%,55%)' },
+  All: { bg: 'hsla(262,83%,58%,0.15)', color: 'hsl(262,83%,72%)' },
+  Write: { bg: 'hsla(221,83%,53%,0.15)', color: 'hsl(221,83%,68%)' },
+  Read: { bg: 'hsla(142,71%,45%,0.15)', color: 'hsl(142,71%,55%)' },
+  Delete: { bg: 'hsla(0,84%,60%,0.15)', color: 'hsl(0,84%,65%)' },
+  None: { bg: 'hsla(215,20%,40%,0.15)', color: 'hsl(215,20%,55%)' },
 };
 const permStyle = (name?: string) => PERM_STYLE[name ?? ''] ?? PERM_STYLE.None;
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
-  lastName:  z.string().min(1, 'Last name is required'),
-  email:     z.string().email('Enter a valid email'),
-  password:  z.string().optional(),
-  gender:    z.string().optional(),
-  orgId:     z.string().min(1, 'Organisation is required'),
-  roleId:    z.string().min(1, 'Role is required'),
-  statusId:  z.string().optional(),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Enter a valid email'),
+  password: z.string().optional(),
+  gender: z.string().optional(),
+  orgId: z.string().min(1, 'Organisation is required'),
+  roleId: z.string().min(1, 'Role is required'),
+  statusId: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -62,19 +62,19 @@ const UsersRoles = () => {
   const [subTab, setSubTab] = useState<SubTab>('users');
 
   // ── Users state ────────────────────────────────────────────────────────────
-  const [users,        setUsers]        = useState<UserResponse[]>([]);
+  const [users, setUsers] = useState<UserResponse[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
-  const [orgs,         setOrgs]         = useState<OrganisationResponse[]>([]);
-  const [roles,        setRoles]        = useState<RoleResponse[]>([]);
-  const [modalMode,    setModalMode]    = useState<'create' | 'edit' | null>(null);
-  const [viewUser,     setViewUser]     = useState<UserResponse | null>(null);
-  const [editTarget,   setEditTarget]   = useState<UserResponse | null>(null);
+  const [orgs, setOrgs] = useState<OrganisationResponse[]>([]);
+  const [roles, setRoles] = useState<RoleResponse[]>([]);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [viewUser, setViewUser] = useState<UserResponse | null>(null);
+  const [editTarget, setEditTarget] = useState<UserResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null);
-  const [submitting,   setSubmitting]   = useState(false);
-  const [deleting,     setDeleting]     = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // ── Roles state ────────────────────────────────────────────────────────────
-  const [roleList,    setRoleList]    = useState<RoleResponse[]>([]);
+  const [roleList, setRoleList] = useState<RoleResponse[]>([]);
   const [roleModules, setRoleModules] = useState<Record<number, RoleModuleAssignment[]>>({});
   const [rolesLoading, setRolesLoading] = useState(false);
 
@@ -83,16 +83,16 @@ const UsersRoles = () => {
   const { reset, handleSubmit, control, setValue, watch, formState: { errors } } = methods;
 
   const { field: firstNameField } = useController({ name: 'firstName', control });
-  const { field: lastNameField  } = useController({ name: 'lastName',  control });
-  const { field: emailField     } = useController({ name: 'email',     control });
-  const { field: passwordField  } = useController({ name: 'password',  control });
+  const { field: lastNameField } = useController({ name: 'lastName', control });
+  const { field: emailField } = useController({ name: 'email', control });
+  const { field: passwordField } = useController({ name: 'password', control });
 
-  const selectedOrgId  = watch('orgId');
+  const selectedOrgId = watch('orgId');
   const selectedRoleId = watch('roleId');
   const selectedGender = watch('gender');
   const selectedStatus = watch('statusId');
-  const selectedOrg    = orgs.find((o) => o.uuid === selectedOrgId);
-  const selectedRole   = roles.find((r) => String(r.roleId) === selectedRoleId);
+  const selectedOrg = orgs.find((o) => o.uuid === selectedOrgId);
+  const selectedRole = roles.find((r) => String(r.roleId) === selectedRoleId);
 
   // ── Fetch users tab data ────────────────────────────────────────────────────
   const fetchUsers = async () => {
@@ -127,7 +127,7 @@ const UsersRoles = () => {
         );
         setRoleModules(Object.fromEntries(entries));
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setRolesLoading(false));
   }, [subTab]);
 

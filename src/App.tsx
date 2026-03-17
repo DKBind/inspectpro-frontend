@@ -19,7 +19,8 @@ import UsersRolesPage from './pages/UsersRoles/UsersRolesPage';
 import Notifications from './pages/Notifications/Notifications';
 import ProfilePage from './pages/Profile/ProfilePage';
 import Users from './pages/Users/Users';
-import NotFound from './components/ui/NotFound/NotFound';
+import NotFound from './components/shared-ui/NotFound/NotFound';
+import Unauthorized from './pages/Unauthorized/Unauthorized';
 
 function App() {
   return (
@@ -30,6 +31,9 @@ function App() {
           <Route path={ROUTES.LOGIN} element={<Login />} />
           <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
         </Route>
+
+        {/* Open routes — no auth required */}
+        <Route path={ROUTES.UNAUTHORIZED} element={<Unauthorized />} />
 
         {/* Semi-protected: must be authenticated but allows first-login users */}
         <Route element={<ProtectedRoute />}>

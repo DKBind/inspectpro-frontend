@@ -6,7 +6,7 @@ import { organisationService } from '@/services/organisationService';
 import type { OrganisationResponse } from '@/services/models/organisation';
 import { OrganisationCreateModal } from './OrganisationCreateModal';
 import { OrganisationViewModal } from './OrganisationViewModal';
-import Pagination from '@/components/ui/Pagination/Pagination';
+import Pagination from '@/components/shared-ui/Pagination/Pagination';
 import {
   Dialog,
   DialogContent,
@@ -14,8 +14,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+} from '@/components/shared-ui/Dialog/dialog';
+import { Button } from '@/components/shared-ui/Button/button';
 import styles from './Organisation.module.css';
 
 function getPlanBadgeClass(planName?: string): string {
@@ -284,30 +284,29 @@ const Organisation = () => {
 
       {/* Status Toggle Confirmation Dialog */}
       <Dialog open={!!toggleTarget} onOpenChange={(open) => !open && setToggleTarget(null)}>
-        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-10 w-10 rounded-xl bg-yellow-600/15 border border-yellow-500/30 flex items-center justify-center shrink-0">
-                <AlertTriangle size={18} className="text-yellow-400" />
+              <div className="h-10 w-10 rounded-xl bg-[#E7970E]/10 border border-[#E7970E]/30 flex items-center justify-center shrink-0">
+                <AlertTriangle size={18} className="text-[#E7970E]" />
               </div>
-              <DialogTitle className="text-white">Confirm Status Change</DialogTitle>
+              <DialogTitle className="text-[#263B4F]">Confirm Status Change</DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 pl-[52px]">
+            <DialogDescription className="text-[#6B7280] pl-[52px]">
               {toggleTarget?.newStatus
-                ? <>Activating <span className="text-white font-medium">{toggleTarget?.org.name}</span> will restore access for this organisation. Are you sure you want to proceed?</>
-                : <>Deactivating <span className="text-white font-medium">{toggleTarget?.org.name}</span> may impact reporting and access. Are you sure you want to proceed?</>
+                ? <>Activating <span className="text-[#263B4F] font-medium">{toggleTarget?.org.name}</span> will restore access for this organisation. Are you sure you want to proceed?</>
+                : <>Deactivating <span className="text-[#263B4F] font-medium">{toggleTarget?.org.name}</span> may impact reporting and access. Are you sure you want to proceed?</>
               }
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-3 mt-2">
-            <Button variant="ghost" onClick={() => setToggleTarget(null)} disabled={toggling}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+            <Button variant="outline" onClick={() => setToggleTarget(null)} disabled={toggling}>
               Cancel
             </Button>
             <Button
               onClick={() => toggleTarget && doToggleStatus(toggleTarget.org, toggleTarget.newStatus)}
               disabled={toggling}
-              className="bg-yellow-600 hover:bg-yellow-500 text-white font-semibold min-w-28">
+              className="bg-[#E7970E] hover:bg-[#d08a0d] text-white font-semibold min-w-28">
               {toggling ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -321,25 +320,24 @@ const Organisation = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-10 w-10 rounded-xl bg-red-600/15 border border-red-500/30 flex items-center justify-center shrink-0">
-                <Trash2 size={18} className="text-red-400" />
+              <div className="h-10 w-10 rounded-xl bg-[#DF453A]/10 border border-[#DF453A]/30 flex items-center justify-center shrink-0">
+                <Trash2 size={18} className="text-[#DF453A]" />
               </div>
-              <DialogTitle className="text-white">Delete Organisation</DialogTitle>
+              <DialogTitle className="text-[#263B4F]">Delete Organisation</DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 pl-[52px]">
+            <DialogDescription className="text-[#6B7280] pl-[52px]">
               This action cannot be undone. The organisation and all its associated data will be permanently removed.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-3 mt-2">
-            <Button variant="ghost" onClick={() => setDeleteId(null)} disabled={deleting}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+            <Button variant="outline" onClick={() => setDeleteId(null)} disabled={deleting}>
               Cancel
             </Button>
             <Button onClick={handleDelete} disabled={deleting}
-              className="bg-red-600 hover:bg-red-500 text-white font-semibold min-w-28">
+              className="bg-[#DF453A] hover:bg-[#c73c32] text-white font-semibold min-w-28">
               {deleting ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

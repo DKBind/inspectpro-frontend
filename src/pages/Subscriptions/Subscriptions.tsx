@@ -18,11 +18,12 @@ import type { ModuleResponse } from '@/services/models/module';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Fld, ViewRow, inputCls } from '@/components/ui/form-helpers';
+} from '@/components/shared-ui/Dialog/dialog';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Input } from '@/components/shared-ui/Input/input';
 import styles from './Subscriptions.module.css';
+
+import { Fld, ViewRow, inputCls } from '@/components/shared-ui/form-helpers';
 
 const PAGE_SIZE = 10;
 

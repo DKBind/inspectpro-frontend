@@ -1,29 +1,32 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
+import { ROUTES } from '@/components/Constant/Route';
 
 export const ProtectedRoute = () => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isFirstLogin } = useAuthStore();
   const location = useLocation();
 
   if (!isAuthenticated) {
-    // Redirect them to the /login page, but save the current location they were
-    // trying to go to when they were redirected. This allows us to send them
-    // along to that page after they login, which is a nicer user experience
-    // than dropping them off on the home page.
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
+  }
+
+  // On first login, force password update — only allow /update-password
+  if (isFirstLogin && location.pathname !== ROUTES.UPDATE_PASSWORD) {
+    return <Navigate to={ROUTES.UPDATE_PASSWORD} replace />;
   }
 
   return <Outlet />;
 };
 
 export const PublicRoute = () => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isFirstLogin } = useAuthStore();
   const location = useLocation();
 
   if (isAuthenticated) {
-    // If the user is authenticated, redirect to the page they were trying to go to
-    // or default to the dashboard.
-    const from = location.state?.from?.pathname || '/dashboard';
+    if (isFirstLogin) {
+      return <Navigate to={ROUTES.UPDATE_PASSWORD} replace />;
+    }
+    const from = location.state?.from?.pathname || ROUTES.DASHBOARD;
     return <Navigate to={from} replace />;
   }
 

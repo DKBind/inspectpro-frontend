@@ -16,13 +16,13 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/shared-ui/Dialog/dialog';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Sec, Fld, IcoInput } from '@/components/ui/form-helpers';
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Input } from '@/components/shared-ui/Input/input';
+import { Sec, Fld, IcoInput } from '@/components/shared-ui/form-helpers';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -52,24 +52,24 @@ function planBadgeStyle(planName?: string): string {
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const schema = z.object({
-  name:                z.string().min(2, 'Franchise name must be at least 2 characters'),
-  email:               z.string().min(1, 'Contact email is required').email('Please enter a valid email'),
-  parentOrgId:         z.string().min(1, 'Parent organisation is required'),
-  subscriptionId:      z.string().optional(),
+  name: z.string().min(2, 'Franchise name must be at least 2 characters'),
+  email: z.string().min(1, 'Contact email is required').email('Please enter a valid email'),
+  parentOrgId: z.string().min(1, 'Parent organisation is required'),
+  subscriptionId: z.string().optional(),
   subscriptionStartDate: z.string().optional(),
-  domain:              z.string().optional(),
-  phoneNumber:         z.string().optional(),
+  domain: z.string().optional(),
+  phoneNumber: z.string().optional(),
   contactedPersonName: z.string().optional(),
-  gstin:               z.string().optional(),
-  pan:                 z.string().optional(),
+  gstin: z.string().optional(),
+  pan: z.string().optional(),
   address: z.object({
     addressLine1: z.string().optional(),
     addressLine2: z.string().optional(),
-    street:       z.string().optional(),
-    district:     z.string().optional(),
-    state:        z.string().optional(),
-    country:      z.string().optional(),
-    pincode:      z.string().optional().refine((v) => !v || /^[0-9]{6}$/.test(v), 'Pincode must be 6 digits'),
+    street: z.string().optional(),
+    district: z.string().optional(),
+    state: z.string().optional(),
+    country: z.string().optional(),
+    pincode: z.string().optional().refine((v) => !v || /^[0-9]{6}$/.test(v), 'Pincode must be 6 digits'),
   }).optional(),
 });
 
@@ -94,34 +94,34 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
   const { user: authUser } = useAuthStore();
   const isSuperAdmin = authUser?.isSuperAdmin === true || authUser?.role === 'super_admin';
 
-  const [isSubmitting, setIsSubmitting]   = useState(false);
-  const [parentOrgs, setParentOrgs]       = useState<OrganisationResponse[]>([]);
-  const [plans, setPlans]                 = useState<SubscriptionResponse[]>([]);
-  const [plansLoading, setPlansLoading]   = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [parentOrgs, setParentOrgs] = useState<OrganisationResponse[]>([]);
+  const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
+  const [plansLoading, setPlansLoading] = useState(false);
   const isEditMode = !!editOrg;
 
   const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY });
   const { control, formState: { errors }, setError, reset, register, watch, setValue } = methods;
 
-  const { field: nameField }          = useController({ name: 'name', control });
-  const { field: emailField }         = useController({ name: 'email', control });
-  const { field: domainField }        = useController({ name: 'domain', control });
-  const { field: phoneField }         = useController({ name: 'phoneNumber', control });
+  const { field: nameField } = useController({ name: 'name', control });
+  const { field: emailField } = useController({ name: 'email', control });
+  const { field: domainField } = useController({ name: 'domain', control });
+  const { field: phoneField } = useController({ name: 'phoneNumber', control });
   const { field: contactPersonField } = useController({ name: 'contactedPersonName', control });
-  const { field: gstinField }         = useController({ name: 'gstin', control });
-  const { field: panField }           = useController({ name: 'pan', control });
-  const { field: addrLine1Field }     = useController({ name: 'address.addressLine1', control });
-  const { field: streetField }        = useController({ name: 'address.street', control });
-  const { field: districtField }      = useController({ name: 'address.district', control });
-  const { field: stateField }         = useController({ name: 'address.state', control });
-  const { field: countryField }       = useController({ name: 'address.country', control });
-  const { field: pincodeField }       = useController({ name: 'address.pincode', control });
+  const { field: gstinField } = useController({ name: 'gstin', control });
+  const { field: panField } = useController({ name: 'pan', control });
+  const { field: addrLine1Field } = useController({ name: 'address.addressLine1', control });
+  const { field: streetField } = useController({ name: 'address.street', control });
+  const { field: districtField } = useController({ name: 'address.district', control });
+  const { field: stateField } = useController({ name: 'address.state', control });
+  const { field: countryField } = useController({ name: 'address.country', control });
+  const { field: pincodeField } = useController({ name: 'address.pincode', control });
 
-  const selectedParentId  = watch('parentOrgId');
+  const selectedParentId = watch('parentOrgId');
   const selectedParentOrg = parentOrgs.find((o) => o.uuid === selectedParentId);
-  const selectedPlanId    = watch('subscriptionId');
+  const selectedPlanId = watch('subscriptionId');
   const subscriptionStartDate = watch('subscriptionStartDate');
-  const selectedPlan      = plans.find((p) => p.id === selectedPlanId);
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId);
 
   const computedEndDate = (() => {
     if (!subscriptionStartDate || !selectedPlan?.durationMonths) return '';
@@ -161,24 +161,24 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
   useEffect(() => {
     if (open && editOrg) {
       reset({
-        name:                editOrg.name ?? '',
-        email:               editOrg.email ?? '',
-        parentOrgId:         editOrg.parentOrgId ?? '',
-        subscriptionId:      '',
+        name: editOrg.name ?? '',
+        email: editOrg.email ?? '',
+        parentOrgId: editOrg.parentOrgId ?? '',
+        subscriptionId: '',
         subscriptionStartDate: '',
-        domain:              editOrg.domain ?? '',
-        phoneNumber:         editOrg.phoneNumber ?? '',
+        domain: editOrg.domain ?? '',
+        phoneNumber: editOrg.phoneNumber ?? '',
         contactedPersonName: editOrg.contactedPersonName ?? '',
-        gstin:               editOrg.gstin ?? '',
-        pan:                 editOrg.pan ?? '',
+        gstin: editOrg.gstin ?? '',
+        pan: editOrg.pan ?? '',
         address: {
           addressLine1: editOrg.address?.addressLine1 ?? '',
           addressLine2: editOrg.address?.addressLine2 ?? '',
-          street:       editOrg.address?.street ?? '',
-          district:     editOrg.address?.district ?? '',
-          state:        editOrg.address?.state ?? '',
-          country:      editOrg.address?.country ?? '',
-          pincode:      editOrg.address?.pincode ?? '',
+          street: editOrg.address?.street ?? '',
+          district: editOrg.address?.district ?? '',
+          state: editOrg.address?.state ?? '',
+          country: editOrg.address?.country ?? '',
+          pincode: editOrg.address?.pincode ?? '',
         },
       });
     } else if (open && !editOrg) {
@@ -194,7 +194,7 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     const clean = (v?: string) => (v?.trim() ? v.trim() : undefined);
-    const addr  = data.address;
+    const addr = data.address;
     const cleanAddr = addr ? {
       addressLine1: clean(addr.addressLine1), addressLine2: clean(addr.addressLine2),
       street: clean(addr.street), district: clean(addr.district),

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { Label } from '@/components/shared-ui/Label/label';
+import { Input } from '@/components/shared-ui/Input/input';
 import { ChevronDown, Calendar } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
 import { subscriptionService } from '@/services/subscriptionService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
 

@@ -18,16 +18,16 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/shared-ui/Dialog/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Sec, Fld, IcoInput } from '@/components/ui/form-helpers';
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Input } from '@/components/shared-ui/Input/input';
+import { Label } from '@/components/shared-ui/Label/label';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,15 +40,15 @@ function formatDisplayDate(iso?: string | null): string {
 
 function planBadgeStyle(planName?: string): string {
   const p = (planName ?? '').toUpperCase();
-  if (p.includes('FREE')) return 'text-slate-400 bg-slate-800/60 border-slate-700';
-  if (p.includes('STARTER') || p.includes('BASIC')) return 'text-emerald-400 bg-emerald-900/20 border-emerald-800/40';
-  if (p.includes('PRO') || p.includes('PROFESSIONAL')) return 'text-blue-400 bg-blue-900/20 border-blue-800/40';
-  if (p.includes('ENTERPRISE') || p.includes('PREMIUM')) return 'text-purple-400 bg-purple-900/20 border-purple-800/40';
+  if (p.includes('FREE')) return 'text-[#6B7280] bg-[#F3F4F6] border-[#E5E7EB]';
+  if (p.includes('STARTER') || p.includes('BASIC')) return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+  if (p.includes('PRO') || p.includes('PROFESSIONAL')) return 'text-blue-600 bg-blue-50 border-blue-200';
+  if (p.includes('ENTERPRISE') || p.includes('PREMIUM')) return 'text-purple-600 bg-purple-50 border-purple-200';
   const palettes = [
-    'text-amber-400 bg-amber-900/20 border-amber-800/40',
-    'text-cyan-400 bg-cyan-900/20 border-cyan-800/40',
-    'text-rose-400 bg-rose-900/20 border-rose-800/40',
-    'text-indigo-400 bg-indigo-900/20 border-indigo-800/40',
+    'text-amber-600 bg-amber-50 border-amber-200',
+    'text-cyan-600 bg-cyan-50 border-cyan-200',
+    'text-rose-600 bg-rose-50 border-rose-200',
+    'text-indigo-600 bg-indigo-50 border-indigo-200',
   ];
   const hash = (planName ?? '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   return palettes[hash % palettes.length];
@@ -295,21 +295,21 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
   };
 
   const inputCls = (hasError: boolean) =>
-    `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
+    `border border-[#E5E7EB] rounded-lg px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-[#33AE95]/30 focus:border-[#33AE95] text-[#263B4F] bg-white text-sm ${hasError ? 'border-[#DF453A]' : ''}`;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-        <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
+        <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
           <div className="flex items-center gap-3 mb-1">
-            <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-              <Building2 size={18} className="text-blue-400" />
+            <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
+              <Building2 size={18} className="text-[#33AE95]" />
             </div>
-            <DialogTitle className="text-xl font-bold text-white">
+            <DialogTitle className="text-xl font-bold text-[#263B4F]">
               {isEditMode ? 'Edit Organisation' : 'Create Organisation'}
             </DialogTitle>
           </div>
-          <DialogDescription className="text-slate-400 text-sm pl-12">
+          <DialogDescription className="text-[#6B7280] text-sm pl-12">
             {isEditMode
               ? 'Update the details below and save your changes.'
               : 'Set up a new workspace and assign a subscription plan.'}
@@ -324,51 +324,51 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
               <Sec icon={<Sparkles size={13} />} label="Subscription Plan">
                 {isEditMode ? (
                   /* Read-only plan info in edit mode */
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-4 grid gap-4 sm:grid-cols-3">
                     <div className="space-y-1.5">
-                      <p className="text-xs text-slate-500 uppercase tracking-wide">Plan</p>
+                      <p className="text-xs text-[#6B7280] uppercase tracking-wide">Plan</p>
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${planBadgeStyle(editOrg?.subscriptionPlanName ?? editOrg?.planType)}`}>
                         <Crown size={11} />
                         {editOrg?.subscriptionPlanName ?? editOrg?.planType ?? '—'}
                       </span>
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-xs text-slate-500 uppercase tracking-wide">Start Date</p>
-                      <p className="text-sm text-slate-200 font-medium">{formatDisplayDate(editOrg?.periodStart)}</p>
+                      <p className="text-xs text-[#6B7280] uppercase tracking-wide">Start Date</p>
+                      <p className="text-sm text-[#263B4F] font-medium">{formatDisplayDate(editOrg?.periodStart)}</p>
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-xs text-slate-500 uppercase tracking-wide">End Date</p>
-                      <p className="text-sm text-slate-200 font-medium">{formatDisplayDate(editOrg?.periodEnd)}</p>
+                      <p className="text-xs text-[#6B7280] uppercase tracking-wide">End Date</p>
+                      <p className="text-sm text-[#263B4F] font-medium">{formatDisplayDate(editOrg?.periodEnd)}</p>
                     </div>
                   </div>
                 ) : (
                   /* Create mode: plan selector + dates */
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-4">
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-4 space-y-4">
                     <Fld label="Select Plan" required error={(errors as any).subscriptionId?.message}>
                       {plansLoading ? (
-                        <div className="h-10 flex items-center text-slate-400 text-sm">Loading plans...</div>
+                        <div className="h-10 flex items-center text-[#6B7280] text-sm">Loading plans...</div>
                       ) : (
                         <DropdownMenu modal={false}>
                           <DropdownMenuTrigger
-                            className={`w-full inline-flex items-center justify-between h-10 rounded-md border bg-slate-950/60 px-3 text-sm font-normal text-white hover:bg-slate-900 focus:outline-none ${(errors as any).subscriptionId ? 'border-red-500' : 'border-slate-700'}`}
+                            className={`w-full inline-flex items-center justify-between h-10 rounded-md border bg-white px-3 text-sm font-normal text-[#263B4F] hover:bg-[#F3F4F6] focus:outline-none ${(errors as any).subscriptionId ? 'border-[#DF453A]' : 'border-[#E5E7EB]'}`}
                           >
-                            <span className={selectedPlan ? 'text-white' : 'text-slate-400'}>
+                            <span className={selectedPlan ? 'text-[#263B4F]' : 'text-[#6B7280]'}>
                               {selectedPlan ? selectedPlan.planName : '— Select a subscription plan —'}
                             </span>
                             <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
-                            className="!bg-[#1e293b] border-slate-700 text-white z-[9999]"
+                            className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]"
                             style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
                           >
                             {plans.length === 0 ? (
-                              <DropdownMenuItem disabled className="text-slate-400">No active plans available</DropdownMenuItem>
+                              <DropdownMenuItem disabled className="text-[#6B7280]">No active plans available</DropdownMenuItem>
                             ) : (
                               plans.map((p) => (
                                 <DropdownMenuItem
                                   key={p.id}
                                   onSelect={() => setValue('subscriptionId', p.id, { shouldValidate: true })}
-                                  className="cursor-pointer focus:bg-slate-800 focus:text-white py-3"
+                                  className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-3"
                                 >
                                   <span className="font-medium">{p.planName}</span>
                                 </DropdownMenuItem>
@@ -383,22 +383,22 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
                       <div className="grid gap-4 sm:grid-cols-2">
                         <Fld label="Start Date" error={(errors as any).subscriptionStartDate?.message}>
                           <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280] pointer-events-none z-10" />
                             <Input
                               type="date"
                               {...register('subscriptionStartDate')}
-                              className={`pl-9 h-10 bg-slate-950/60 border-slate-700 text-white [color-scheme:dark] focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 ${(errors as any).subscriptionStartDate ? 'border-red-500' : ''}`}
+                              className={`pl-9 h-10 border-[#E5E7EB] text-[#263B4F] bg-white focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 ${(errors as any).subscriptionStartDate ? 'border-[#DF453A]' : ''}`}
                             />
                           </div>
                         </Fld>
                         <Fld label="End Date">
                           <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
-                            <div className={`pl-9 h-10 bg-slate-950/30 border border-slate-700 rounded-md flex items-center text-sm ${computedEndDate ? 'text-slate-300' : 'text-slate-500'}`}>
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280] pointer-events-none z-10" />
+                            <div className={`pl-9 h-10 bg-[#F3F4F6] border border-[#E5E7EB] rounded-md flex items-center text-sm ${computedEndDate ? 'text-[#263B4F]' : 'text-[#6B7280]'}`}>
                               {computedEndDate || (selectedPlan?.durationMonths ? 'Select a start date' : 'No duration set')}
                             </div>
                           </div>
-                          <p className="text-xs text-slate-500 mt-1">Auto-calculated ({selectedPlan?.durationMonths ?? '?'} months)</p>
+                          <p className="text-xs text-[#6B7280] mt-1">Auto-calculated ({selectedPlan?.durationMonths ?? '?'} months)</p>
                         </Fld>
                       </div>
                     )}
@@ -408,7 +408,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
 
               {/* Core Details */}
               <Sec icon={<Building2 size={13} />} label="Organisation Details">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Fld label="Organisation Name" required error={errors.name?.message}>
                       <IcoInput icon={<Building2 size={15} />}>
@@ -441,7 +441,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
 
               {/* Business Identifiers */}
               <Sec icon={<FileText size={13} />} label="Business Identifiers">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
                   <div className="grid gap-4 sm:grid-cols-3">
                     <Fld label="GSTIN" hint="Optional" error={errors.gstin?.message}>
                       <Input placeholder="22AAAAA0000A1Z5" {...gstinField}
@@ -461,7 +461,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
 
               {/* Address */}
               <Sec icon={<MapPin size={13} />} label="Address">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Fld label="Address Line 1">
                       <Input placeholder="Flat / House no., Building name"
@@ -494,13 +494,12 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
 
             </div>
 
-            <DialogFooter className="px-7 py-5 border-t border-slate-800 bg-slate-900/30 rounded-b-2xl flex gap-3">
-              <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting}
-                className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+            <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl flex gap-3">
+              <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}
-                className="flex-1 sm:flex-none sm:min-w-44 bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg active:scale-95">
+                className="flex-1 sm:flex-none sm:min-w-44 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95">
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -517,3 +516,42 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
 }
 
 // ─── Micro helpers ────────────────────────────────────────────────────────────
+
+function Sec({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <section>
+      {label && (
+        <div className="flex items-center gap-2 mb-3">
+          {icon && <span className="text-[#33AE95]">{icon}</span>}
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">{label}</span>
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+
+function Fld({ label, required, hint, error, children }: {
+  label: string; required?: boolean; hint?: string; error?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <Label className="text-[#263B4F] text-sm font-medium">{label}</Label>
+        {required && <span className="text-[#DF453A] text-xs">*</span>}
+        {hint && <span className="text-[#6B7280] text-xs">({hint})</span>}
+      </div>
+      {children}
+      {error && <p className="text-xs text-[#DF453A]">{error}</p>}
+    </div>
+  );
+}
+
+function IcoInput({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">{icon}</span>
+      <div className="[&_input]:pl-9">{children}</div>
+    </div>
+  );
+}

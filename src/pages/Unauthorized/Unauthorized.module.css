@@ -1,0 +1,106 @@
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--ip-page-bg);
+  padding: 24px;
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ip-radius-xl, 16px);
+  padding: 48px 40px;
+  text-align: center;
+  box-shadow: var(--ip-shadow-md);
+}
+
+.iconWrapper {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--ip-red-light);
+  border: 1px solid var(--ip-red-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+}
+
+.icon {
+  width: 32px;
+  height: 32px;
+  color: var(--ip-red);
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ip-text-primary);
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+}
+
+.description {
+  font-size: 14px;
+  color: var(--ip-text-secondary);
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--ip-btn-height-md, 40px);
+  padding: 0 20px;
+  border-radius: var(--ip-radius-md, 8px);
+  border: 1.5px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-secondary);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.backBtn:hover {
+  border-color: var(--ip-brand);
+  color: var(--ip-brand);
+  background: var(--ip-brand-light);
+}
+
+.homeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--ip-btn-height-md, 40px);
+  padding: 0 20px;
+  border-radius: var(--ip-radius-md, 8px);
+  border: none;
+  background: var(--ip-gradient-brand);
+  color: white;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px var(--ip-brand-light);
+  font-family: inherit;
+}
+
+.homeBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--ip-brand-hover-shadow);
+}

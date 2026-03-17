@@ -3,7 +3,7 @@
  * Import from here instead of defining locally in each page.
  */
 import React from 'react';
-import { Label } from '@/components/ui/label';
+import { Label } from './Label/label';
 
 // ─── Input class builder ────────────────────────────────────────────────────
 

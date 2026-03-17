@@ -186,17 +186,53 @@
   opacity: 0;
 }
 
-/* Mobile overlay */
+/* ── Responsive: Tablet (768px – 1024px) ── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar {
+    width: 60px;
+  }
+
+  /* On tablet the sidebar is always icon-only; ignore the JS collapsed state */
+  .sidebarCollapsed {
+    width: 60px;
+  }
+
+  .brandText,
+  .navText,
+  .navLabel,
+  .badge {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+  }
+
+  .navItem {
+    justify-content: center;
+    padding: 10px 0;
+  }
+
+  .brand {
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+/* ── Responsive: Mobile (≤ 768px) — full-width drawer ── */
 @media (max-width: 768px) {
   .sidebar {
+    width: 260px;
     transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: var(--ip-shadow-xl);
   }
 
+  /* When drawer is open, slide in */
   .sidebarMobileOpen {
     transform: translateX(0);
   }
 
+  /* On mobile the sidebar is never icon-only; always full-width when open */
   .sidebarCollapsed {
     width: 260px;
   }

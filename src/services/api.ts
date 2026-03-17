@@ -39,22 +39,67 @@ class ApiClient {
     const { params, ...fetchConfig } = config;
     const token = this.getAuthToken();
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...config.headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(config.headers as Record<string, string> || {}),
     };
 
-    const response = await fetch(this.buildUrl(endpoint, params), {
+    let response = await fetch(this.buildUrl(endpoint, params), {
       ...fetchConfig,
       headers,
     });
 
-    if (!response.ok) {
+    // Handle 401 Unauthorized - attempt token refresh
+    if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh-token')) {
+      try {
+        const authStorage = localStorage.getItem('auth-storage');
+        if (authStorage) {
+          const parsed = JSON.parse(authStorage);
+          const refreshToken = parsed?.state?.refreshToken;
+
+          if (refreshToken) {
+            // Attempt to refresh tokens via the backend
+            const refreshRes = await fetch(this.buildUrl('/auth/refresh-token'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken }),
+            });
+
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              if (refreshData.status && refreshData.object) {
+                const { accessToken, idToken } = refreshData.object;
+
+                // Update localStorage
+                if (parsed.state) {
+                  parsed.state.accessToken = accessToken;
+                  parsed.state.idToken = idToken;
+                  localStorage.setItem('auth-storage', JSON.stringify(parsed));
+                }
+
+                // Retry original request with new token
+                headers['Authorization'] = `Bearer ${accessToken}`;
+                response = await fetch(this.buildUrl(endpoint, params), {
+                  ...fetchConfig,
+                  headers,
+                });
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Token refresh failed', error);
+      }
+
+      // If still 401 after refresh attempt, logout
       if (response.status === 401) {
         localStorage.removeItem('auth-storage');
         window.location.href = '/login';
       }
+    }
+
+    if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Request failed' }));
       throw new Error(error.message || `HTTP Error ${response.status}`);
     }

@@ -1,22 +1,22 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useModuleStore } from '@/store/useModuleStore';
 import { moduleService } from '@/services/moduleService';
 import { authService } from '@/services/authService';
 import { ROUTES } from '@/components/Constant/Route';
-import { Shield, Lock, Eye, EyeOff } from 'lucide-react';
+import { Shield, Eye, EyeOff, CheckCircle2, BarChart3, Users2, ClipboardList } from 'lucide-react';
 import styles from './Login.module.css';
 
 const Login = () => {
   const { setAuth } = useAuthStore();
   const { setAccessModules } = useModuleStore();
   const navigate = useNavigate();
-  const [email,    setEmail]    = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading,       setLoading]       = useState(false);
-  const [error,         setError]         = useState('');
-  const [showPassword,  setShowPassword]  = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,21 +27,25 @@ const Login = () => {
       const data = await authService.login(email.trim().toLowerCase(), password);
 
       const user = {
-        id:          data.userId,
-        email:       data.email,
-        name:        `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim(),
-        role:        data.superAdmin ? 'super_admin' : (data.roleName ?? 'user'),
-        roleId:      data.superAdmin ? undefined : data.roleId,
-        // Map all roles with their IDs so the role-switcher works
-        roles:       (data.roles ?? []).map((r) => ({ roleId: r.roleId, roleName: r.roleName })),
-        orgId:       data.orgId,
+        id: data.userId,
+        email: data.email,
+        name: `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim(),
+        role: data.superAdmin ? 'super_admin' : (data.roleName ?? 'user'),
+        roleId: data.superAdmin ? undefined : data.roleId,
+        roles: (data.roles ?? []).map((r) => ({ roleId: r.roleId, roleName: r.roleName })),
+        orgId: data.orgId,
         isSuperAdmin: data.superAdmin,
       };
 
-      setAuth(user, data.accessToken, data.refreshToken, data.firstLogin ?? false);
+      const isFirstLogin = data.isFirstLogin ?? false;
+      setAuth(user, data.accessToken, data.refreshToken, isFirstLogin);
 
-      // Use my-access as the single source of truth for sidebar visibility
-      await moduleService.getMyAccess(data.userId).then(setAccessModules).catch(() => {});
+      if (isFirstLogin) {
+        navigate(ROUTES.UPDATE_PASSWORD);
+        return;
+      }
+
+      await moduleService.getMyAccess(data.userId).then(setAccessModules).catch(() => { });
 
       navigate(ROUTES.DASHBOARD);
     } catch (err: unknown) {
@@ -53,78 +57,122 @@ const Login = () => {
 
   return (
     <div className={styles.authPage}>
-      <div className={styles.bgDecoration}>
-        <div className={`${styles.bgOrb} ${styles.bgOrb1}`} />
-        <div className={`${styles.bgOrb} ${styles.bgOrb2}`} />
+      {/* Left Brand Panel */}
+      <div className={styles.brandPanel}>
+        <div className={styles.brandContent}>
+          <div className={styles.brandLogo}>
+            <Shield className={styles.brandLogoIcon} />
+          </div>
+          <h1 className={styles.brandName}>InspectWisePro</h1>
+          <p className={styles.brandTagline}>Inspection & Quality Management</p>
+          <p className={styles.brandDesc}>
+            The enterprise platform for managing inspections, quality audits, and compliance workflows — all in one place.
+          </p>
+
+          <div className={styles.featureList}>
+            <div className={styles.featureItem}>
+              <ClipboardList className={styles.featureIcon} />
+              <span>End-to-end inspection management</span>
+            </div>
+            <div className={styles.featureItem}>
+              <BarChart3 className={styles.featureIcon} />
+              <span>Real-time quality analytics</span>
+            </div>
+            <div className={styles.featureItem}>
+              <Users2 className={styles.featureIcon} />
+              <span>Multi-org & franchise support</span>
+            </div>
+            <div className={styles.featureItem}>
+              <CheckCircle2 className={styles.featureIcon} />
+              <span>Role-based access control</span>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.brandFooter}>
+          <p>© 2025 InspectWisePro. All rights reserved.</p>
+        </div>
+
+        {/* Decorative orbs */}
+        <div className={styles.brandOrb1} />
+        <div className={styles.brandOrb2} />
       </div>
 
-      <div className={styles.authCard}>
-        <div className={styles.logoSection}>
-          <div className={styles.logoIcon}><Shield /></div>
-          <div className={styles.logoTitle}>InspectWisePro</div>
-          <div className={styles.logoSubtitle}>Inspection & Quality Management</div>
-        </div>
-
-        <h2 className={styles.formTitle}>Welcome back</h2>
-        <p className={styles.formSubtitle}>Sign in to your account to continue</p>
-
-        <form onSubmit={handleSubmit}>
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Email</label>
-            <input
-              type="email"
-              className={styles.formInput}
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-            />
+      {/* Right Form Panel */}
+      <div className={styles.formPanel}>
+        <div className={styles.formCard}>
+          {/* Mobile logo */}
+          <div className={styles.mobileLogo}>
+            <div className={styles.mobileLogoIcon}><Shield /></div>
+            <span className={styles.mobileLogoText}>InspectWisePro</span>
           </div>
 
-          <div className={styles.formGroup}>
-            <label className={styles.formLabel}>Password</label>
-            <div className={styles.passwordWrapper}>
+          <div className={styles.formHeader}>
+            <h2 className={styles.formTitle}>Sign in to your account</h2>
+            <p className={styles.formSubtitle}>Enter your credentials to access the platform</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className={styles.form}>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Email address</label>
               <input
-                type={showPassword ? 'text' : 'password'}
+                type="email"
                 className={styles.formInput}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                placeholder="you@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 disabled={loading}
+                autoComplete="email"
               />
-              <button
-                type="button"
-                className={styles.eyeBtn}
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff /> : <Eye />}
-              </button>
             </div>
-          </div>
 
-          {error && (
-            <div className={styles.errorMsg}>
-              {error}
+            <div className={styles.formGroup}>
+              <div className={styles.labelRow}>
+                <label className={styles.formLabel}>Password</label>
+                <Link to={ROUTES.FORGOT_PASSWORD} className={styles.forgotLink}>
+                  Forgot password?
+                </Link>
+              </div>
+              <div className={styles.passwordWrapper}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className={styles.formInput}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className={styles.eyeBtn}
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff /> : <Eye />}
+                </button>
+              </div>
             </div>
-          )}
 
-          <button type="submit" className={styles.submitBtn} disabled={loading}>
-            {loading ? 'Signing in…' : 'Sign In'}
-          </button>
-        </form>
+            {error && (
+              <div className={styles.errorMsg}>
+                {error}
+              </div>
+            )}
 
-        <div className={styles.dividerRow}>
-          <div className={styles.dividerLine} />
-          <span className={styles.dividerText}>or continue with</span>
-          <div className={styles.dividerLine} />
+            <button type="submit" className={styles.submitBtn} disabled={loading}>
+              {loading ? (
+                <span className={styles.loadingRow}>
+                  <span className={styles.spinner} />
+                  Signing in…
+                </span>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
         </div>
-
-        <button className={styles.secondaryBtn} type="button">
-          <Lock />
-          Sign in with OTP
-        </button>
       </div>
     </div>
   );

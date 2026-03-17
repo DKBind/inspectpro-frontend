@@ -24,11 +24,29 @@
   overflow-y: auto;
 }
 
-/* Mobile */
+/* ── Responsive: Tablet (768px – 1024px) ── */
+/* Sidebar is always icon-only (60px) on tablet regardless of collapsed state */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .mainArea,
+  .mainAreaCollapsed {
+    margin-left: 60px;
+  }
+
+  .content {
+    padding: 20px;
+  }
+}
+
+/* ── Responsive: Mobile (≤ 768px) ── */
+/* Sidebar becomes a drawer overlay; main area takes full width */
 @media (max-width: 768px) {
   .mainArea,
   .mainAreaCollapsed {
     margin-left: 0;
+  }
+
+  .content {
+    padding: 16px;
   }
 }
 

@@ -10,8 +10,8 @@ import { organisationService } from '@/services/organisationService';
 import { PlanSelector } from './PlanSelector';
 import { OrgDetailsForm } from './OrgDetailsForm';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/shared-ui/Card/card';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 

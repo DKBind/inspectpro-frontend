@@ -20,28 +20,28 @@ import { subscriptionService } from '@/services/subscriptionService';
 import type { CustomerResponse } from '@/services/models/customer';
 import type { SubscriptionResponse } from '@/services/models/subscription';
 import { useAuthStore } from '@/store/useAuthStore';
-import Pagination from '@/components/ui/Pagination/Pagination';
+import Pagination from '@/components/shared-ui/Pagination/Pagination';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
-} from '@/components/ui/dialog';
+} from '@/components/shared-ui/Dialog/dialog';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Fld, IcoInput, ViewRow, inputCls } from '@/components/ui/form-helpers';
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
+import { Button } from '@/components/shared-ui/Button/button';
+import { Input } from '@/components/shared-ui/Input/input';
 import styles from '@/pages/Organisation/Organisation.module.css';
+import { Fld, IcoInput, ViewRow, inputCls } from '@/components/shared-ui/form-helpers';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const schema = z.object({
-  firstName:     z.string().min(1, 'First name is required'),
-  lastName:      z.string().optional(),
-  email:         z.string().optional().refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Invalid email'),
-  phoneNumber:   z.string().optional(),
-  companyName:   z.string().optional(),
-  notes:         z.string().optional(),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().optional(),
+  email: z.string().optional().refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Invalid email'),
+  phoneNumber: z.string().optional(),
+  companyName: z.string().optional(),
+  notes: z.string().optional(),
   subscriptionId: z.string().optional(),
 });
 
@@ -58,33 +58,33 @@ const Customers = () => {
   const { user } = useAuthStore();
   const orgId = user?.orgId ?? '';
 
-  const [customers, setCustomers]   = useState<CustomerResponse[]>([]);
-  const [plans, setPlans]           = useState<SubscriptionResponse[]>([]);
-  const [loading, setLoading]       = useState(true);
+  const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize]     = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
-  const [limitInfo, setLimitInfo]   = useState<{ current: number; max: number } | null>(null);
+  const [limitInfo, setLimitInfo] = useState<{ current: number; max: number } | null>(null);
 
-  const [formOpen, setFormOpen]         = useState(false);
-  const [editTarget, setEditTarget]     = useState<CustomerResponse | null>(null);
-  const [viewTarget, setViewTarget]     = useState<CustomerResponse | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<CustomerResponse | null>(null);
+  const [viewTarget, setViewTarget] = useState<CustomerResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CustomerResponse | null>(null);
-  const [deleting, setDeleting]         = useState(false);
-  const [submitting, setSubmitting]     = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY });
   const { control, formState: { errors }, reset, register, setValue } = methods;
 
   const { field: firstNameField } = useController({ name: 'firstName', control });
-  const { field: lastNameField  } = useController({ name: 'lastName',  control });
-  const { field: emailField     } = useController({ name: 'email',     control });
-  const { field: phoneField     } = useController({ name: 'phoneNumber', control });
-  const { field: companyField   } = useController({ name: 'companyName', control });
+  const { field: lastNameField } = useController({ name: 'lastName', control });
+  const { field: emailField } = useController({ name: 'email', control });
+  const { field: phoneField } = useController({ name: 'phoneNumber', control });
+  const { field: companyField } = useController({ name: 'companyName', control });
 
   const selectedPlanId = methods.watch('subscriptionId');
-  const selectedPlan   = plans.find((p) => p.id === selectedPlanId);
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId);
 
   // ─── Fetch ──────────────────────────────────────────────────────────────
 
@@ -137,12 +137,12 @@ const Customers = () => {
   const openEdit = (c: CustomerResponse) => {
     setEditTarget(c);
     reset({
-      firstName:      c.firstName ?? '',
-      lastName:       c.lastName ?? '',
-      email:          c.email ?? '',
-      phoneNumber:    c.phoneNumber ?? '',
-      companyName:    c.companyName ?? '',
-      notes:          c.notes ?? '',
+      firstName: c.firstName ?? '',
+      lastName: c.lastName ?? '',
+      email: c.email ?? '',
+      phoneNumber: c.phoneNumber ?? '',
+      companyName: c.companyName ?? '',
+      notes: c.notes ?? '',
       subscriptionId: c.subscriptionId ?? '',
     });
     setFormOpen(true);
@@ -155,12 +155,12 @@ const Customers = () => {
   const onSubmit = async (data: FormValues) => {
     setSubmitting(true);
     const payload = {
-      firstName:      data.firstName.trim(),
-      lastName:       data.lastName?.trim() || undefined,
-      email:          data.email?.trim() || undefined,
-      phoneNumber:    data.phoneNumber?.trim() || undefined,
-      companyName:    data.companyName?.trim() || undefined,
-      notes:          data.notes?.trim() || undefined,
+      firstName: data.firstName.trim(),
+      lastName: data.lastName?.trim() || undefined,
+      email: data.email?.trim() || undefined,
+      phoneNumber: data.phoneNumber?.trim() || undefined,
+      companyName: data.companyName?.trim() || undefined,
+      notes: data.notes?.trim() || undefined,
       subscriptionId: data.subscriptionId || undefined,
     };
     try {
@@ -471,12 +471,12 @@ const Customers = () => {
           </DialogHeader>
           {viewTarget && (
             <div className="px-7 py-6 space-y-0">
-              <ViewRow label="Name"    value={viewTarget.fullName || viewTarget.firstName} />
-              <ViewRow label="Email"   value={viewTarget.email ?? '—'} />
-              <ViewRow label="Phone"   value={viewTarget.phoneNumber ?? '—'} />
+              <ViewRow label="Name" value={viewTarget.fullName || viewTarget.firstName} />
+              <ViewRow label="Email" value={viewTarget.email ?? '—'} />
+              <ViewRow label="Phone" value={viewTarget.phoneNumber ?? '—'} />
               <ViewRow label="Company" value={viewTarget.companyName ?? '—'} />
-              <ViewRow label="Plan"    value={viewTarget.subscriptionPlanName ?? '—'} />
-              <ViewRow label="Status"  value={viewTarget.isActive ? 'Active' : 'Inactive'} />
+              <ViewRow label="Plan" value={viewTarget.subscriptionPlanName ?? '—'} />
+              <ViewRow label="Status" value={viewTarget.isActive ? 'Active' : 'Inactive'} />
               {viewTarget.notes && <ViewRow label="Notes" value={viewTarget.notes} />}
             </div>
           )}

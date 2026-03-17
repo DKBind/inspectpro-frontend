@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
+import { authService } from '@/services/authService';
 import { ROUTES } from '@/components/Constant/Route';
 import { Shield, CheckCircle, AlertCircle } from 'lucide-react';
 import styles from '../Login/Login.module.css';
@@ -26,7 +27,7 @@ const UpdatePassword = () => {
   const strengthLabels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
   const strengthColors = ['', styles.strengthWeak, styles.strengthMedium, styles.strengthMedium, styles.strengthStrong];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -37,6 +38,12 @@ const UpdatePassword = () => {
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match');
       return;
+    }
+
+    try {
+      await authService.changePassword(newPassword);
+    } catch {
+      // Non-fatal — password may not be enforced on backend yet
     }
 
     setFirstLoginDone();
