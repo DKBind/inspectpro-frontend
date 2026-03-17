@@ -12,8 +12,8 @@ import {
   BarChart3,
   Activity,
 } from 'lucide-react';
-import Pagination from '@/components/shared-ui/Pagination/Pagination';
 import styles from './Dashboard.module.css';
+import ModalPagination from '@/components/shared-ui/ModalPagination/ModalPagination';
 
 // ─── Dummy Data ────────────────────────────────────────────────────────
 const statsData = [
@@ -102,7 +102,7 @@ const formatDate = () => {
 // ─── Component ─────────────────────────────────────────────────────────
 const Dashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize] = useState(10);
 
   const totalPages = Math.ceil(inspectionsData.length / pageSize);
   const paginatedInspections = inspectionsData.slice(
@@ -110,10 +110,6 @@ const Dashboard = () => {
     currentPage * pageSize
   );
 
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1);
-  };
 
   return (
     <div className={styles.dashboardPage}>
@@ -192,17 +188,12 @@ const Dashboard = () => {
                 ))}
               </tbody>
             </table>
-            <div className={styles.paginationContainer}>
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={inspectionsData.length}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={handlePageSizeChange}
-              />
-            </div>
           </div>
+          <ModalPagination currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={inspectionsData.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}/>
         </div>
 
         {/* Right Column */}

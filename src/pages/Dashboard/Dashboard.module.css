@@ -217,6 +217,9 @@
   border: 1px solid var(--ip-border);
   overflow: hidden;
   box-shadow: var(--ip-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .panelHeader {
@@ -252,6 +255,7 @@
 
 .panelBody {
   padding: 0;
+  flex: 1;
 }
 
 /* Table */
@@ -422,9 +426,4 @@
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-}
-
-/* Pagination wrapper */
-.paginationContainer {
-  padding: 0 24px 8px;
 }
