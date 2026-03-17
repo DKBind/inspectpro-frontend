@@ -389,11 +389,8 @@ const FranchiseSubscriptions = () => {
                   <div className="flex items-center gap-3 py-1">
                     <button type="button" role="switch" aria-checked={watchIsActive}
                       onClick={() => setValue('isActive', !watchIsActive)}
-                      className={`${styles.statusToggle} ${watchIsActive ? styles.toggleOn : styles.toggleOff}`}>
-                      <span className={styles.toggleKnob}>
-                        {watchIsActive ? <CheckCircle size={10} /> : <XCircle size={10} />}
-                      </span>
-                    </button>
+                      className={`${styles.statusToggle} ${watchIsActive ? styles.toggleOn : styles.toggleOff}`}
+                    />
                     <span className={`text-sm font-medium ${watchIsActive ? 'text-[#33AE95]' : 'text-[#6B7280]'}`}>
                       {watchIsActive ? 'Active' : 'Inactive'}
                     </span>
@@ -584,10 +581,7 @@ function StatusToggle({ active, loading, onToggle }: { active: boolean; loading:
   return (
     <button type="button" role="switch" aria-checked={active} disabled={loading} onClick={onToggle}
       title={active ? 'Click to deactivate' : 'Click to activate'}
-      className={`${styles.statusToggle} ${active ? styles.toggleOn : styles.toggleOff}`}>
-      <span className={styles.toggleKnob}>
-        {active ? <CheckCircle size={8} /> : <XCircle size={8} />}
-      </span>
-    </button>
+      className={`${styles.statusToggle} ${active ? styles.toggleOn : styles.toggleOff}`}
+    />
   );
 }

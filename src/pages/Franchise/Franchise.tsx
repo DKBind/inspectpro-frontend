@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { GitBranch, Plus, Globe, RefreshCw, Eye, Pencil, Trash2, XCircle, CheckCircle, AlertTriangle, Building2, Crown } from 'lucide-react';
+import { GitBranch, Plus, Globe, RefreshCw, Eye, Pencil, Trash2, AlertTriangle, Building2, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { organisationService } from '@/services/organisationService';
@@ -194,11 +194,7 @@ const Franchise = () => {
                           onClick={() => setToggleTarget({ org: f, newStatus: !f.isActive })}
                           disabled={toggling}
                           title={f.isActive ? 'Click to deactivate' : 'Click to activate'}
-                        >
-                          <span className={styles.toggleKnob}>
-                            {f.isActive ? <CheckCircle size={8} /> : <XCircle size={8} />}
-                          </span>
-                        </button>
+                        />
                       </td>
                       <td>
                         <div className={styles.actionBtns}>

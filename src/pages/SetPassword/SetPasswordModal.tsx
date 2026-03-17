@@ -53,21 +53,21 @@ const SetPasswordModal = () => {
   return (
     <Dialog open={isFirstLogin} onOpenChange={() => { /* forced — cannot close without setting password */ }}>
       <DialogContent
-        className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0"
+        className="sm:max-w-md shadow-xl rounded-2xl p-0"
         // Prevent closing by clicking outside or pressing Escape
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
           <div className="flex items-center gap-3 mb-1">
             <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
               <KeyRound size={18} className="text-blue-400" />
             </div>
-            <DialogTitle className="text-xl font-bold text-white">Set Your Password</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-[#263B4F]">Set Your Password</DialogTitle>
           </div>
-          <DialogDescription className="text-slate-400 text-sm pl-12">
+          <DialogDescription className="text-[#6B7280] text-sm pl-12">
             Welcome! For security, please set a new password before continuing.
-            Your default password was <span className="text-slate-300 font-mono">InspectPro@123</span>.
+            Your default password was <span className="text-[#374151] font-mono">InspectPro@123</span>.
           </DialogDescription>
         </DialogHeader>
 
@@ -84,14 +84,14 @@ const SetPasswordModal = () => {
                   placeholder="Enter new password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 pl-9 pr-10"
+                  className="h-10 border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 pl-9 pr-10"
                   required
                   autoFocus
                 />
                 <button
                   type="button"
                   onClick={() => setShowNew((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#6B7280] transition-colors"
                   tabIndex={-1}
                 >
                   {showNew ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -109,13 +109,13 @@ const SetPasswordModal = () => {
                   placeholder="Re-enter new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 pl-9 pr-10"
+                  className="h-10 border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 pl-9 pr-10"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#6B7280] transition-colors"
                   tabIndex={-1}
                 >
                   {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -123,10 +123,10 @@ const SetPasswordModal = () => {
               </div>
             </Fld>
 
-            {error && <p className="text-xs text-red-400">{error}</p>}
+            {error && <p className="text-xs text-[#DF453A]">{error}</p>}
           </div>
 
-          <DialogFooter className="px-7 py-5 border-t border-slate-800 bg-slate-900/30 rounded-b-2xl">
+          <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl">
             <Button
               type="submit"
               disabled={submitting}

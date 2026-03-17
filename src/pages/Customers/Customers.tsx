@@ -212,7 +212,7 @@ const Customers = () => {
           <p className={styles.pageSubtitle}>
             Manage customers for your franchise.
             {limitInfo && (
-              <span className={limitInfo.current >= limitInfo.max ? ' text-red-400' : ' text-slate-400'}>
+              <span className={limitInfo.current >= limitInfo.max ? ' text-red-400' : ' text-[#6B7280]'}>
                 {' '}· {limitInfo.current} / {limitInfo.max} used
               </span>
             )}
@@ -333,17 +333,17 @@ const Customers = () => {
 
       {/* Create / Edit Modal */}
       <Dialog open={formOpen} onOpenChange={(open) => { if (!open) closeForm(); }}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto shadow-xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
               <div className="h-9 w-9 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center">
                 <Users size={18} className="text-purple-400" />
               </div>
-              <DialogTitle className="text-xl font-bold text-white">
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">
                 {editTarget ? 'Edit Customer' : 'Add Customer'}
               </DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 text-sm pl-12">
+            <DialogDescription className="text-[#6B7280] text-sm pl-12">
               {editTarget ? 'Update the customer details below.' : 'Add a new customer to your franchise.'}
             </DialogDescription>
           </DialogHeader>
@@ -355,12 +355,12 @@ const Customers = () => {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Fld label="First Name" required error={errors.firstName?.message}>
                     <IcoInput icon={<User size={14} />}>
-                      <Input placeholder="John" {...firstNameField} className={inputCls(!!errors.firstName, 'purple')} />
+                      <Input placeholder="John" {...firstNameField} className={inputCls(!!errors.firstName)} />
                     </IcoInput>
                   </Fld>
                   <Fld label="Last Name">
                     <IcoInput icon={<User size={14} />}>
-                      <Input placeholder="Doe" {...lastNameField} className={inputCls(false, 'purple')} />
+                      <Input placeholder="Doe" {...lastNameField} className={inputCls(false)} />
                     </IcoInput>
                   </Fld>
                 </div>
@@ -368,46 +368,46 @@ const Customers = () => {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Fld label="Email" error={errors.email?.message}>
                     <IcoInput icon={<Mail size={14} />}>
-                      <Input type="email" placeholder="john@company.com" {...emailField} className={inputCls(!!errors.email, 'purple')} />
+                      <Input type="email" placeholder="john@company.com" {...emailField} className={inputCls(!!errors.email)} />
                     </IcoInput>
                   </Fld>
                   <Fld label="Phone">
                     <IcoInput icon={<Phone size={14} />}>
-                      <Input placeholder="+91 98765 43210" {...phoneField} className={inputCls(false, 'purple')} />
+                      <Input placeholder="+91 98765 43210" {...phoneField} className={inputCls(false)} />
                     </IcoInput>
                   </Fld>
                 </div>
 
                 <Fld label="Company Name">
                   <IcoInput icon={<Building2 size={14} />}>
-                    <Input placeholder="Company Pvt. Ltd." {...companyField} className={inputCls(false, 'purple')} />
+                    <Input placeholder="Company Pvt. Ltd." {...companyField} className={inputCls(false)} />
                   </IcoInput>
                 </Fld>
 
                 {/* Subscription plan */}
                 <Fld label="Subscription Plan" hint="Optional">
                   <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger className="w-full inline-flex items-center justify-between h-10 rounded-md border border-slate-700 bg-slate-950/60 px-3 text-sm text-white hover:bg-slate-900 focus:outline-none">
-                      <span className={selectedPlan ? 'text-white' : 'text-slate-400'}>
+                    <DropdownMenuTrigger className="w-full inline-flex items-center justify-between h-10 rounded-md border border-[#E5E7EB] bg-white px-3 text-sm text-[#263B4F] hover:bg-[#F3F4F6] focus:outline-none">
+                      <span className={selectedPlan ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
                         {selectedPlan ? selectedPlan.planName : '— Select a plan —'}
                       </span>
                       <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="!bg-[#1e293b] border-slate-700 text-white z-[9999]"
+                    <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]"
                       style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
-                      <DropdownMenuItem onSelect={() => setValue('subscriptionId', '')} className="cursor-pointer focus:bg-slate-800 text-slate-400 py-3">
+                      <DropdownMenuItem onSelect={() => setValue('subscriptionId', '')} className="cursor-pointer focus:bg-[#F3F4F6] text-[#9CA3AF] py-3">
                         — None —
                       </DropdownMenuItem>
                       {plans.length === 0 ? (
-                        <DropdownMenuItem disabled className="text-slate-400">No active plans</DropdownMenuItem>
+                        <DropdownMenuItem disabled className="text-[#9CA3AF]">No active plans</DropdownMenuItem>
                       ) : (
                         plans.map((p) => (
                           <DropdownMenuItem key={p.id} onSelect={() => setValue('subscriptionId', p.id)}
-                            className="cursor-pointer focus:bg-slate-800 focus:text-white py-3">
+                            className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-3">
                             <div>
                               <span className="font-medium">{p.planName}</span>
-                              {p.maxUsers != null && <span className="ml-2 text-xs text-slate-400">· {p.maxUsers} customers</span>}
-                              {p.price != null && <span className="ml-2 text-xs text-slate-400">· ₹{Number(p.price).toLocaleString('en-IN')}</span>}
+                              {p.maxUsers != null && <span className="ml-2 text-xs text-[#9CA3AF]">· {p.maxUsers} customers</span>}
+                              {p.price != null && <span className="ml-2 text-xs text-[#9CA3AF]">· ₹{Number(p.price).toLocaleString('en-IN')}</span>}
                             </div>
                           </DropdownMenuItem>
                         ))
@@ -435,14 +435,14 @@ const Customers = () => {
 
                 <Fld label="Notes" hint="Optional">
                   <textarea rows={3} placeholder="Any additional notes..." {...register('notes')}
-                    className="w-full rounded-md bg-slate-950/60 border border-slate-700 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20 text-sm px-3 py-2 resize-none outline-none" />
+                    className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 text-sm px-3 py-2 resize-none outline-none" />
                 </Fld>
 
               </div>
 
-              <DialogFooter className="px-7 py-5 border-t border-slate-800 bg-slate-900/30 rounded-b-2xl flex gap-3">
+              <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl flex gap-3">
                 <Button type="button" variant="ghost" onClick={closeForm} disabled={submitting}
-                  className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Cancel</Button>
+                  className="text-[#6B7280] hover:text-[#263B4F] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Cancel</Button>
                 <Button type="submit" disabled={submitting}
                   className="flex-1 sm:flex-none sm:min-w-44 bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-lg active:scale-95">
                   {submitting ? (
@@ -460,13 +460,13 @@ const Customers = () => {
 
       {/* View Modal */}
       <Dialog open={!!viewTarget} onOpenChange={(open) => { if (!open) setViewTarget(null); }}>
-        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-md shadow-xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
               <div className="h-9 w-9 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center">
                 <Users size={18} className="text-purple-400" />
               </div>
-              <DialogTitle className="text-xl font-bold text-white">Customer Details</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">Customer Details</DialogTitle>
             </div>
           </DialogHeader>
           {viewTarget && (
@@ -480,9 +480,9 @@ const Customers = () => {
               {viewTarget.notes && <ViewRow label="Notes" value={viewTarget.notes} />}
             </div>
           )}
-          <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
+          <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">
             <Button variant="ghost" onClick={() => setViewTarget(null)}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Close</Button>
+              className="text-[#6B7280] hover:text-[#263B4F] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Close</Button>
             {viewTarget && (
               <Button onClick={() => { openEdit(viewTarget); setViewTarget(null); }}
                 className="bg-purple-600 hover:bg-purple-500 text-white font-semibold">
@@ -495,21 +495,21 @@ const Customers = () => {
 
       {/* Delete Confirm */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
-        <DialogContent className="sm:max-w-md !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-md shadow-xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
               <div className="h-10 w-10 rounded-xl bg-red-600/15 border border-red-500/30 flex items-center justify-center shrink-0">
                 <AlertTriangle size={18} className="text-red-400" />
               </div>
-              <DialogTitle className="text-white">Delete Customer</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">Delete Customer</DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 pl-[52px]">
-              Delete <span className="text-white font-medium">{deleteTarget?.fullName || deleteTarget?.firstName}</span>? This action cannot be undone.
+            <DialogDescription className="text-[#6B7280] pl-[52px]">
+              Delete <span className="text-[#263B4F] font-medium">{deleteTarget?.fullName || deleteTarget?.firstName}</span>? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-3 mt-2 px-7 pb-5">
             <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">Cancel</Button>
+              className="text-[#6B7280] hover:text-[#263B4F] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Cancel</Button>
             <Button onClick={handleDelete} disabled={deleting}
               className="bg-red-600 hover:bg-red-500 text-white font-semibold min-w-28">
               {deleting ? <span className="flex items-center gap-2"><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Deleting...</span> : 'Delete'}

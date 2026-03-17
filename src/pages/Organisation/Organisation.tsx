@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Plus, Globe, Crown, RefreshCw, Eye, Pencil, Trash2, XCircle, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Building2, Plus, Globe, Crown, RefreshCw, Eye, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { organisationService } from '@/services/organisationService';
@@ -229,13 +229,7 @@ const Organisation = () => {
                           onClick={() => handleToggleStatus(org)}
                           disabled={toggling}
                           title={org.isActive ? 'Click to deactivate' : 'Click to activate'}
-                        >
-                          <span className={styles.toggleKnob}>
-                            {org.isActive
-                              ? <CheckCircle size={8} />
-                              : <XCircle size={8} />}
-                          </span>
-                        </button>
+                        />
                       </td>
 
                       <td>

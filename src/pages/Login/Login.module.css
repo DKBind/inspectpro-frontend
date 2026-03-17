@@ -60,8 +60,7 @@
   color: rgba(255, 255, 255, 0.75);
   font-weight: 500;
   margin-bottom: 24px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
 .brandDesc {
