@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import styles from './ModalPagination.module.css';
+import { cn } from '@/lib/utils';
 
 interface ModalPaginationProps {
   currentPage: number;
@@ -21,7 +22,7 @@ const ModalPagination = ({
 
   const getPageNumbers = (): (number | 'ellipsis')[] => {
     const pages: (number | 'ellipsis')[] = [];
-    if (totalPages <= 5) {
+    if (totalPages <= 3) {
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
       pages.push(1);
@@ -38,9 +39,9 @@ const ModalPagination = ({
   if (totalPages <= 1) return null;
 
   return (
-    <div className={styles.wrapper}>
+    <div className={cn(styles.wrapper, 'mt-2')}>
       <span className={styles.info}>
-        {startItem}–{endItem} of {totalItems}
+        Showing {startItem} out of {totalItems}
       </span>
 
       <div className={styles.controls}>

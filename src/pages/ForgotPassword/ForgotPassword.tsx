@@ -4,6 +4,7 @@ import { ROUTES } from '@/components/Constant/Route';
 import { authService } from '@/services/authService';
 import { Shield, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import styles from '../Login/Login.module.css';
+import { cn } from '@/lib/utils';
 
 type Step = 'email' | 'otp' | 'reset' | 'success';
 
@@ -18,6 +19,7 @@ const ForgotPassword = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
 
   const stepIndex: Record<Step, number> = { email: 0, otp: 1, reset: 2, success: 3 };
@@ -33,6 +35,20 @@ const ForgotPassword = () => {
       setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setResending(true);
+    try {
+      await authService.sendOtp(email.trim().toLowerCase());
+      setStep('otp');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to re-send OTP. Please try again.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -98,16 +114,13 @@ const ForgotPassword = () => {
         {/* Step: Email */}
         {step === 'email' && (
           <>
-            <button className={styles.backBtn} onClick={() => navigate(ROUTES.LOGIN)}>
-              <ArrowLeft /> Back to login
-            </button>
             <h2 className={styles.formTitle}>Forgot password?</h2>
             <p className={styles.formSubtitle}>
               Enter your email and we'll send you an OTP to reset your password.
             </p>
-            {error && <div className={styles.errorMsg}>{error}</div>}
+            {error && <div className={cn(styles.errorMsg, 'mt-2')}>{error}</div>}
             <form onSubmit={handleSendOtp}>
-              <div className={styles.formGroup}>
+              <div className={cn(styles.formGroup, 'mt-4')}>
                 <label className={styles.formLabel}>Email address</label>
                 <input
                   type="email"
@@ -119,8 +132,11 @@ const ForgotPassword = () => {
                   disabled={loading}
                 />
               </div>
-              <button type="submit" className={styles.submitBtn} disabled={loading}>
+              <button type="submit" className={cn(styles.submitBtn, 'mt-2')} disabled={loading}>
                 {loading ? 'Sending OTP…' : 'Send OTP'}
+              </button>
+              <button className={cn(styles.backBtn, 'mt-2')} onClick={() => navigate(ROUTES.LOGIN)}>
+                <ArrowLeft /> Back to login
               </button>
             </form>
           </>
@@ -129,16 +145,13 @@ const ForgotPassword = () => {
         {/* Step: OTP */}
         {step === 'otp' && (
           <>
-            <button className={styles.backBtn} onClick={() => { setStep('email'); setError(''); }}>
-              <ArrowLeft /> Back
-            </button>
             <h2 className={styles.formTitle}>Verify OTP</h2>
             <p className={styles.formSubtitle}>
               Enter the 6-digit code sent to <strong>{email}</strong>
             </p>
-            {error && <div className={styles.errorMsg}>{error}</div>}
+            {error && <div className={cn(styles.errorMsg, 'mt-2')}>{error}</div>}
             <form onSubmit={handleVerifyOtp}>
-              <div className={styles.formGroup}>
+              <div className={cn(styles.formGroup, 'mt-4')}>
                 <label className={styles.formLabel}>OTP Code</label>
                 <input
                   type="text"
@@ -152,16 +165,19 @@ const ForgotPassword = () => {
                   autoComplete="one-time-code"
                 />
               </div>
-              <button type="submit" className={styles.submitBtn} disabled={loading || otp.length < 6}>
+              <button type="submit" className={cn(styles.submitBtn, 'mt-2')} disabled={loading || resending || otp.length < 6}>
                 {loading ? 'Verifying…' : 'Verify OTP'}
               </button>
             </form>
-            <div className={styles.footerLink}>
+            { (!loading && !resending) && <div className={styles.footerLink}>
               Didn't receive a code?{' '}
-              <button onClick={() => { setError(''); handleSendOtp({ preventDefault: () => {} } as React.FormEvent); }}>
+              <button onClick={() => { setError(''); handleReSendOtp({ preventDefault: () => {} } as React.FormEvent); }}>
                 Resend
               </button>
-            </div>
+            </div> }
+            <button className={cn(styles.backBtn, 'mt-2')} onClick={() => { setStep('email'); setError(''); }}>
+              <ArrowLeft /> Back
+            </button>
           </>
         )}
 
@@ -173,9 +189,9 @@ const ForgotPassword = () => {
             </button>
             <h2 className={styles.formTitle}>Set new password</h2>
             <p className={styles.formSubtitle}>Create a strong password for your account</p>
-            {error && <div className={styles.errorMsg}>{error}</div>}
+            {error && <div className={cn(styles.errorMsg, 'mt-2')}>{error}</div>}
             <form onSubmit={handleResetPassword}>
-              <div className={styles.formGroup}>
+              <div className={cn(styles.formGroup, 'mt-4')}>
                 <label className={styles.formLabel}>New Password</label>
                 <div className={styles.passwordWrapper}>
                   <input
@@ -192,7 +208,7 @@ const ForgotPassword = () => {
                   </button>
                 </div>
               </div>
-              <div className={styles.formGroup}>
+              <div className={cn(styles.formGroup, 'mt-2')}>
                 <label className={styles.formLabel}>Confirm Password</label>
                 <div className={styles.passwordWrapper}>
                   <input
@@ -209,7 +225,7 @@ const ForgotPassword = () => {
                   </button>
                 </div>
               </div>
-              <button type="submit" className={styles.submitBtn} disabled={loading}>
+              <button type="submit" className={cn(styles.submitBtn, 'mt-2')} disabled={loading}>
                 {loading ? 'Resetting…' : 'Reset Password'}
               </button>
             </form>
@@ -227,7 +243,7 @@ const ForgotPassword = () => {
             <p className={styles.formSubtitle}>
               Your password has been reset. You can now sign in with your new password.
             </p>
-            <button className={styles.submitBtn} onClick={() => navigate(ROUTES.LOGIN)}>
+            <button className={cn(styles.submitBtn, 'mt-4')} onClick={() => navigate(ROUTES.LOGIN)}>
               Back to Sign In
             </button>
           </>
