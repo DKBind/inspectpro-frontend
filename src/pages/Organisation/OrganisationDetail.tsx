@@ -14,7 +14,6 @@ import {
   DialogFooter,
 } from '@/components/shared-ui/Dialog/dialog';
 import { Button } from '@/components/shared-ui/Button/button';
-import { CheckCircle, XCircle } from 'lucide-react';
 import SubscriptionModal from './SubscriptionModal';
 import type { OrgSubscriptionResponse } from '@/services/models/subscription';
 import { subscriptionService } from '@/services/subscriptionService';
@@ -166,11 +165,7 @@ const OrganisationDetail = () => {
             onClick={() => handleToggleStatus(org)}
             disabled={toggling}
             title={org.isActive ? 'Click to deactivate' : 'Click to activate'}
-          >
-            <span className={styles.toggleKnob}>
-              {org.isActive ? <CheckCircle size={13} /> : <XCircle size={13} />}
-            </span>
-          </button>
+          />
         </div>
       </div>
 

@@ -230,11 +230,11 @@ const Subscriptions = () => {
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.pageTitle}>Subscription Plans</h1>
-          <p className={styles.pageSubtitle}>
+          {/* <p className={styles.pageSubtitle}>
             {isSuperAdmin
               ? 'Create and manage global subscription plans with features (modules) and user limits.'
               : 'Create and manage subscription plans for your franchise branches.'}
-          </p>
+          </p> */}
         </div>
         <button className={styles.createBtn} onClick={openCreate}>
           <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
@@ -367,17 +367,17 @@ const Subscriptions = () => {
 
       {/* Create / Edit Modal */}
       <Dialog open={modalMode !== null} onOpenChange={(open) => { if (!open) setModalMode(null); }}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
               <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
                 <CreditCard size={18} className="text-blue-400" />
               </div>
-              <DialogTitle className="text-xl font-bold text-white">
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">
                 {modalMode === 'edit' ? 'Edit Subscription Plan' : 'Create Subscription Plan'}
               </DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 text-sm pl-12">
+            <DialogDescription className="text-[#6B7280] text-sm pl-12">
               {modalMode === 'edit'
                 ? 'Update the plan details and its assigned modules.'
                 : 'Define a reusable plan with pricing, limits, and features.'}
@@ -395,7 +395,7 @@ const Subscriptions = () => {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Fld label="Price" required error={errors.price?.message}>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10">
                       <IndianRupee size={14} />
                     </span>
                     <Input placeholder="0.00" {...register('price')}
@@ -404,7 +404,7 @@ const Subscriptions = () => {
                 </Fld>
                 <Fld label="Duration (Months)" required error={errors.durationMonths?.message}>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10">
                       <Clock size={14} />
                     </span>
                     <Input placeholder="e.g. 12" {...register('durationMonths')}
@@ -416,7 +416,7 @@ const Subscriptions = () => {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Fld label="Max Users" hint="Optional" error={errors.maxUsers?.message}>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10">
                       <Users size={14} />
                     </span>
                     <Input placeholder="e.g. 50" {...register('maxUsers')}
@@ -432,7 +432,7 @@ const Subscriptions = () => {
                         onClick={() => setValue('billingCycle', cycle)}
                         className={`flex-1 h-10 rounded-md text-sm font-medium border transition-all ${watch('billingCycle') === cycle
                           ? 'bg-blue-600/20 border-blue-500/60 text-blue-400'
-                          : 'bg-slate-950/60 border-slate-700 text-slate-400 hover:border-slate-600'
+                          : 'bg-white border-[#E5E7EB] text-[#6B7280] hover:border-[#D1D5DB]'
                           }`}
                       >
                         {cycle.charAt(0) + cycle.slice(1).toLowerCase()}
@@ -451,12 +451,8 @@ const Subscriptions = () => {
                       aria-checked={watchIsActive}
                       onClick={() => setValue('isActive', !watchIsActive)}
                       className={`${styles.statusToggle} ${watchIsActive ? styles.toggleOn : styles.toggleOff}`}
-                    >
-                      <span className={styles.toggleKnob}>
-                        {watchIsActive ? <CheckCircle size={10} /> : <XCircle size={10} />}
-                      </span>
-                    </button>
-                    <span className={`text-sm font-medium ${watchIsActive ? 'text-green-400' : 'text-slate-500'}`}>
+                    />
+                    <span className={`text-sm font-medium ${watchIsActive ? 'text-green-600' : 'text-[#6B7280]'}`}>
                       {watchIsActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
@@ -465,7 +461,7 @@ const Subscriptions = () => {
 
               <Fld label="Features (Modules)" hint="Select which features this plan includes">
                 {modulePickerItems.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-2">
+                  <p className="text-xs text-[#6B7280] py-2">
                     No modules available. Create modules on the Modules page first.
                   </p>
                 ) : (
@@ -483,8 +479,8 @@ const Subscriptions = () => {
                             gap: 10,
                             padding: '10px 12px',
                             borderRadius: 8,
-                            border: `1px solid ${checked ? 'rgba(59,130,246,0.4)' : '#1e293b'}`,
-                            background: checked ? 'rgba(59,130,246,0.08)' : 'rgba(15,23,42,0.4)',
+                            border: `1px solid ${checked ? 'rgba(59,130,246,0.4)' : '#E5E7EB'}`,
+                            background: checked ? 'rgba(59,130,246,0.06)' : '#F9FAFB',
                             textAlign: 'left',
                             cursor: 'pointer',
                             transition: 'all 0.15s',
@@ -492,18 +488,18 @@ const Subscriptions = () => {
                         >
                           <span style={{
                             marginTop: 2, flexShrink: 0, width: 16, height: 16,
-                            borderRadius: 4, border: `1px solid ${checked ? '#3b82f6' : '#475569'}`,
+                            borderRadius: 4, border: `1px solid ${checked ? '#3b82f6' : '#D1D5DB'}`,
                             background: checked ? '#3b82f6' : 'transparent',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                           }}>
                             {checked && <CheckCircle size={10} color="white" />}
                           </span>
                           <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: 12, fontWeight: 600, color: checked ? '#93c5fd' : '#94a3b8', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: checked ? '#2563eb' : '#374151', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {m.name}
                             </p>
                             {m.category && (
-                              <p style={{ fontSize: 11, color: '#475569', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <p style={{ fontSize: 11, color: '#9CA3AF', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {m.category}
                               </p>
                             )}
@@ -522,23 +518,23 @@ const Subscriptions = () => {
 
               <Fld label="Notes" hint="Optional" error={errors.notes?.message}>
                 <div className="relative">
-                  <span className="absolute left-3 top-3 text-slate-500 pointer-events-none z-10">
+                  <span className="absolute left-3 top-3 text-slate-400 pointer-events-none z-10">
                     <FileText size={14} />
                   </span>
                   <textarea
                     rows={3}
                     placeholder="Description or notes..."
                     {...register('notes')}
-                    className="w-full rounded-md bg-slate-950/60 border border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all text-sm px-3 py-2 pl-9 resize-none outline-none"
+                    className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 transition-all text-sm px-3 py-2 pl-9 resize-none outline-none"
                   />
                 </div>
               </Fld>
 
             </div>
 
-            <DialogFooter className="px-7 py-5 border-t border-slate-800 bg-slate-900/30 rounded-b-2xl flex gap-3">
+            <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl flex gap-3">
               <Button type="button" variant="ghost" onClick={() => setModalMode(null)} disabled={submitting}
-                className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+                className="text-[#6B7280] hover:text-[#263B4F] hover:bg-[#F3F4F6] border border-[#E5E7EB]">
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting}
@@ -557,13 +553,13 @@ const Subscriptions = () => {
 
       {/* View Modal */}
       <Dialog open={viewPlan !== null} onOpenChange={(open) => { if (!open) setViewPlan(null); }}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto shadow-xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
               <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
                 <CreditCard size={18} className="text-blue-400" />
               </div>
-              <DialogTitle className="text-xl font-bold text-white">Plan Details</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">Plan Details</DialogTitle>
             </div>
           </DialogHeader>
           {viewPlan && (
@@ -579,20 +575,20 @@ const Subscriptions = () => {
               </div>
 
               <div>
-                <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9CA3AF', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <LayoutGrid size={12} />
                   Features / Modules ({(viewPlan.modules ?? []).length})
                 </p>
                 {(viewPlan.modules ?? []).length === 0 ? (
-                  <p style={{ fontSize: 12, color: '#475569' }}>No modules assigned to this plan.</p>
+                  <p style={{ fontSize: 12, color: '#6B7280' }}>No modules assigned to this plan.</p>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                     {viewPlan.modules!.map((m) => (
-                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(15,23,42,0.4)', border: '1px solid #1e293b', borderRadius: 8, padding: '8px 12px' }}>
-                        <Package size={13} color="#60a5fa" style={{ flexShrink: 0 }} />
+                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 12px' }}>
+                        <Package size={13} color="#3b82f6" style={{ flexShrink: 0 }} />
                         <div style={{ minWidth: 0 }}>
-                          <p style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
-                          {m.category && <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>{m.category}</p>}
+                          <p style={{ fontSize: 12, fontWeight: 600, color: '#263B4F', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
+                          {m.category && <p style={{ fontSize: 11, color: '#9CA3AF', margin: 0 }}>{m.category}</p>}
                         </div>
                       </div>
                     ))}
@@ -601,9 +597,9 @@ const Subscriptions = () => {
               </div>
             </div>
           )}
-          <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
+          <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">
             <Button variant="ghost" onClick={() => setViewPlan(null)}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+              className="text-[#6B7280] hover:text-[#263B4F] hover:bg-[#F3F4F6] border border-[#E5E7EB]">
               Close
             </Button>
           </DialogFooter>
@@ -612,28 +608,28 @@ const Subscriptions = () => {
 
       {/* Toggle Confirm Modal */}
       <Dialog open={toggleTarget !== null} onOpenChange={(open) => { if (!open) setToggleTarget(null); }}>
-        <DialogContent className="sm:max-w-sm !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-sm shadow-xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
               <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${toggleTarget?.newActive ? 'bg-green-600/20 border border-green-500/30' : 'bg-orange-600/20 border border-orange-500/30'}`}>
                 {toggleTarget?.newActive
-                  ? <CheckCircle size={18} className="text-green-400" />
-                  : <XCircle size={18} className="text-orange-400" />}
+                  ? <CheckCircle size={18} className="text-green-500" />
+                  : <XCircle size={18} className="text-orange-500" />}
               </div>
-              <DialogTitle className="text-xl font-bold text-white">
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">
                 {toggleTarget?.newActive ? 'Activate Plan' : 'Deactivate Plan'}
               </DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 text-sm pl-12">
+            <DialogDescription className="text-[#6B7280] text-sm pl-12">
               Are you sure you want to{' '}
-              <strong className="text-white">{toggleTarget?.newActive ? 'activate' : 'deactivate'}</strong>{' '}
-              <strong className="text-white">{toggleTarget?.plan.planName}</strong>?
+              <strong className="text-[#263B4F]">{toggleTarget?.newActive ? 'activate' : 'deactivate'}</strong>{' '}
+              <strong className="text-[#263B4F]">{toggleTarget?.plan.planName}</strong>?
               {!toggleTarget?.newActive && ' Inactive plans will not be available for new organisations.'}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
+          <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">
             <Button variant="ghost" onClick={() => setToggleTarget(null)} disabled={!!togglingId}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+              className="text-[#6B7280] hover:text-[#263B4F] hover:bg-[#F3F4F6] border border-[#E5E7EB]">
               Cancel
             </Button>
             <Button
@@ -655,23 +651,23 @@ const Subscriptions = () => {
 
       {/* Delete Confirm Modal */}
       <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
-        <DialogContent className="sm:max-w-sm !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+        <DialogContent className="sm:max-w-sm shadow-xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
               <div className="h-9 w-9 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center">
                 <Trash2 size={18} className="text-red-400" />
               </div>
-              <DialogTitle className="text-xl font-bold text-white">Delete Plan</DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">Delete Plan</DialogTitle>
             </div>
-            <DialogDescription className="text-slate-400 text-sm pl-12">
+            <DialogDescription className="text-[#6B7280] text-sm pl-12">
               Are you sure you want to delete{' '}
-              <strong className="text-white">{deleteTarget?.planName}</strong>?
+              <strong className="text-[#263B4F]">{deleteTarget?.planName}</strong>?
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="px-7 py-5 border-t border-slate-800 flex gap-3">
+          <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">
             <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}
-              className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+              className="text-[#6B7280] hover:text-[#263B4F] hover:bg-[#F3F4F6] border border-[#E5E7EB]">
               Cancel
             </Button>
             <Button onClick={confirmDelete} disabled={deleting}
@@ -703,10 +699,6 @@ function StatusToggle({ active, loading, onToggle }: {
       onClick={onToggle}
       title={active ? 'Click to deactivate' : 'Click to activate'}
       className={`${styles.statusToggle} ${active ? styles.toggleOn : styles.toggleOff}`}
-    >
-      <span className={styles.toggleKnob}>
-        {active ? <CheckCircle size={8} /> : <XCircle size={8} />}
-      </span>
-    </button>
+    />
   );
 }
