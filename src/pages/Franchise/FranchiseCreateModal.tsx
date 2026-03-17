@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
 import {
-  GitBranch, Globe, Mail, Phone, User, MapPin, ChevronDown,
+  GitBranch, Globe, Mail, Phone, User, MapPin,
   Building2, Sparkles, Calendar, Crown,
 } from 'lucide-react';
 
@@ -17,12 +17,10 @@ import { useAuthStore } from '@/store/useAuthStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/shared-ui/Dialog/dialog';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
 import { Button } from '@/components/shared-ui/Button/button';
 import { Input } from '@/components/shared-ui/Input/input';
 import { Sec, Fld, IcoInput } from '@/components/shared-ui/form-helpers';
+import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -118,7 +116,6 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
   const { field: pincodeField } = useController({ name: 'address.pincode', control });
 
   const selectedParentId = watch('parentOrgId');
-  const selectedParentOrg = parentOrgs.find((o) => o.uuid === selectedParentId);
   const selectedPlanId = watch('subscriptionId');
   const subscriptionStartDate = watch('subscriptionStartDate');
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
@@ -242,21 +239,21 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
   };
 
   const inp = (hasError: boolean) =>
-    `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all ${hasError ? 'border-red-500' : ''}`;
+    `h-10 bg-white border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 transition-all ${hasError ? '!border-[#DF453A]' : ''}`;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto !bg-[#0d1117] !border-slate-800 text-white shadow-2xl rounded-2xl p-0">
-        <DialogHeader className="px-7 pt-7 pb-5 border-b border-slate-800">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
+        <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
           <div className="flex items-center gap-3 mb-1">
-            <div className="h-9 w-9 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center">
-              <GitBranch size={18} className="text-purple-400" />
+            <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
+              <GitBranch size={18} className="text-[#33AE95]" />
             </div>
-            <DialogTitle className="text-xl font-bold text-white">
+            <DialogTitle className="text-xl font-bold text-[#263B4F]">
               {isEditMode ? 'Edit Franchise' : 'Create Franchise'}
             </DialogTitle>
           </div>
-          <DialogDescription className="text-slate-400 text-sm pl-12">
+          <DialogDescription className="text-[#6B7280] text-sm pl-12">
             {isEditMode ? 'Update the franchise details below.' : 'Set up a new franchise under a parent organisation.'}
           </DialogDescription>
         </DialogHeader>
@@ -268,40 +265,20 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
               {/* Parent Organisation */}
               {!isEditMode && (
                 <Sec icon={<Building2 size={13} />} label="Parent Organisation">
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4">
                     <Fld label="Parent Organisation" required error={(errors as any).parentOrgId?.message}>
                       {isSuperAdmin ? (
-                        <DropdownMenu modal={false}>
-                          <DropdownMenuTrigger
-                            className={`w-full inline-flex items-center justify-between h-10 rounded-md border bg-slate-950/60 px-3 text-sm font-normal text-white hover:bg-slate-900 focus:outline-none ${(errors as any).parentOrgId ? 'border-red-500' : 'border-slate-700'}`}
-                          >
-                            <span className={selectedParentOrg ? 'text-white' : 'text-slate-400'}>
-                              {selectedParentOrg ? selectedParentOrg.name : '— Select organisation —'}
-                            </span>
-                            <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            className="!bg-[#1e293b] border-slate-700 text-white z-[9999]"
-                            style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
-                          >
-                            {parentOrgs.length === 0 ? (
-                              <DropdownMenuItem disabled className="text-slate-400">No organisations found</DropdownMenuItem>
-                            ) : (
-                              parentOrgs.map((o) => (
-                                <DropdownMenuItem
-                                  key={o.uuid}
-                                  onSelect={() => setValue('parentOrgId', o.uuid, { shouldValidate: true })}
-                                  className="cursor-pointer focus:bg-slate-800 focus:text-white py-3"
-                                >
-                                  {o.name}
-                                </DropdownMenuItem>
-                              ))
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <DropdownSelect
+                          options={parentOrgs.map((o) => ({ value: o.uuid, label: o.name }))}
+                          value={selectedParentId || null}
+                          onChange={(val: string | number | null) => setValue('parentOrgId', String(val ?? ''), { shouldValidate: true })}
+                          placeholder="— Select organisation —"
+                          searchable
+                          error={(errors as any).parentOrgId?.message}
+                        />
                       ) : (
-                        <div className="h-10 rounded-md border border-slate-700 bg-slate-950/30 px-3 flex items-center gap-2 text-sm text-slate-300">
-                          <Building2 size={14} className="text-slate-500" />
+                        <div className="h-10 rounded-md border border-[#E5E7EB] bg-white px-3 flex items-center gap-2 text-sm text-[#263B4F]">
+                          <Building2 size={14} className="text-[#6B7280]" />
                           {parentOrgs.find((o) => o.uuid === authUser?.orgId)?.name ?? authUser?.orgId ?? '—'}
                         </div>
                       )}
@@ -314,68 +291,41 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
               <Sec icon={<Sparkles size={13} />} label="Subscription Plan">
                 {isEditMode ? (
                   /* Read-only in edit mode */
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 grid gap-4 sm:grid-cols-3">
                     <div className="space-y-1.5">
-                      <p className="text-xs text-slate-500 uppercase tracking-wide">Plan</p>
+                      <p className="text-xs text-[#6B7280] uppercase tracking-wide">Plan</p>
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${planBadgeStyle(editOrg?.subscriptionPlanName ?? editOrg?.planType)}`}>
                         <Crown size={11} />
                         {editOrg?.subscriptionPlanName ?? editOrg?.planType ?? '—'}
                       </span>
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-xs text-slate-500 uppercase tracking-wide">Start Date</p>
-                      <p className="text-sm text-slate-200 font-medium">{formatDisplayDate(editOrg?.periodStart)}</p>
+                      <p className="text-xs text-[#6B7280] uppercase tracking-wide">Start Date</p>
+                      <p className="text-sm text-[#263B4F] font-medium">{formatDisplayDate(editOrg?.periodStart)}</p>
                     </div>
                     <div className="space-y-1.5">
-                      <p className="text-xs text-slate-500 uppercase tracking-wide">End Date</p>
-                      <p className="text-sm text-slate-200 font-medium">{formatDisplayDate(editOrg?.periodEnd)}</p>
+                      <p className="text-xs text-[#6B7280] uppercase tracking-wide">End Date</p>
+                      <p className="text-sm text-[#263B4F] font-medium">{formatDisplayDate(editOrg?.periodEnd)}</p>
                     </div>
                   </div>
                 ) : (
                   /* Create mode: plan selector + dates */
-                  <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-4">
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 space-y-4">
                     <Fld label="Select Plan" hint="Optional">
-                      {plansLoading ? (
-                        <div className="h-10 flex items-center text-slate-400 text-sm">Loading plans...</div>
-                      ) : (
-                        <DropdownMenu modal={false}>
-                          <DropdownMenuTrigger
-                            className="w-full inline-flex items-center justify-between h-10 rounded-md border border-slate-700 bg-slate-950/60 px-3 text-sm font-normal text-white hover:bg-slate-900 focus:outline-none"
-                          >
-                            <span className={selectedPlan ? 'text-white' : 'text-slate-400'}>
-                              {selectedPlan ? selectedPlan.planName : '— Select a subscription plan —'}
-                            </span>
-                            <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            className="!bg-[#1e293b] border-slate-700 text-white z-[9999]"
-                            style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
-                          >
-                            {plans.length === 0 ? (
-                              <DropdownMenuItem disabled className="text-slate-400">
-                                No plans available — create plans in Subscriptions first
-                              </DropdownMenuItem>
-                            ) : (
-                              plans.map((p) => (
-                                <DropdownMenuItem
-                                  key={p.id}
-                                  onSelect={() => setValue('subscriptionId', p.id, { shouldValidate: true })}
-                                  className="cursor-pointer focus:bg-slate-800 focus:text-white py-3"
-                                >
-                                  <div>
-                                    <span className="font-medium">{p.planName}</span>
-                                    {p.maxUsers != null && (
-                                      <span className="ml-2 text-xs text-slate-400">· {p.maxUsers} users</span>
-                                    )}
-                                  </div>
-                                </DropdownMenuItem>
-                              ))
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                      <DropdownSelect
+                        options={plans.map((p) => ({
+                          value: p.id,
+                          label: p.planName,
+                          meta: p.maxUsers != null ? `${p.maxUsers} users` : undefined,
+                        }))}
+                        value={selectedPlanId || null}
+                        onChange={(val: string | number | null) => setValue('subscriptionId', String(val ?? ''), { shouldValidate: true })}
+                        placeholder="— Select a subscription plan —"
+                        searchable
+                        loading={plansLoading}
+                      />
                       {plans.length === 0 && !plansLoading && (
-                        <p className="text-xs text-amber-400/80 mt-1">
+                        <p className="text-xs text-amber-600 mt-1">
                           No subscription plans found. Go to Subscriptions to create plans for your franchises.
                         </p>
                       )}
@@ -385,22 +335,22 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
                       <div className="grid gap-4 sm:grid-cols-2">
                         <Fld label="Start Date">
                           <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280] pointer-events-none z-10" />
                             <Input
                               type="date"
                               {...register('subscriptionStartDate')}
-                              className="pl-9 h-10 bg-slate-950/60 border-slate-700 text-white [color-scheme:dark] focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
+                              className="pl-9 h-10 bg-white border-[#E5E7EB] text-[#263B4F] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20"
                             />
                           </div>
                         </Fld>
                         <Fld label="End Date">
                           <div className="relative">
-                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none z-10" />
-                            <div className={`pl-9 h-10 bg-slate-950/30 border border-slate-700 rounded-md flex items-center text-sm ${computedEndDate ? 'text-slate-300' : 'text-slate-500'}`}>
+                            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280] pointer-events-none z-10" />
+                            <div className={`pl-9 h-10 bg-[#F3F4F6] border border-[#E5E7EB] rounded-md flex items-center text-sm ${computedEndDate ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}`}>
                               {computedEndDate || (selectedPlan?.durationMonths ? 'Select a start date' : 'No duration set')}
                             </div>
                           </div>
-                          <p className="text-xs text-slate-500 mt-1">Auto-calculated ({selectedPlan?.durationMonths ?? '?'} months)</p>
+                          <p className="text-xs text-[#6B7280] mt-1">Auto-calculated ({selectedPlan?.durationMonths ?? '?'} months)</p>
                         </Fld>
                       </div>
                     )}
@@ -410,7 +360,7 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
 
               {/* Franchise Details */}
               <Sec icon={<GitBranch size={13} />} label="Franchise Details">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-5">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Fld label="Franchise Name" required error={errors.name?.message}>
                       <IcoInput icon={<GitBranch size={15} />}>
@@ -449,7 +399,7 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
 
               {/* Address */}
               <Sec icon={<MapPin size={13} />} label="Address">
-                <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-5">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Fld label="Address Line 1">
                       <Input placeholder="Flat / House no., Building name" {...addrLine1Field} className={inp(false)} />
@@ -478,13 +428,12 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
               </Sec>
             </div>
 
-            <DialogFooter className="px-7 py-5 border-t border-slate-800 bg-slate-900/30 rounded-b-2xl flex gap-3">
-              <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting}
-                className="text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700">
+            <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl flex gap-3">
+              <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}
-                className="flex-1 sm:flex-none sm:min-w-44 bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-lg active:scale-95">
+                className="flex-1 sm:flex-none sm:min-w-44 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95">
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

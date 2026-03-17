@@ -180,7 +180,7 @@ const Dashboard = () => {
                 {paginatedInspections.map((ins) => (
                   <tr key={ins.id}>
                     <td style={{ fontWeight: 600, color: 'hsl(221, 83%, 63%)' }}>{ins.id}</td>
-                    <td style={{ color: 'hsl(210, 40%, 90%)' }}>{ins.project}</td>
+                    <td>{ins.project}</td>
                     <td>{ins.type}</td>
                     <td>{ins.date}</td>
                     <td>

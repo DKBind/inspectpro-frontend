@@ -9,14 +9,9 @@ import { Label } from './Label/label';
 
 /** Returns Tailwind classes for a standard form input.
  *  @param hasError  highlights border in red when true
- *  @param accent    focus-ring colour: 'blue' (default) | 'purple'
  */
-export const inputCls = (hasError?: boolean, accent: 'blue' | 'purple' = 'blue') => {
-  const focus =
-    accent === 'purple'
-      ? 'focus:border-purple-500 focus:ring-1 focus:ring-purple-500/20'
-      : 'focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20';
-  return `h-10 bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-500 ${focus} transition-all ${hasError ? 'border-red-500' : ''}`;
+export const inputCls = (hasError?: boolean) => {
+  return `h-10 bg-white border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 transition-all ${hasError ? '!border-[#DF453A]' : ''}`;
 };
 
 // ─── Section header ─────────────────────────────────────────────────────────
@@ -25,12 +20,12 @@ export function Sec({
   icon,
   label,
   children,
-  iconColor = 'text-blue-400',
+  iconColor = 'text-[#33AE95]',
 }: {
   icon?: React.ReactNode;
   label: string;
   children: React.ReactNode;
-  /** Tailwind colour class for the icon, e.g. "text-purple-400". Defaults to "text-blue-400". */
+  /** Tailwind colour class for the icon. Defaults to brand teal. */
   iconColor?: string;
 }) {
   return (
@@ -38,7 +33,7 @@ export function Sec({
       {label && (
         <div className="flex items-center gap-2 mb-3">
           {icon && <span className={iconColor}>{icon}</span>}
-          <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">{label}</span>
         </div>
       )}
       {children}
@@ -64,12 +59,12 @@ export function Fld({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
-        <Label className="text-slate-300 text-sm font-medium">{label}</Label>
-        {required && <span className="text-red-400 text-xs">*</span>}
-        {hint && <span className="text-slate-500 text-xs">({hint})</span>}
+        <Label className="text-[#263B4F] text-sm font-medium">{label}</Label>
+        {required && <span className="text-[#DF453A] text-xs">*</span>}
+        {hint && <span className="text-[#6B7280] text-xs">({hint})</span>}
       </div>
       {children}
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-[#DF453A]">{error}</p>}
     </div>
   );
 }
@@ -85,7 +80,7 @@ export function IcoInput({
 }) {
   return (
     <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none z-10">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">
         {icon}
       </span>
       <div className="[&_input]:pl-9">{children}</div>
@@ -97,9 +92,9 @@ export function IcoInput({
 
 export function ViewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-2.5 border-b border-slate-800 last:border-0">
-      <span className="text-xs text-slate-500 uppercase tracking-wide font-medium shrink-0 w-24">{label}</span>
-      <span className="text-sm text-slate-200 text-right break-all">{value}</span>
+    <div className="flex items-start justify-between gap-4 py-2.5 border-b border-[#E5E7EB] last:border-0">
+      <span className="text-xs text-[#6B7280] uppercase tracking-wide font-medium shrink-0 w-24">{label}</span>
+      <span className="text-sm text-[#263B4F] text-right break-all">{value}</span>
     </div>
   );
 }

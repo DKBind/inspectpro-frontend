@@ -19,6 +19,8 @@ import {
 import { Button } from '@/components/shared-ui/Button/button';
 import { Input } from '@/components/shared-ui/Input/input';
 import { Label } from '@/components/shared-ui/Label/label';
+import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
+import styles from './SubscriptionModal.module.css';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -140,25 +142,28 @@ export default function SubscriptionModal({
     }
   };
 
-  const selectCls =
-    'h-10 w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] text-sm px-3 focus:border-[#33AE95] focus:outline-none appearance-none cursor-pointer';
-
-  const inputCls = (hasError?: boolean) =>
-    `border border-[#E5E7EB] rounded-lg px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-[#33AE95]/30 focus:border-[#33AE95] text-[#263B4F] bg-white text-sm ${hasError ? 'border-[#DF453A]' : ''}`;
+  const planOptions = plans.map((p) => ({
+    value: p.id,
+    label: p.planName,
+    meta: [
+      p.price != null ? `${p.currency ?? 'INR'} ${Number(p.price).toLocaleString()}` : null,
+      p.status?.name ? p.status.name : null,
+    ].filter(Boolean).join(' · '),
+  }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
-        <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
+        <DialogHeader className={styles.modalHeader}>
           <div className="flex items-center gap-3 mb-1">
-            <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
-              <CreditCard size={18} className="text-[#33AE95]" />
+            <div className={styles.iconBox}>
+              <CreditCard size={18} className={styles.iconColor} />
             </div>
-            <DialogTitle className="text-xl font-bold text-[#263B4F]">
+            <DialogTitle className={styles.modalTitle}>
               {isEdit ? 'Manage Subscription' : 'Assign Subscription'}
             </DialogTitle>
           </div>
-          <DialogDescription className="text-[#6B7280] text-sm pl-12">
+          <DialogDescription className={styles.modalDesc}>
             {isEdit
               ? `Update the subscription for ${orgName}.`
               : `Select a subscription plan to assign to ${orgName}.`}
@@ -166,23 +171,23 @@ export default function SubscriptionModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit, () => toast.error('Please fix the errors before submitting.'))}>
-          <div className="px-7 py-6 space-y-6">
+          <div className={styles.formBody}>
 
             {/* Plan picker */}
             <Fld label="Subscription Plan" required error={errors.subscriptionId?.message}>
               {plansLoading ? (
-                <div className="h-10 flex items-center text-[#6B7280] text-sm">Loading plans...</div>
+                <div className={styles.loadingPlaceholder}>Loading plans...</div>
               ) : (
-                <select {...register('subscriptionId')} className={selectCls}>
-                  <option value="">— Select a plan —</option>
-                  {plans.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.planName}
-                      {p.price != null ? ` — ${p.currency ?? 'INR'} ${Number(p.price).toLocaleString()}` : ''}
-                      {p.status?.name ? ` [${p.status.name}]` : ''}
-                    </option>
-                  ))}
-                </select>
+                <DropdownSelect
+                  options={planOptions}
+                  value={selectedPlanId || null}
+                  onChange={(val: string | number | null) =>
+                    setValue('subscriptionId', String(val ?? ''), { shouldValidate: true })
+                  }
+                  placeholder="— Select a plan —"
+                  searchable
+                  error={errors.subscriptionId?.message}
+                />
               )}
             </Fld>
 
@@ -190,13 +195,11 @@ export default function SubscriptionModal({
             <div className="grid gap-4 sm:grid-cols-3">
               <Fld label="Price Override" hint="Optional" error={errors.priceOverride?.message}>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">
-                    <DollarSign size={14} />
-                  </span>
+                  <span className={styles.iconAddon}><DollarSign size={14} /></span>
                   <Input
                     placeholder="0.00"
                     {...register('priceOverride')}
-                    className={inputCls(!!errors.priceOverride) + ' pl-9'}
+                    className={`${styles.formInput}${errors.priceOverride ? ` ${styles.hasError}` : ''} pl-9`}
                   />
                 </div>
               </Fld>
@@ -205,18 +208,16 @@ export default function SubscriptionModal({
                   placeholder="INR"
                   maxLength={3}
                   {...register('currency')}
-                  className={inputCls(!!errors.currency) + ' uppercase'}
+                  className={`${styles.formInput}${errors.currency ? ` ${styles.hasError}` : ''} uppercase`}
                 />
               </Fld>
               <Fld label="Max Users" hint="Optional" error={errors.maxUsers?.message}>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">
-                    <Users size={14} />
-                  </span>
+                  <span className={styles.iconAddon}><Users size={14} /></span>
                   <Input
                     placeholder="100"
                     {...register('maxUsers')}
-                    className={inputCls(!!errors.maxUsers) + ' pl-9'}
+                    className={`${styles.formInput}${errors.maxUsers ? ` ${styles.hasError}` : ''} pl-9`}
                   />
                 </div>
               </Fld>
@@ -226,25 +227,21 @@ export default function SubscriptionModal({
             <div className="grid gap-4 sm:grid-cols-2">
               <Fld label="Period Start" hint="Optional" error={errors.periodStart?.message}>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">
-                    <Calendar size={14} />
-                  </span>
+                  <span className={styles.iconAddon}><Calendar size={14} /></span>
                   <Input
                     type="datetime-local"
                     {...register('periodStart')}
-                    className={inputCls(!!errors.periodStart) + ' pl-9'}
+                    className={`${styles.formInput}${errors.periodStart ? ` ${styles.hasError}` : ''} pl-9`}
                   />
                 </div>
               </Fld>
               <Fld label="Period End" hint="Optional" error={errors.periodEnd?.message}>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">
-                    <Calendar size={14} />
-                  </span>
+                  <span className={styles.iconAddon}><Calendar size={14} /></span>
                   <Input
                     type="datetime-local"
                     {...register('periodEnd')}
-                    className={inputCls(!!errors.periodEnd) + ' pl-9'}
+                    className={`${styles.formInput}${errors.periodEnd ? ` ${styles.hasError}` : ''} pl-9`}
                   />
                 </div>
               </Fld>
@@ -253,21 +250,19 @@ export default function SubscriptionModal({
             {/* Notes */}
             <Fld label="Notes" hint="Optional" error={errors.notes?.message}>
               <div className="relative">
-                <span className="absolute left-3 top-3 text-[#6B7280] pointer-events-none z-10">
-                  <FileText size={14} />
-                </span>
+                <span className={styles.iconAddonTop}><FileText size={14} /></span>
                 <textarea
                   rows={3}
                   placeholder="Any additional notes..."
                   {...register('notes')}
-                  className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#6B7280] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 transition-all text-sm px-3 py-2 pl-9 resize-none outline-none"
+                  className={styles.textarea}
                 />
               </div>
             </Fld>
 
           </div>
 
-          <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl flex gap-3">
+          <DialogFooter className={styles.footer}>
             <Button
               type="button"
               variant="outline"
@@ -279,7 +274,7 @@ export default function SubscriptionModal({
             <Button
               type="submit"
               disabled={submitting}
-              className="flex-1 sm:flex-none sm:min-w-44 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95"
+              className={styles.submitBtn}
             >
               {submitting ? (
                 <span className="flex items-center gap-2">
@@ -303,12 +298,12 @@ function Fld({ label, required, hint, error, children }: {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
-        <Label className="text-[#263B4F] text-sm font-medium">{label}</Label>
-        {required && <span className="text-[#DF453A] text-xs">*</span>}
-        {hint && <span className="text-[#6B7280] text-xs">({hint})</span>}
+        <Label className={styles.fieldLabel}>{label}</Label>
+        {required && <span className={styles.requiredMark}>*</span>}
+        {hint && <span className={styles.fieldHint}>({hint})</span>}
       </div>
       {children}
-      {error && <p className="text-xs text-[#DF453A]">{error}</p>}
+      {error && <p className={styles.errorText}>{error}</p>}
     </div>
   );
 }
