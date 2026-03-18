@@ -80,8 +80,8 @@ const FranchiseSubscriptions = () => {
     if (!user) return;
     setLoading(true);
     try {
-      // Backend resolves org from JWT claims — no need to pass orgId from frontend.
-      const p = await subscriptionService.listSubscriptions();
+      // Returns only plans created by the caller's own organisation.
+      const p = await subscriptionService.listMySubscriptions();
       setPlans(p);
     } catch {
       toast.error('Failed to load subscription data');

@@ -29,6 +29,13 @@ export const subscriptionService = {
     return response.object as SubscriptionResponse[];
   },
 
+  /** Plans created by the caller's own organisation only (FranchiseSubscriptions page). */
+  listMySubscriptions: async (): Promise<SubscriptionResponse[]> => {
+    const response = await api.get<ApiResponse<SubscriptionResponse[]>>('/subscriptions/mine');
+    if (!response.status) throw new Error(response.message || 'Failed to fetch subscriptions');
+    return (response.object as SubscriptionResponse[]) ?? [];
+  },
+
   createSubscription: async (data: SubscriptionRequest): Promise<SubscriptionResponse> => {
     const response = await api.post<ApiResponse<SubscriptionResponse>>('/subscriptions', data);
     if (!response.status) throw new Error(response.message || 'Failed to create subscription');
