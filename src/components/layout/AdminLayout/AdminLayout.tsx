@@ -11,15 +11,13 @@ import styles from './AdminLayout.module.css';
 const AdminLayout = () => {
   const { user, isAuthenticated, isFirstLogin } = useAuthStore();
   const { accessModules, setAccessModules } = useModuleStore();
-  const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
-
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Re-fetch sidebar modules when authenticated but the store is empty
   // (happens after a page refresh since the previous session's store may have been cleared)
   useEffect(() => {
-    if (!isAuthenticated || !user || isSuperAdmin) return;
+    if (!isAuthenticated || !user) return;
     if (accessModules.length > 0) return;
     moduleService.getMyAccess(user.id).then(setAccessModules).catch(() => {});
   }, [isAuthenticated, user?.id]);

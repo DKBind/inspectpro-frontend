@@ -168,7 +168,11 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
             <div className={styles.userInfo}>
               <span className={styles.userName}>{user?.name || user?.email || 'User'}</span>
               {/* Show the actual current role name from DB */}
-              <span className={styles.userRole}>{user?.role ?? 'User'}</span>
+              <span className={styles.userRole}>
+                {user?.role
+                  ? user.role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+                  : 'User'}
+              </span>
             </div>
             {hasMultipleRoles && (
               <ChevronDown className={`${styles.chevron} ${showRoleMenu ? styles.chevronUp : ''}`} />

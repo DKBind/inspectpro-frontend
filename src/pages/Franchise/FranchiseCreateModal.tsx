@@ -279,7 +279,7 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
                       ) : (
                         <div className="h-10 rounded-md border border-[#E5E7EB] bg-white px-3 flex items-center gap-2 text-sm text-[#263B4F]">
                           <Building2 size={14} className="text-[#6B7280]" />
-                          {parentOrgs.find((o) => o.uuid === authUser?.orgId)?.name ?? authUser?.orgId ?? '—'}
+                          {authUser?.orgName ?? parentOrgs.find((o) => o.uuid === authUser?.orgId)?.name ?? '—'}
                         </div>
                       )}
                     </Fld>

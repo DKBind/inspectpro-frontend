@@ -29,6 +29,7 @@ export interface UserResponse {
   middleName?: string;
   lastName: string;
   email: string;
+  phoneNumber?: string;
   gender?: string;
   bio?: string;
   remark?: string;
@@ -49,6 +50,7 @@ export interface UserRequest {
   lastName: string;
   email: string;
   password?: string;
+  phoneNumber?: string;
   gender?: string;
   bio?: string;
   remark?: string;
@@ -58,11 +60,40 @@ export interface UserRequest {
   statusId?: number;
 }
 
+// ─── Role ─────────────────────────────────────────────────────────────────────
+
+export type RoleScope = 'PLATFORM' | 'ORGANISATION' | 'FRANCHISE';
+
 export interface RoleResponse {
   roleId: number;
   name: string;
   description?: string;
-  designation?: string;
+  scope?: RoleScope;
+  statusName?: string;
+  isActive?: boolean;
+  createdByName?: string;
+  createdDate?: string;
+  assignedUsersCount?: number;
+}
+
+export interface RoleModulePermission {
+  moduleId: number;
+  permissionNames: string[];
+}
+
+export interface RoleCreateRequest {
+  name: string;
+  description?: string;
+  scope?: RoleScope;
+  modules?: RoleModulePermission[];
+}
+
+export interface RoleUserItem {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  statusName?: string;
 }
 
 export interface RoleModuleAssignment {
@@ -71,5 +102,24 @@ export interface RoleModuleAssignment {
   moduleRoute: string;
   moduleCategory?: string;
   permissionId?: number;
-  permissionName?: string; // Read | Write | None | Delete | All
+  permissionName?: string; // Read | Write | Update | Delete | Import | Export | Share | All
+}
+
+// ─── Module ───────────────────────────────────────────────────────────────────
+
+export interface ModuleResponse {
+  id: number;
+  name: string;
+  description?: string;
+  category?: string;
+  route?: string;
+  icon?: string;
+  active?: boolean;
+}
+
+// ─── Permission ───────────────────────────────────────────────────────────────
+
+export interface PermissionItem {
+  id: number;
+  name: string;
 }

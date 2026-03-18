@@ -24,6 +24,7 @@ export interface LoginResponse {
   superAdmin: boolean;
   firstLogin: boolean; // true when user still has the default password
   accessToken: string;
+  idToken: string;
   refreshToken: string;
   isFirstLogin?: boolean;
 }

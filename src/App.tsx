@@ -15,6 +15,7 @@ import Franchise from './pages/Franchise/Franchise';
 import Subscriptions from './pages/Subscriptions/Subscriptions';
 import FranchiseSubscriptions from './pages/FranchiseSubscriptions/FranchiseSubscriptions';
 import Customers from './pages/Customers/Customers';
+import Projects from './pages/Projects/Projects';
 import UsersRolesPage from './pages/UsersRoles/UsersRolesPage';
 import Notifications from './pages/Notifications/Notifications';
 import ProfilePage from './pages/Profile/ProfilePage';
@@ -44,7 +45,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
             <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
-            <Route path={ROUTES.PROJECTS} element={<Dashboard />} />
+            <Route path={ROUTES.PROJECTS} element={<Projects />} />
             <Route path={ROUTES.INSPECTIONS} element={<Dashboard />} />
             <Route path={ROUTES.CHECKLISTS} element={<Dashboard />} />
             <Route path={ROUTES.DEFECTS} element={<Dashboard />} />
@@ -58,7 +59,7 @@ function App() {
             <Route path={ROUTES.USERS} element={<Users />} />
             <Route path={ROUTES.FRANCHISE} element={<Franchise />} />
             <Route path={ROUTES.FRANCHISE_SUBSCRIPTIONS} element={<FranchiseSubscriptions />} />
-            <Route path={ROUTES.CUSTOMERS} element={<Customers />} />
+            <Route path={ROUTES.CLIENTS} element={<Customers />} />
             <Route path={ROUTES.USERS_ROLES} element={<UsersRolesPage />} />
             <Route path={ROUTES.NOTIFICATIONS} element={<Notifications />} />
             <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
