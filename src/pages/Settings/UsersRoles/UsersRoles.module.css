@@ -564,10 +564,248 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 600;
-  padding: 2px 8px 2px 6px;
+  padding: 2px 9px;
   border-radius: 20px;
   white-space: nowrap;
   letter-spacing: 0.01em;
+}
+
+/* ─── Roles table ────────────────────────────────────────────────────────────── */
+.tableRow {
+  transition: background 0.12s ease;
+}
+
+.tableRow:hover td {
+  background: var(--ip-surface-hover);
+}
+
+/* ─── Expand button ──────────────────────────────────────────────────────────── */
+.expandBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--ip-border);
+  background: transparent;
+  color: var(--ip-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.expandBtn:hover {
+  border-color: var(--ip-brand);
+  color: var(--ip-brand);
+  background: rgba(51, 174, 149, 0.06);
+}
+
+/* ─── Expanded permissions row ───────────────────────────────────────────────── */
+.expandedRow td {
+  padding: 0 !important;
+  border-bottom: 1px solid var(--ip-border);
+  background: var(--ip-surface-raised);
+}
+
+.expandedContent {
+  padding: 14px 24px 14px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.expandedModuleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.expandedModuleName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ip-text-primary);
+  min-width: 140px;
+  flex-shrink: 0;
+}
+
+.expandedPerms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* ─── Module picker (create/edit role modal) ─────────────────────────────────── */
+.modulePickerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.modulePickerTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ip-text-primary);
+}
+
+.selectAllBtn {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.selectAllBtn:hover {
+  border-color: var(--ip-brand);
+  color: var(--ip-brand);
+  background: rgba(51, 174, 149, 0.06);
+}
+
+.modulePickerList {
+  border: 1px solid var(--ip-border);
+  border-radius: 10px;
+  overflow: hidden;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.modulePickerItem {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ip-border);
+  transition: background 0.12s ease;
+}
+
+.modulePickerItem:last-child {
+  border-bottom: none;
+}
+
+.modulePickerItem:hover {
+  background: var(--ip-surface-raised);
+}
+
+.modulePickerItemSelected {
+  background: rgba(51, 174, 149, 0.04);
+}
+
+.moduleCheckRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.moduleCheckbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--ip-brand);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.moduleCheckLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ip-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+}
+
+.moduleCategoryTag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ip-text-muted);
+  background: var(--ip-surface-raised);
+  border: 1px solid var(--ip-border);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+
+/* Permission buttons row inside module picker */
+.permRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+  padding-left: 24px;
+}
+
+.permBtn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.permBtn:hover {
+  border-color: var(--ip-border-strong);
+  color: var(--ip-text-primary);
+}
+
+.permBtnActive {
+  font-weight: 700;
+}
+
+/* ─── Clickable count cell button ────────────────────────────────────────────── */
+.countBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--ip-brand);
+  font-weight: 600;
+  background: rgba(51, 174, 149, 0.08);
+  border: 1px solid rgba(51, 174, 149, 0.20);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.countBtn:hover {
+  background: rgba(51, 174, 149, 0.14);
+  border-color: rgba(51, 174, 149, 0.35);
+}
+
+/* ─── Scope badge ────────────────────────────────────────────────────────────── */
+.scopeBadge {
+  display: inline-flex;
+  padding: 3px 9px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: rgba(99, 102, 241, 0.10);
+  color: #4f46e5;
+  border: 1px solid rgba(99, 102, 241, 0.22);
+}
+
+/* ─── Permission count badge inside module picker ────────────────────────────── */
+.permCountBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: rgba(51, 174, 149, 0.12);
+  color: #33AE95;
+  border: 1px solid rgba(51, 174, 149, 0.25);
+  white-space: nowrap;
+  margin-left: auto;
 }

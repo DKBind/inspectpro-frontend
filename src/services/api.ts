@@ -17,7 +17,8 @@ class ApiClient {
       const authStorage = localStorage.getItem('auth-storage');
       if (authStorage) {
         const parsed = JSON.parse(authStorage);
-        return parsed?.state?.accessToken || null;
+        // ID token carries email + custom claims; fall back to accessToken if idToken absent
+        return parsed?.state?.idToken || parsed?.state?.accessToken || null;
       }
     } catch {
       return null;
@@ -78,8 +79,8 @@ class ApiClient {
                   localStorage.setItem('auth-storage', JSON.stringify(parsed));
                 }
 
-                // Retry original request with new token
-                headers['Authorization'] = `Bearer ${accessToken}`;
+                // Retry with ID token (has email + custom claims)
+                headers['Authorization'] = `Bearer ${idToken || accessToken}`;
                 response = await fetch(this.buildUrl(endpoint, params), {
                   ...fetchConfig,
                   headers,

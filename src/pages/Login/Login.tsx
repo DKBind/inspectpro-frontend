@@ -34,11 +34,12 @@ const Login = () => {
         roleId: data.superAdmin ? undefined : data.roleId,
         roles: (data.roles ?? []).map((r) => ({ roleId: r.roleId, roleName: r.roleName })),
         orgId: data.orgId,
+        orgName: data.orgName,
         isSuperAdmin: data.superAdmin,
       };
 
       const isFirstLogin = data.isFirstLogin ?? false;
-      setAuth(user, data.accessToken, data.refreshToken, isFirstLogin);
+      setAuth(user, data.accessToken, data.refreshToken, isFirstLogin, data.idToken);
 
       if (isFirstLogin) {
         navigate(ROUTES.UPDATE_PASSWORD);

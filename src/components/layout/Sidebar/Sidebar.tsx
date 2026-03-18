@@ -36,6 +36,7 @@ const ALL_SYSTEM_ITEMS: NavItem[] = [
   { label: 'Organisation', icon: Building2, path: ROUTES.ORGANISATION },
   { label: 'Franchise', icon: GitBranch, path: ROUTES.FRANCHISE },
   { label: 'Subscriptions', icon: CreditCard, path: ROUTES.SUBSCRIPTIONS },
+  { label: 'Clients', icon: Users, path: ROUTES.CLIENTS },
   { label: 'Users & Roles', icon: Users, path: ROUTES.USERS_ROLES },
   { label: 'Notifications', icon: Bell, path: ROUTES.NOTIFICATIONS },
   { label: 'Profile', icon: UserCircle, path: ROUTES.PROFILE },
@@ -44,7 +45,7 @@ const ALL_SYSTEM_ITEMS: NavItem[] = [
 
 // ─── Route → icon / label / section metadata (drives dynamic sidebar) ─────────
 type SectionKey = 'main' | 'system';
-const MODULE_META: Record<string, { label: string; icon: LucideIcon; section: SectionKey }> = {
+const MODULE_META: Record<string, { label: string; icon: LucideIcon; section: SectionKey; path?: string }> = {
   '/dashboard': { label: 'Dashboard', icon: LayoutDashboard, section: 'main' },
   '/projects': { label: 'Projects', icon: FolderKanban, section: 'main' },
   '/inspections': { label: 'Inspections', icon: ClipboardCheck, section: 'main' },
@@ -55,7 +56,8 @@ const MODULE_META: Record<string, { label: string; icon: LucideIcon; section: Se
   '/franchise': { label: 'Franchise', icon: GitBranch, section: 'system' },
   '/subscriptions': { label: 'Subscriptions', icon: CreditCard, section: 'system' },
   '/franchise-subscriptions': { label: 'Franchise Subscriptions', icon: Sparkles, section: 'system' },
-  '/customers': { label: 'Customers', icon: Users, section: 'system' },
+  '/clients': { label: 'Clients', icon: Users, section: 'system' },
+  '/client': { label: 'Clients', icon: Users, section: 'system', path: '/clients' },
   '/users-roles': { label: 'Users & Roles', icon: Users, section: 'system' },
   '/notifications': { label: 'Notifications', icon: Bell, section: 'system' },
   '/profile': { label: 'Profile', icon: UserCircle, section: 'system' },
@@ -83,7 +85,7 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
       seen.add(topPath);
       const meta = MODULE_META[topPath];
       if (!meta) return;
-      const item: NavItem = { label: meta.label, icon: meta.icon, path: topPath };
+      const item: NavItem = { label: meta.label, icon: meta.icon, path: meta.path ?? topPath };
       if (meta.section === 'main') main.push(item);
       else system.push(item);
     });
@@ -97,13 +99,15 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
   let visibleMain: NavItem[];
   let visibleSystem: NavItem[];
 
-  if (isSuperAdmin) {
-    visibleMain = ALL_MAIN_ITEMS;
-    visibleSystem = ALL_SYSTEM_ITEMS;
-  } else if (accessModules.length > 0) {
+  if (accessModules.length > 0) {
+    // Use DB modules for all users (super admin modules are fetched from API too)
     const built = buildFromDB();
     visibleMain = built.main;
     visibleSystem = built.system;
+  } else if (isSuperAdmin) {
+    // Super admin fallback while API loads
+    visibleMain = ALL_MAIN_ITEMS;
+    visibleSystem = ALL_SYSTEM_ITEMS;
   } else {
     // Not yet loaded — show nothing except Profile
     visibleMain = [];

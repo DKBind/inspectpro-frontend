@@ -11,6 +11,35 @@ interface ApiResponse<T> {
 
 export const customerService = {
 
+  // ─── Caller-aware endpoints (no orgId required) ──────────────────────────
+
+  listClients: async (page = 0, size = 10): Promise<PageResponse<CustomerResponse>> => {
+    const res = await api.get<ApiResponse<PageResponse<CustomerResponse>>>(
+      `/clients?page=${page}&size=${size}`,
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to fetch clients');
+    return res.object as PageResponse<CustomerResponse>;
+  },
+
+  createClient: async (data: CustomerRequest): Promise<CustomerResponse> => {
+    const res = await api.post<ApiResponse<CustomerResponse>>('/clients', data);
+    if (!res.status) throw new Error(res.message || 'Failed to create client');
+    return res.object as CustomerResponse;
+  },
+
+  updateClient: async (id: string, data: CustomerRequest): Promise<CustomerResponse> => {
+    const res = await api.put<ApiResponse<CustomerResponse>>(`/clients/${id}`, data);
+    if (!res.status) throw new Error(res.message || 'Failed to update client');
+    return res.object as CustomerResponse;
+  },
+
+  deleteClient: async (id: string): Promise<void> => {
+    const res = await api.delete<ApiResponse<null>>(`/clients/${id}`);
+    if (!res.status) throw new Error(res.message || 'Failed to delete client');
+  },
+
+  // ─── Org-scoped endpoints (legacy) ───────────────────────────────────────
+
   createCustomer: async (franchiseId: string, data: CustomerRequest): Promise<CustomerResponse> => {
     const res = await api.post<ApiResponse<CustomerResponse>>(
       `/organisations/${franchiseId}/customers`, data,

@@ -18,7 +18,7 @@ export const ROUTES = {
   PROFILE: '/profile',
   FRANCHISE: '/franchise',
   FRANCHISE_SUBSCRIPTIONS: '/franchise-subscriptions',
-  CUSTOMERS: '/customers',
+  CLIENTS: '/clients',
   USERS_ROLES: '/users-roles',
   NOTIFICATIONS: '/notifications',
   UNAUTHORIZED: '/unauthorized',

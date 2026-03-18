@@ -10,11 +10,9 @@ import {
 } from 'lucide-react';
 
 import { subscriptionService } from '@/services/subscriptionService';
-import { moduleService } from '@/services/moduleService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useModuleStore } from '@/store/useModuleStore';
-import type { ModuleResponse } from '@/services/models/module';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
@@ -63,7 +61,6 @@ const Subscriptions = () => {
   const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
 
   const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
-  const [allModules, setAllModules] = useState<ModuleResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -86,16 +83,13 @@ const Subscriptions = () => {
   // ─── Fetch ────────────────────────────────────────────────────────────────
 
   const fetchData = async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      const p = await (isSuperAdmin
-        ? subscriptionService.listSubscriptions()
-        : subscriptionService.listSubscriptionsByOrgId(user!.orgId!));
+      // Backend is caller-aware: super admin gets global plans, org admin gets
+      // their org's plans — resolved from JWT claims server-side, no orgId needed here.
+      const p = await subscriptionService.listSubscriptions();
       setPlans(p);
-      if (isSuperAdmin) {
-        const m = await moduleService.listModules();
-        setAllModules(m);
-      }
     } catch {
       toast.error('Failed to load subscription data');
     } finally {
@@ -103,7 +97,9 @@ const Subscriptions = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  // Re-run whenever the user identity changes (important: Zustand rehydration
+  // after page refresh may happen slightly after the first render).
+  useEffect(() => { fetchData(); }, [user?.id]);
 
   // ─── Create ───────────────────────────────────────────────────────────────
 
@@ -152,8 +148,7 @@ const Subscriptions = () => {
       statusId: data.isActive ? 1 : 2,
       notes: data.notes || undefined,
       moduleIds: selectedModuleIds,
-      // Org users own the plan — tag it with their orgId
-      createdByOrgId: !isSuperAdmin && user?.orgId ? user.orgId : undefined,
+      // createdByOrgId is derived server-side from JWT claims
     };
     try {
       if (modalMode === 'edit' && editTarget) {
@@ -217,10 +212,8 @@ const Subscriptions = () => {
   const totalPages = Math.max(1, Math.ceil(plans.length / PAGE_SIZE));
   const paginated = plans.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
 
-  // For super-admin use fetched allModules; for org-admin use role-based accessModules
-  const modulePickerItems = isSuperAdmin
-    ? allModules.map((m) => ({ id: m.id, name: m.name, category: m.category ?? '' }))
-    : accessModules.map((m) => ({ id: m.moduleId, name: m.name, category: m.category }));
+  const modulePickerItems = accessModules
+    .map((m) => ({ id: m.moduleId, name: m.name, category: m.category ?? '' }));
 
   // ─── Render ───────────────────────────────────────────────────────────────
 

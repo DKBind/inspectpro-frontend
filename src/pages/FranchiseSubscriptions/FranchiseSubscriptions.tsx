@@ -18,10 +18,9 @@ import {
 } from 'lucide-react';
 
 import { subscriptionService } from '@/services/subscriptionService';
-import { moduleService } from '@/services/moduleService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
-import type { ModuleResponse } from '@/services/models/module';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useModuleStore } from '@/store/useModuleStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
@@ -53,11 +52,10 @@ const isActivePlan = (plan: SubscriptionResponse) =>
 
 const FranchiseSubscriptions = () => {
   const { user } = useAuthStore();
-  const orgId = user?.orgId ?? '';
+  const { accessModules } = useModuleStore();
 
   const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
-  const [allModules, setAllModules] = useState<ModuleResponse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
@@ -79,15 +77,12 @@ const FranchiseSubscriptions = () => {
   // ─── Fetch ────────────────────────────────────────────────────────────────
 
   const fetchData = async () => {
-    if (!orgId) return;
+    if (!user) return;
     setLoading(true);
     try {
-      const [p, m] = await Promise.all([
-        subscriptionService.listSubscriptionsByOrgId(orgId),
-        moduleService.listModules(),
-      ]);
+      // Backend resolves org from JWT claims — no need to pass orgId from frontend.
+      const p = await subscriptionService.listSubscriptions();
       setPlans(p);
-      setAllModules(m);
     } catch {
       toast.error('Failed to load subscription data');
     } finally {
@@ -95,7 +90,7 @@ const FranchiseSubscriptions = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, [orgId]);
+  useEffect(() => { fetchData(); }, [user?.id]);
 
   // ─── Create / Edit ────────────────────────────────────────────────────────
 
@@ -135,7 +130,7 @@ const FranchiseSubscriptions = () => {
       statusId: data.isActive ? 1 : 2,
       notes: data.notes || undefined,
       moduleIds: selectedModuleIds,
-      createdByOrgId: orgId,   // tag plan as owned by this franchise
+      // createdByOrgId is now derived server-side from JWT claims — no need to send it
     };
     try {
       if (modalMode === 'edit' && editTarget) {
@@ -204,7 +199,7 @@ const FranchiseSubscriptions = () => {
         <div>
           <h1 className={styles.pageTitle}>My Subscription Plans</h1>
           <p className={styles.pageSubtitle}>
-            Create and manage subscription plans to offer your customers. Each plan defines features and user limits.
+            {/* Create and manage subscription plans to offer your customers. Each plan defines features and user limits. */}
           </p>
         </div>
         <button className={styles.createBtn} onClick={openCreate}>
@@ -399,14 +394,14 @@ const FranchiseSubscriptions = () => {
               )}
 
               <Fld label="Features (Modules)" hint="Select which features this plan includes">
-                {allModules.length === 0 ? (
+                {accessModules.length === 0 ? (
                   <p className="text-xs text-[#6B7280] py-2">No modules available.</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 mt-1">
-                    {allModules.map((m) => {
-                      const checked = selectedModuleIds.includes(m.id);
+                    {accessModules.map((m) => {
+                      const checked = selectedModuleIds.includes(m.moduleId);
                       return (
-                        <button key={m.id} type="button" onClick={() => toggleModule(m.id)}
+                        <button key={m.moduleId} type="button" onClick={() => toggleModule(m.moduleId)}
                           style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${checked ? 'rgba(51,174,149,0.4)' : '#E5E7EB'}`, background: checked ? 'rgba(51,174,149,0.08)' : '#F3F4F6', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
                           <span style={{ marginTop: 2, flexShrink: 0, width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? '#33AE95' : '#E5E7EB'}`, background: checked ? '#33AE95' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {checked && <CheckCircle size={10} color="white" />}
