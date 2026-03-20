@@ -18,7 +18,7 @@ const ModalPagination = ({
   onPageChange,
 }: ModalPaginationProps) => {
   const startItem = (currentPage - 1) * pageSize + 1;
-  const endItem = Math.min(currentPage * pageSize, totalItems);
+  // const endItem = Math.min(currentPage * pageSize, totalItems);
 
   const getPageNumbers = (): (number | 'ellipsis')[] => {
     const pages: (number | 'ellipsis')[] = [];
