@@ -19,21 +19,21 @@ import { Button } from '@/components/shared-ui/Button/button';
 import styles from '@/pages/Organisation/Organisation.module.css';
 
 const Franchise = () => {
-  const [franchises, setFranchises]   = useState<OrganisationResponse[]>([]);
-  const [loading, setLoading]         = useState(true);
+  const [franchises, setFranchises] = useState<OrganisationResponse[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize]       = useState(10);
-  const [totalPages, setTotalPages]   = useState(0);
-  const [totalItems, setTotalItems]   = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
 
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editFranchise, setEditFranchise] = useState<OrganisationResponse | null>(null);
   const [viewFranchise, setViewFranchise] = useState<OrganisationResponse | null>(null);
-  const [deleteId, setDeleteId]           = useState<string | null>(null);
-  const [deleting, setDeleting]           = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [toggleTarget, setToggleTarget] = useState<{ org: OrganisationResponse; newStatus: boolean } | null>(null);
-  const [toggling, setToggling]         = useState(false);
+  const [toggling, setToggling] = useState(false);
 
   const fetchFranchises = async (page = currentPage, size = pageSize) => {
     setLoading(true);
@@ -106,7 +106,7 @@ const Franchise = () => {
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.pageTitle}>Franchises</h1>
-          <p className={styles.pageSubtitle}>Manage franchise branches linked to their parent organisations.</p>
+          {/* <p className={styles.pageSubtitle}>Manage franchise branches linked to their parent organisations.</p> */}
         </div>
         <button className={styles.createBtn} onClick={openCreate}>
           <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
