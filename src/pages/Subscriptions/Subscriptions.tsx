@@ -60,7 +60,7 @@ const isActivePlan = (plan: SubscriptionResponse) =>
 const Subscriptions = () => {
   const { user } = useAuthStore();
   const { accessModules } = useModuleStore();
-  // const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+  const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
 
   const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
   const [loading, setLoading] = useState(true);
