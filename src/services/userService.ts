@@ -95,6 +95,13 @@ export const userService = {
 
   // ── Modules & Permissions ─────────────────────────────────────────────────
 
+  listRolesWithModules: async (orgId?: string): Promise<{ roleId: number; roleName: string; modules: RoleModuleAssignment[] }[]> => {
+    const url = orgId ? `/roles/with-modules?orgId=${orgId}` : '/roles/with-modules';
+    const res = await api.get<ApiResponse<{ roleId: number; roleName: string; modules: RoleModuleAssignment[] }[]>>(url);
+    if (!res.status) throw new Error(res.message || 'Failed to fetch roles with modules');
+    return res.object ?? [];
+  },
+
   listModules: async (): Promise<ModuleResponse[]> => {
     const res = await api.get<ApiResponse<ModuleResponse[]>>('/modules');
     if (!res.status) throw new Error(res.message || 'Failed to fetch modules');

@@ -18,9 +18,10 @@ import {
 } from 'lucide-react';
 
 import { subscriptionService } from '@/services/subscriptionService';
+import { moduleService } from '@/services/moduleService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
+import type { ModuleResponse } from '@/services/models/module';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useModuleStore } from '@/store/useModuleStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
@@ -52,7 +53,6 @@ const isActivePlan = (plan: SubscriptionResponse) =>
 
 const FranchiseSubscriptions = () => {
   const { user } = useAuthStore();
-  const { accessModules } = useModuleStore();
 
   const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,6 +66,8 @@ const FranchiseSubscriptions = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [toggleTarget, setToggleTarget] = useState<{ plan: SubscriptionResponse; newActive: boolean } | null>(null);
   const [selectedModuleIds, setSelectedModuleIds] = useState<number[]>([]);
+  const [allDbModules, setAllDbModules] = useState<ModuleResponse[]>([]);
+  const [modulesLoading, setModulesLoading] = useState(false);
 
   const { register, reset, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -80,8 +82,10 @@ const FranchiseSubscriptions = () => {
     if (!user) return;
     setLoading(true);
     try {
-      // Returns only plans created by the caller's own organisation.
-      const p = await subscriptionService.listMySubscriptions();
+      const isSuperAdmin = user.isSuperAdmin === true || (user as any).role === 'super_admin';
+      const p = isSuperAdmin
+        ? await subscriptionService.listSubscriptions()
+        : await subscriptionService.listMySubscriptions();
       setPlans(p);
     } catch {
       toast.error('Failed to load subscription data');
@@ -92,6 +96,20 @@ const FranchiseSubscriptions = () => {
 
   useEffect(() => { fetchData(); }, [user?.id]);
 
+  // ─── Load all DB modules for the picker ──────────────────────────────────
+
+  const loadModules = async () => {
+    setModulesLoading(true);
+    try {
+      const mods = await moduleService.listModules();
+      setAllDbModules(mods.filter((m) => m.active !== false));
+    } catch {
+      toast.error('Failed to load modules');
+    } finally {
+      setModulesLoading(false);
+    }
+  };
+
   // ─── Create / Edit ────────────────────────────────────────────────────────
 
   const openCreate = () => {
@@ -99,6 +117,7 @@ const FranchiseSubscriptions = () => {
     setSelectedModuleIds([]);
     reset({ planName: '', price: '', durationMonths: '', maxUsers: '', billingCycle: 'MONTHLY', isActive: true, notes: '' });
     setModalMode('create');
+    loadModules();
   };
 
   const openEdit = (plan: SubscriptionResponse) => {
@@ -114,6 +133,7 @@ const FranchiseSubscriptions = () => {
       notes: plan.notes ?? '',
     });
     setModalMode('edit');
+    loadModules();
   };
 
   const toggleModule = (id: number) =>
@@ -197,7 +217,7 @@ const FranchiseSubscriptions = () => {
       {/* Header */}
       <div className={styles.pageHeader}>
         <div>
-          <h1 className={styles.pageTitle}>My Subscription Plans</h1>
+          {/* <h1 className={styles.pageTitle}>My Subscription Plans</h1> */}
           <p className={styles.pageSubtitle}>
             {/* Create and manage subscription plans to offer your customers. Each plan defines features and user limits. */}
           </p>
@@ -394,14 +414,18 @@ const FranchiseSubscriptions = () => {
               )}
 
               <Fld label="Features (Modules)" hint="Select which features this plan includes">
-                {accessModules.length === 0 ? (
+                {modulesLoading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0', color: '#6B7280', fontSize: 13 }}>
+                    <Loader2 size={14} className="animate-spin" /> Loading modules…
+                  </div>
+                ) : allDbModules.length === 0 ? (
                   <p className="text-xs text-[#6B7280] py-2">No modules available.</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 mt-1">
-                    {accessModules.map((m) => {
-                      const checked = selectedModuleIds.includes(m.moduleId);
+                    {allDbModules.map((m) => {
+                      const checked = selectedModuleIds.includes(m.id);
                       return (
-                        <button key={m.moduleId} type="button" onClick={() => toggleModule(m.moduleId)}
+                        <button key={m.id} type="button" onClick={() => toggleModule(m.id)}
                           style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${checked ? 'rgba(51,174,149,0.4)' : '#E5E7EB'}`, background: checked ? 'rgba(51,174,149,0.08)' : '#F3F4F6', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
                           <span style={{ marginTop: 2, flexShrink: 0, width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? '#33AE95' : '#E5E7EB'}`, background: checked ? '#33AE95' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {checked && <CheckCircle size={10} color="white" />}

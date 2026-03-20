@@ -188,15 +188,16 @@ const UsersRoles = () => {
   const fetchRoles = async () => {
     setRolesLoading(true);
     try {
-      const fetched = await userService.listRoles();
+      const [fetched, withModules] = await Promise.all([
+        userService.listRoles(),
+        userService.listRolesWithModules(),
+      ]);
       setRoleList(fetched);
-      const entries = await Promise.all(
-        fetched.map(async (r) => {
-          try { return [r.roleId, await userService.getRoleModules(r.roleId)] as [number, RoleModuleAssignment[]]; }
-          catch { return [r.roleId, []] as [number, RoleModuleAssignment[]]; }
-        })
-      );
-      setRoleModules(Object.fromEntries(entries));
+      const entries: Record<number, RoleModuleAssignment[]> = {};
+      for (const entry of withModules) {
+        entries[entry.roleId] = entry.modules ?? [];
+      }
+      setRoleModules(entries);
     } catch { /* silent */ }
     finally { setRolesLoading(false); }
   };
@@ -207,24 +208,28 @@ const UsersRoles = () => {
 
   // ── Fetch modules for role modal ──────────────────────────────────────────
   const loadModalData = async () => {
-    if (allModules.length > 0) return;
     setModulesLoading(true);
     try {
       if (isSuperAdmin) {
         const mods = await userService.listModules();
         setAllModules(mods.filter((m) => m.active !== false));
       } else {
-        // Non-admin: only show modules the logged-in user can access
-        setAllModules(
-          accessModules.map((m) => ({
-            id: m.moduleId,
-            name: m.name,
-            route: m.route,
-            active: true,
-            category: m.category ?? null,
-            icon: m.icon ?? null,
-          } as ModuleResponse))
-        );
+        // Non-admin: use the modules the logged-in user can access (always fresh from store)
+        const mods = accessModules.map((m) => ({
+          id: m.moduleId,
+          name: m.name,
+          route: m.route,
+          active: true,
+          category: m.category ?? null,
+          icon: m.icon ?? null,
+        } as ModuleResponse));
+        if (mods.length > 0) {
+          setAllModules(mods);
+        } else {
+          // Fallback: fetch from API if store is empty
+          const fetched = await userService.listModules();
+          setAllModules(fetched.filter((m) => m.active !== false));
+        }
       }
     } catch { toast.error('Failed to load modules'); }
     finally { setModulesLoading(false); }
@@ -294,11 +299,19 @@ const UsersRoles = () => {
         } else {
           ALL_PERM_NAMES.forEach((p) => perms.add(p));
           perms.add('All');
+          // Auto-select module when enabling All
+          if (!next.has(moduleId)) next.set(moduleId, new Set());
         }
       } else {
-        perms.has(permName) ? perms.delete(permName) : perms.add(permName);
-        const allSelected = ALL_PERM_NAMES.every((p) => perms.has(p));
-        allSelected ? perms.add('All') : perms.delete('All');
+        if (perms.has(permName)) {
+          perms.delete(permName);
+          perms.delete('All');
+        } else {
+          perms.add(permName);
+          // Auto-select the module when adding a permission
+          const allSelected = ALL_PERM_NAMES.every((p) => perms.has(p));
+          allSelected ? perms.add('All') : perms.delete('All');
+        }
       }
       next.set(moduleId, perms);
       return next;
@@ -311,8 +324,10 @@ const UsersRoles = () => {
       const perms = new Set(next.get(moduleId) ?? []);
       const allSelected = ALL_PERM_NAMES.every((p) => perms.has(p));
       if (allSelected) {
+        // Clear all perms but keep module selected (empty set = selected, no perms)
         next.set(moduleId, new Set());
       } else {
+        // Select all perms — also ensures module is selected
         const full = new Set(ALL_PERM_NAMES);
         full.add('All');
         next.set(moduleId, full);
@@ -501,10 +516,8 @@ const UsersRoles = () => {
     } finally { setToggling(false); setToggleTarget(null); }
   };
 
-  const userRoleIds = new Set((authUser?.roles ?? []).map((r) => r.roleId));
-  const visibleRoles = isSuperAdmin
-    ? roleList
-    : roleList.filter((r) => userRoleIds.has(r.roleId));
+  // Backend already filters roleList by createdBy for non-admin users.
+  const visibleRoles = roleList;
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
@@ -892,32 +905,30 @@ const UsersRoles = () => {
                           )}
                         </label>
 
-                        {/* Permission buttons — visible only when module is selected */}
-                        {selected && (
-                          <div className={styles.permRow}>
-                            <button
-                              type="button"
-                              className={`${styles.permBtn} ${ALL_PERM_NAMES.every((p) => permsForMod.has(p)) ? styles.permBtnActive : ''}`}
-                              style={ALL_PERM_NAMES.every((p) => permsForMod.has(p))
-                                ? { background: PERM_STYLE.All.bg, color: PERM_STYLE.All.color, borderColor: PERM_STYLE.All.border }
-                                : {}}
-                              onClick={() => toggleAllPermsForModule(mod.id)}
-                            >All</button>
-                            {ALL_PERM_NAMES.map((pName) => {
-                              const active = permsForMod.has(pName);
-                              const ps = permStyle(pName);
-                              return (
-                                <button
-                                  key={pName}
-                                  type="button"
-                                  className={`${styles.permBtn} ${active ? styles.permBtnActive : ''}`}
-                                  style={active ? { background: ps.bg, color: ps.color, borderColor: ps.border } : {}}
-                                  onClick={() => togglePermission(mod.id, pName)}
-                                >{pName}</button>
-                              );
-                            })}
-                          </div>
-                        )}
+                        {/* Permission buttons — always visible */}
+                        <div className={styles.permRow}>
+                          <button
+                            type="button"
+                            className={`${styles.permBtn} ${ALL_PERM_NAMES.every((p) => permsForMod.has(p)) ? styles.permBtnActive : ''}`}
+                            style={ALL_PERM_NAMES.every((p) => permsForMod.has(p))
+                              ? { background: PERM_STYLE.All.bg, color: PERM_STYLE.All.color, borderColor: PERM_STYLE.All.border }
+                              : {}}
+                            onClick={() => toggleAllPermsForModule(mod.id)}
+                          >All</button>
+                          {ALL_PERM_NAMES.map((pName) => {
+                            const active = permsForMod.has(pName);
+                            const ps = permStyle(pName);
+                            return (
+                              <button
+                                key={pName}
+                                type="button"
+                                className={`${styles.permBtn} ${active ? styles.permBtnActive : ''}`}
+                                style={active ? { background: ps.bg, color: ps.color, borderColor: ps.border } : {}}
+                                onClick={() => togglePermission(mod.id, pName)}
+                              >{pName}</button>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   })}

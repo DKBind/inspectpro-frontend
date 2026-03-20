@@ -10,7 +10,9 @@ import {
 } from 'lucide-react';
 
 import { subscriptionService } from '@/services/subscriptionService';
+import { moduleService } from '@/services/moduleService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
+import type { ModuleResponse } from '@/services/models/module';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useModuleStore } from '@/store/useModuleStore';
 import {
@@ -72,6 +74,8 @@ const Subscriptions = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [toggleTarget, setToggleTarget] = useState<{ plan: SubscriptionResponse; newActive: boolean } | null>(null);
   const [selectedModuleIds, setSelectedModuleIds] = useState<number[]>([]);
+  const [allDbModules, setAllDbModules] = useState<ModuleResponse[]>([]);
+  const [modulesLoading, setModulesLoading] = useState(false);
 
   const { register, reset, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -101,6 +105,35 @@ const Subscriptions = () => {
   // after page refresh may happen slightly after the first render).
   useEffect(() => { fetchData(); }, [user?.id]);
 
+  // ─── Load all DB modules for the picker ──────────────────────────────────
+
+  const loadModules = async () => {
+    if (!isSuperAdmin) {
+      // Org admin: only show modules accessible via their role
+      setAllDbModules(
+        accessModules.map((m) => ({
+          id: m.moduleId,
+          name: m.name,
+          route: m.route,
+          icon: m.icon ?? null,
+          category: m.category ?? null,
+          active: true,
+        } as ModuleResponse))
+      );
+      return;
+    }
+    // Super admin: all modules in DB
+    setModulesLoading(true);
+    try {
+      const mods = await moduleService.listModules();
+      setAllDbModules(mods.filter((m) => m.active !== false));
+    } catch {
+      toast.error('Failed to load modules');
+    } finally {
+      setModulesLoading(false);
+    }
+  };
+
   // ─── Create ───────────────────────────────────────────────────────────────
 
   const openCreate = () => {
@@ -108,6 +141,7 @@ const Subscriptions = () => {
     setSelectedModuleIds([]);
     reset({ planName: '', price: '', durationMonths: '', maxUsers: '', billingCycle: 'MONTHLY', isActive: true, notes: '' });
     setModalMode('create');
+    loadModules();
   };
 
   // ─── Edit ─────────────────────────────────────────────────────────────────
@@ -125,6 +159,7 @@ const Subscriptions = () => {
       notes: plan.notes ?? '',
     });
     setModalMode('edit');
+    loadModules();
   };
 
   // ─── Module toggle ────────────────────────────────────────────────────────
@@ -212,8 +247,6 @@ const Subscriptions = () => {
   const totalPages = Math.max(1, Math.ceil(plans.length / PAGE_SIZE));
   const paginated = plans.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
 
-  const modulePickerItems = accessModules
-    .map((m) => ({ id: m.moduleId, name: m.name, category: m.category ?? '' }));
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -223,11 +256,6 @@ const Subscriptions = () => {
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.pageTitle}>Subscription Plans</h1>
-          {/* <p className={styles.pageSubtitle}>
-            {isSuperAdmin
-              ? 'Create and manage global subscription plans with features (modules) and user limits.'
-              : 'Create and manage subscription plans for your franchise branches.'}
-          </p> */}
         </div>
         <button className={styles.createBtn} onClick={openCreate}>
           <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
@@ -453,13 +481,15 @@ const Subscriptions = () => {
               )}
 
               <Fld label="Features (Modules)" hint="Select which features this plan includes">
-                {modulePickerItems.length === 0 ? (
-                  <p className="text-xs text-[#6B7280] py-2">
-                    No modules available. Create modules on the Modules page first.
-                  </p>
+                {modulesLoading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0', color: '#6B7280', fontSize: 13 }}>
+                    <Loader2 size={14} className="animate-spin" /> Loading modules…
+                  </div>
+                ) : allDbModules.length === 0 ? (
+                  <p className="text-xs text-[#6B7280] py-2">No modules available.</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2 mt-1">
-                    {modulePickerItems.map((m) => {
+                    {allDbModules.map((m) => {
                       const checked = selectedModuleIds.includes(m.id);
                       return (
                         <button
@@ -467,16 +497,10 @@ const Subscriptions = () => {
                           type="button"
                           onClick={() => toggleModule(m.id)}
                           style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 10,
-                            padding: '10px 12px',
-                            borderRadius: 8,
-                            border: `1px solid ${checked ? 'rgba(59,130,246,0.4)' : '#E5E7EB'}`,
+                            display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
+                            borderRadius: 8, border: `1px solid ${checked ? 'rgba(59,130,246,0.4)' : '#E5E7EB'}`,
                             background: checked ? 'rgba(59,130,246,0.06)' : '#F9FAFB',
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
+                            textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s',
                           }}
                         >
                           <span style={{

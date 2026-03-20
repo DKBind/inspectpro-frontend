@@ -58,7 +58,7 @@ function planBadgeStyle(planName?: string): string {
 
 const schema = z.object({
   name: z.string().min(2, 'Organisation name must be at least 2 characters'),
-  email: z.string().min(1, 'Contact email is required').email({ message: 'Please enter a valid email address' }),
+  email: z.string().min(1, 'Contact email is required').email({ error: 'Please enter a valid email address' }),
   domain: z
     .string()
     .optional()
@@ -95,20 +95,18 @@ const schema = z.object({
       (val) => !val || /^[A-Z]{4}[0-9]{5}[A-Z]$/i.test(val),
       'Invalid TAN format (e.g. ABCD12345E)'
     ),
-  address: z
-    .object({
-      addressLine1: z.string().optional(),
-      addressLine2: z.string().optional(),
-      street: z.string().optional(),
-      district: z.string().optional(),
-      state: z.string().optional(),
-      country: z.string().optional(),
-      pincode: z
-        .string()
-        .optional()
-        .refine((val) => !val || /^[0-9]{6}$/.test(val), 'Pincode must be 6 digits'),
-    })
-    .optional(),
+  address: z.object({
+    addressLine1: z.string().min(1, 'Address Line 1 is required'),
+    addressLine2: z.string().optional(),
+    street: z.string().optional(),
+    district: z.string().optional(),
+    state: z.string().min(1, 'State is required'),
+    country: z.string().min(1, 'Country is required'),
+    pincode: z
+      .string()
+      .optional()
+      .refine((val) => !val || /^[0-9]{6}$/.test(val), 'Pincode must be 6 digits'),
+  }),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -174,7 +172,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
     const d = new Date(subscriptionStartDate);
     if (isNaN(d.getTime())) return '';
     d.setMonth(d.getMonth() + selectedPlan.durationMonths);
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   })();
 
   // Fetch active subscription plans when modal opens (create mode only).
@@ -227,6 +225,12 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
   };
 
   const onSubmit = async (data: FormValues) => {
+    // Validate start date is required when a plan is selected in create mode
+    if (!isEditMode && data.subscriptionId && !data.subscriptionStartDate) {
+      methods.setError('subscriptionStartDate', { type: 'manual', message: 'Start date is required' });
+      return;
+    }
+
     setIsSubmitting(true);
     const clean = (val?: string) => (val?.trim() ? val.trim() : undefined);
     const rawAddr = data.address;
@@ -295,7 +299,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
   };
 
   const inputCls = (hasError: boolean) =>
-    `border border-[#E5E7EB] rounded-lg px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-[#33AE95]/30 focus:border-[#33AE95] text-[#263B4F] bg-white text-sm ${hasError ? 'border-[#DF453A]' : ''}`;
+    `border border-[#E5E7EB] rounded-lg px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-[#33AE95]/30 focus:border-[#33AE95] text-[#263B4F] bg-white text-sm placeholder:text-[#9CA3AF] ${hasError ? 'border-[#DF453A]' : ''}`;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -381,13 +385,13 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
 
                     {selectedPlan && (
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <Fld label="Start Date" error={(errors as any).subscriptionStartDate?.message}>
+                        <Fld label="Start Date" required error={(errors as any).subscriptionStartDate?.message}>
                           <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280] pointer-events-none z-10" />
                             <Input
                               type="date"
                               {...register('subscriptionStartDate')}
-                              className={`pl-9 h-10 border-[#E5E7EB] text-[#263B4F] bg-white focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 ${(errors as any).subscriptionStartDate ? 'border-[#DF453A]' : ''}`}
+                              className={`pl-9 h-10 border-[#E5E7EB] text-[#263B4F] bg-white focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 placeholder:text-[#9CA3AF] ${(errors as any).subscriptionStartDate ? 'border-[#DF453A]' : ''}`}
                             />
                           </div>
                         </Fld>
@@ -463,9 +467,9 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
               <Sec icon={<MapPin size={13} />} label="Address">
                 <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Fld label="Address Line 1">
+                    <Fld label="Address Line 1" required error={errors.address?.addressLine1?.message}>
                       <Input placeholder="Flat / House no., Building name"
-                        {...addrLine1Field} className={inputCls(false)} />
+                        {...addrLine1Field} className={inputCls(!!errors.address?.addressLine1)} />
                     </Fld>
                     <Fld label="Address Line 2">
                       <Input placeholder="Area, Colony, Locality"
@@ -477,16 +481,16 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
                     <Fld label="District">
                       <Input placeholder="District" {...districtField} className={inputCls(false)} />
                     </Fld>
-                    <Fld label="State">
-                      <Input placeholder="State" {...stateField} className={inputCls(false)} />
+                    <Fld label="State" required error={errors.address?.state?.message}>
+                      <Input placeholder="State" {...stateField} className={inputCls(!!errors.address?.state)} />
                     </Fld>
-                    <Fld label="Country">
-                      <Input placeholder="Country" {...countryField} className={inputCls(false)} />
+                    <Fld label="Country" required error={errors.address?.country?.message}>
+                      <Input placeholder="Country" {...countryField} className={inputCls(!!errors.address?.country)} />
                     </Fld>
-                    <Fld label="Pincode" error={(errors.address as any)?.pincode?.message}>
+                    <Fld label="Pincode" error={errors.address?.pincode?.message}>
                       <Input placeholder="110001" maxLength={6}
                         {...pincodeField}
-                        className={inputCls(!!(errors.address as any)?.pincode)} />
+                        className={inputCls(!!errors.address?.pincode)} />
                     </Fld>
                   </div>
                 </div>

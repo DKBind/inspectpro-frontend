@@ -38,10 +38,10 @@ function DialogOverlay({
       data-slot="dialog-overlay"
       className={cn(
         "fixed inset-0 z-50",
-        "bg-[#263B4F]/40 backdrop-blur-[2px]",
+        "bg-[#263B4F]/50",
         "data-[state=open]:animate-in data-[state=open]:fade-in-0",
         "data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
-        "duration-200",
+        "duration-150",
         className
       )}
       {...props}
@@ -70,11 +70,12 @@ function DialogContent({
           // Styling - project theme
           "rounded-[16px] border border-[#E4E8EC]",
           "bg-white shadow-[0_20px_60px_rgba(38,59,79,0.14),0_8px_24px_rgba(38,59,79,0.08)]",
-          // Open animation - scale + slide up + fade
-          "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-bottom-2",
+          // Open animation - fade + gentle slide up (no zoom = no GPU stutter)
+          "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-4",
           // Close animation
-          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-bottom-2",
+          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-bottom-2",
           "duration-200 ease-out outline-none",
+          "will-change-[transform,opacity]",
           "overflow-hidden",
           className
         )}

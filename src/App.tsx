@@ -16,6 +16,7 @@ import Subscriptions from './pages/Subscriptions/Subscriptions';
 import FranchiseSubscriptions from './pages/FranchiseSubscriptions/FranchiseSubscriptions';
 import Customers from './pages/Customers/Customers';
 import Projects from './pages/Projects/Projects';
+import Checklists from './pages/Checklists/Checklists';
 import UsersRolesPage from './pages/UsersRoles/UsersRolesPage';
 import Notifications from './pages/Notifications/Notifications';
 import ProfilePage from './pages/Profile/ProfilePage';
@@ -47,7 +48,7 @@ function App() {
             <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
             <Route path={ROUTES.PROJECTS} element={<Projects />} />
             <Route path={ROUTES.INSPECTIONS} element={<Dashboard />} />
-            <Route path={ROUTES.CHECKLISTS} element={<Dashboard />} />
+            <Route path={ROUTES.CHECKLISTS} element={<Checklists />} />
             <Route path={ROUTES.DEFECTS} element={<Dashboard />} />
             <Route path={ROUTES.REPORTS} element={<Dashboard />} />
             <Route path={ROUTES.SETTINGS} element={<Settings />} />
