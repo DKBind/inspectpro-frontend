@@ -31,6 +31,8 @@ export interface CustomerRequest {
   notes?: string;
   subscriptionId?: string;
   statusId?: number;
+  /** Super admin: target org or franchise UUID to create the client under. */
+  franchiseId?: string;
 }
 
 export interface CustomerLimitInfo {

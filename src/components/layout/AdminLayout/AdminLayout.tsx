@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/layout/Sidebar/Sidebar';
 import Header from '@/components/layout/Header/Header';
@@ -13,12 +13,15 @@ const AdminLayout = () => {
   const { accessModules, setAccessModules } = useModuleStore();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const hasFetchedRef = useRef(false);
 
-  // Re-fetch sidebar modules when authenticated but the store is empty
-  // (happens after a page refresh since the previous session's store may have been cleared)
+  // Re-fetch sidebar modules when authenticated but the store is empty.
+  // useRef guard prevents React StrictMode from firing this twice on mount.
   useEffect(() => {
     if (!isAuthenticated || !user) return;
     if (accessModules.length > 0) return;
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
     moduleService.getMyAccess(user.id).then(setAccessModules).catch(() => {});
   }, [isAuthenticated, user?.id]);
 
