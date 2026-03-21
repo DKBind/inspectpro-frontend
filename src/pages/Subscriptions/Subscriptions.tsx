@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import {
   CreditCard, Plus, RefreshCw, IndianRupee, Clock,
   FileText, Loader2, Eye, Pencil, Trash2, ChevronLeft, ChevronRight,
-  CheckCircle, XCircle, Users, Package, LayoutGrid,
+  CheckCircle, XCircle, Users, Package, LayoutGrid, Sparkles, Building2,
 } from 'lucide-react';
 
 import { subscriptionService } from '@/services/subscriptionService';
@@ -50,20 +50,163 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+type Tab = 'org' | 'franchise';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const isActivePlan = (plan: SubscriptionResponse) =>
   plan.status?.name?.toUpperCase() === 'ACTIVE';
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Plan table sub-component ─────────────────────────────────────────────────
+
+function PlanTable({
+  plans,
+  loading,
+  onView,
+  onEdit,
+  onDelete,
+  onToggle,
+  togglingId,
+}: {
+  plans: SubscriptionResponse[];
+  loading: boolean;
+  onView: (p: SubscriptionResponse) => void;
+  onEdit: (p: SubscriptionResponse) => void;
+  onDelete: (p: SubscriptionResponse) => void;
+  onToggle: (p: SubscriptionResponse) => void;
+  togglingId: string | null;
+}) {
+  const [currentPage, setCurrentPage] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(plans.length / PAGE_SIZE));
+  const paginated = plans.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+
+  if (loading) {
+    return (
+      <div className={styles.emptyState}>
+        <div className={styles.spinner} />
+        <p style={{ marginTop: 12 }}>Loading...</p>
+      </div>
+    );
+  }
+
+  if (plans.length === 0) {
+    return (
+      <div className={styles.emptyState}>
+        <CreditCard style={{ width: 40, height: 40, marginBottom: 12, opacity: 0.3 }} />
+        <p>No subscription plans yet.</p>
+        <p className={styles.emptySubtext}>Click "Create Plan" to add one.</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th>Plan Name</th>
+            <th>Price</th>
+            <th>Duration</th>
+            <th>Max Users</th>
+            <th>Modules</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {paginated.map((p) => (
+            <tr key={p.id} className={styles.tableRow}>
+              <td><span className={styles.planName}>{p.planName}</span></td>
+              <td className={styles.mutedCell}>
+                {p.price != null ? `\u20B9 ${Number(p.price).toLocaleString('en-IN')}` : '\u2014'}
+              </td>
+              <td className={styles.mutedCell}>
+                {p.durationMonths != null
+                  ? `${p.durationMonths} mo${p.billingCycle ? ` \u00B7 ${p.billingCycle.charAt(0) + p.billingCycle.slice(1).toLowerCase()}` : ''}`
+                  : '\u2014'}
+              </td>
+              <td className={styles.mutedCell}>
+                {p.maxUsers != null ? p.maxUsers.toLocaleString() : '\u2014'}
+              </td>
+              <td className={styles.mutedCell}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#94a3b8' }}>
+                  <Package style={{ width: 12, height: 12 }} />
+                  {p.modules?.length ?? 0}
+                </span>
+              </td>
+              <td>
+                <StatusToggle
+                  active={isActivePlan(p)}
+                  loading={togglingId === p.id}
+                  onToggle={() => onToggle(p)}
+                />
+              </td>
+              <td>
+                <div className={styles.actions}>
+                  <button className={styles.actionBtn} title="View" onClick={() => onView(p)}>
+                    <Eye size={14} />
+                  </button>
+                  <button className={styles.actionBtn} title="Edit" onClick={() => onEdit(p)}>
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+                    title="Delete"
+                    onClick={() => onDelete(p)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <span className={styles.paginationInfo}>
+            {`Showing ${currentPage * PAGE_SIZE + 1}\u2013${Math.min((currentPage + 1) * PAGE_SIZE, plans.length)} of ${plans.length}`}
+          </span>
+          <div className={styles.paginationControls}>
+            <button className={styles.pageBtn} disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}>
+              <ChevronLeft size={14} />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                className={`${styles.pageBtn} ${i === currentPage ? styles.pageBtnActive : ''}`}
+                onClick={() => setCurrentPage(i)}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button className={styles.pageBtn} disabled={currentPage === totalPages - 1} onClick={() => setCurrentPage((p) => p + 1)}>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 const Subscriptions = () => {
   const { user } = useAuthStore();
   const { accessModules } = useModuleStore();
   const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
 
-  const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
+  // Tab state — org admin always starts on franchise tab
+  const [activeTab, setActiveTab] = useState<Tab>(isSuperAdmin ? 'org' : 'franchise');
+
+  // Plans split by type
+  const [orgPlans, setOrgPlans] = useState<SubscriptionResponse[]>([]);
+  const [franchisePlans, setFranchisePlans] = useState<SubscriptionResponse[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal / action state
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
@@ -71,11 +214,13 @@ const Subscriptions = () => {
   const [editTarget, setEditTarget] = useState<SubscriptionResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SubscriptionResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
   const [toggleTarget, setToggleTarget] = useState<{ plan: SubscriptionResponse; newActive: boolean } | null>(null);
   const [selectedModuleIds, setSelectedModuleIds] = useState<number[]>([]);
   const [allDbModules, setAllDbModules] = useState<ModuleResponse[]>([]);
   const [modulesLoading, setModulesLoading] = useState(false);
+
+  // Which tab the current create/edit modal is for
+  const [modalTab, setModalTab] = useState<Tab>('org');
 
   const { register, reset, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -84,16 +229,23 @@ const Subscriptions = () => {
 
   const watchIsActive = watch('isActive');
 
-  // ─── Fetch ────────────────────────────────────────────────────────────────
+  // ─── Fetch ──────────────────────────────────────────────────────────────
 
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
     try {
-      // Backend is caller-aware: super admin gets global plans, org admin gets
-      // their org's plans — resolved from JWT claims server-side, no orgId needed here.
-      const p = await subscriptionService.listSubscriptions();
-      setPlans(p);
+      if (isSuperAdmin) {
+        // Super admin: get all plans and split by global flag
+        const all = await subscriptionService.listSubscriptions();
+        setOrgPlans(all.filter((p) => p.global !== false && p.createdByOrgId == null));
+        setFranchisePlans(all.filter((p) => p.global === false || p.createdByOrgId != null));
+      } else {
+        // Org admin: only their own franchise plans
+        setOrgPlans([]);
+        const mine = await subscriptionService.listMySubscriptions();
+        setFranchisePlans(mine);
+      }
     } catch {
       toast.error('Failed to load subscription data');
     } finally {
@@ -101,15 +253,13 @@ const Subscriptions = () => {
     }
   };
 
-  // Re-run whenever the user identity changes (important: Zustand rehydration
-  // after page refresh may happen slightly after the first render).
   useEffect(() => { fetchData(); }, [user?.id]);
 
-  // ─── Load all DB modules for the picker ──────────────────────────────────
+  // ─── Load modules for picker ─────────────────────────────────────────────
 
-  const loadModules = async () => {
-    if (!isSuperAdmin) {
-      // Org admin: only show modules accessible via their role
+  const loadModules = async (forTab: Tab) => {
+    if (!isSuperAdmin && forTab === 'franchise') {
+      // Org admin creating franchise plan: only show their accessible modules
       setAllDbModules(
         accessModules.map((m) => ({
           id: m.moduleId,
@@ -122,7 +272,6 @@ const Subscriptions = () => {
       );
       return;
     }
-    // Super admin: all modules in DB
     setModulesLoading(true);
     try {
       const mods = await moduleService.listModules();
@@ -134,19 +283,20 @@ const Subscriptions = () => {
     }
   };
 
-  // ─── Create ───────────────────────────────────────────────────────────────
+  // ─── Open create/edit ────────────────────────────────────────────────────
 
-  const openCreate = () => {
+  const openCreate = (tab: Tab) => {
+    setModalTab(tab);
     setEditTarget(null);
     setSelectedModuleIds([]);
     reset({ planName: '', price: '', durationMonths: '', maxUsers: '', billingCycle: 'MONTHLY', isActive: true, notes: '' });
     setModalMode('create');
-    loadModules();
+    loadModules(tab);
   };
 
-  // ─── Edit ─────────────────────────────────────────────────────────────────
-
   const openEdit = (plan: SubscriptionResponse) => {
+    const tab = (plan.global !== false && plan.createdByOrgId == null) ? 'org' : 'franchise';
+    setModalTab(tab);
     setEditTarget(plan);
     setSelectedModuleIds((plan.modules ?? []).map((m) => m.id));
     reset({
@@ -159,18 +309,13 @@ const Subscriptions = () => {
       notes: plan.notes ?? '',
     });
     setModalMode('edit');
-    loadModules();
+    loadModules(tab);
   };
 
-  // ─── Module toggle ────────────────────────────────────────────────────────
+  const toggleModule = (id: number) =>
+    setSelectedModuleIds((prev) => prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]);
 
-  const toggleModule = (id: number) => {
-    setSelectedModuleIds((prev) =>
-      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id],
-    );
-  };
-
-  // ─── Submit (create / edit) ───────────────────────────────────────────────
+  // ─── Submit ──────────────────────────────────────────────────────────────
 
   const onSubmit = async (data: FormValues) => {
     setSubmitting(true);
@@ -183,16 +328,23 @@ const Subscriptions = () => {
       statusId: data.isActive ? 1 : 2,
       notes: data.notes || undefined,
       moduleIds: selectedModuleIds,
-      // createdByOrgId is derived server-side from JWT claims
     };
     try {
       if (modalMode === 'edit' && editTarget) {
         const updated = await subscriptionService.updateSubscription(editTarget.id, payload);
-        setPlans((prev) => prev.map((p) => p.id === editTarget.id ? updated : p));
+        if (modalTab === 'org') {
+          setOrgPlans((prev) => prev.map((p) => p.id === editTarget.id ? updated : p));
+        } else {
+          setFranchisePlans((prev) => prev.map((p) => p.id === editTarget.id ? updated : p));
+        }
         toast.success('Subscription plan updated!');
       } else {
         const created = await subscriptionService.createSubscription(payload);
-        setPlans((prev) => [...prev, created]);
+        if (modalTab === 'org') {
+          setOrgPlans((prev) => [...prev, created]);
+        } else {
+          setFranchisePlans((prev) => [...prev, created]);
+        }
         toast.success('Subscription plan created!');
       }
       setModalMode(null);
@@ -203,11 +355,7 @@ const Subscriptions = () => {
     }
   };
 
-  // ─── Toggle status ────────────────────────────────────────────────────────
-
-  const handleToggleStatus = (plan: SubscriptionResponse) => {
-    setToggleTarget({ plan, newActive: !isActivePlan(plan) });
-  };
+  // ─── Toggle status ───────────────────────────────────────────────────────
 
   const confirmToggleStatus = async () => {
     if (!toggleTarget) return;
@@ -215,7 +363,12 @@ const Subscriptions = () => {
     setTogglingId(plan.id);
     try {
       const updated = await subscriptionService.toggleStatus(plan.id);
-      setPlans((prev) => prev.map((p) => p.id === plan.id ? updated : p));
+      const isOrgPlan = plan.global !== false && plan.createdByOrgId == null;
+      if (isOrgPlan) {
+        setOrgPlans((prev) => prev.map((p) => p.id === plan.id ? updated : p));
+      } else {
+        setFranchisePlans((prev) => prev.map((p) => p.id === plan.id ? updated : p));
+      }
       toast.success(`Plan marked as ${toggleTarget.newActive ? 'Active' : 'Inactive'}`);
     } catch (e: any) {
       toast.error(e.message || 'Failed to toggle status');
@@ -225,14 +378,19 @@ const Subscriptions = () => {
     }
   };
 
-  // ─── Delete ───────────────────────────────────────────────────────────────
+  // ─── Delete ──────────────────────────────────────────────────────────────
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
       await subscriptionService.deleteSubscription(deleteTarget.id);
-      setPlans((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      const isOrgPlan = deleteTarget.global !== false && deleteTarget.createdByOrgId == null;
+      if (isOrgPlan) {
+        setOrgPlans((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      } else {
+        setFranchisePlans((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      }
       toast.success('Subscription plan deleted');
       setDeleteTarget(null);
     } catch (e: any) {
@@ -242,33 +400,83 @@ const Subscriptions = () => {
     }
   };
 
-  // ─── Pagination ───────────────────────────────────────────────────────────
-
-  const totalPages = Math.max(1, Math.ceil(plans.length / PAGE_SIZE));
-  const paginated = plans.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
-
-
   // ─── Render ───────────────────────────────────────────────────────────────
+
+  const activePlans = activeTab === 'org' ? orgPlans : franchisePlans;
 
   return (
     <div className={styles.page}>
       {/* Header */}
       <div className={styles.pageHeader}>
         <div>
-          <h1 className={styles.pageTitle}>Subscription Plans</h1>
+          <h1 className={styles.pageTitle}>Subscriptions</h1>
         </div>
-        <button className={styles.createBtn} onClick={openCreate}>
+        <button className={styles.createBtn} onClick={() => openCreate(activeTab)}>
           <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
           Create Plan
         </button>
       </div>
 
-      {/* Table Panel */}
+      {/* Tabs — super admin sees both; org admin sees only Franchise tab */}
+      {isSuperAdmin && (
+        <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '1px solid #E5E7EB' }}>
+          <button
+            onClick={() => setActiveTab('org')}
+            style={{
+              padding: '10px 20px',
+              fontSize: 14,
+              fontWeight: 600,
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              borderBottom: activeTab === 'org' ? '2px solid #3b82f6' : '2px solid transparent',
+              color: activeTab === 'org' ? '#3b82f6' : '#6B7280',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: -1,
+            }}
+          >
+            <Building2 size={15} />
+            Organisation Subscriptions
+            <span style={{ background: activeTab === 'org' ? '#dbeafe' : '#F3F4F6', color: activeTab === 'org' ? '#2563eb' : '#6B7280', borderRadius: 12, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>
+              {orgPlans.length}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('franchise')}
+            style={{
+              padding: '10px 20px',
+              fontSize: 14,
+              fontWeight: 600,
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              borderBottom: activeTab === 'franchise' ? '2px solid #33AE95' : '2px solid transparent',
+              color: activeTab === 'franchise' ? '#33AE95' : '#6B7280',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: -1,
+            }}
+          >
+            <Sparkles size={15} />
+            Franchise Subscriptions
+            <span style={{ background: activeTab === 'franchise' ? '#d1fae5' : '#F3F4F6', color: activeTab === 'franchise' ? '#059669' : '#6B7280', borderRadius: 12, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>
+              {franchisePlans.length}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Panel */}
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <h3 className={styles.panelTitle}>
-            <CreditCard style={{ display: 'inline', width: 16, height: 16, marginRight: 8, verticalAlign: 'middle' }} />
-            All Plans
+            {activeTab === 'org'
+              ? <><Building2 style={{ display: 'inline', width: 16, height: 16, marginRight: 8, verticalAlign: 'middle' }} />Organisation Plans</>
+              : <><Sparkles style={{ display: 'inline', width: 16, height: 16, marginRight: 8, verticalAlign: 'middle' }} />Franchise Plans</>
+            }
           </h3>
           <button className={styles.refreshBtn} onClick={fetchData} title="Refresh">
             <RefreshCw style={{ width: 14, height: 14 }} />
@@ -276,113 +484,15 @@ const Subscriptions = () => {
         </div>
 
         <div className={styles.panelBody}>
-          {loading ? (
-            <div className={styles.emptyState}>
-              <div className={styles.spinner} />
-              <p style={{ marginTop: 12 }}>Loading...</p>
-            </div>
-          ) : plans.length === 0 ? (
-            <div className={styles.emptyState}>
-              <CreditCard style={{ width: 40, height: 40, marginBottom: 12, opacity: 0.3 }} />
-              <p>No subscription plans yet.</p>
-              <p className={styles.emptySubtext}>Click "Create Plan" to add one.</p>
-            </div>
-          ) : (
-            <>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Plan Name</th>
-                    <th>Price</th>
-                    <th>Duration</th>
-                    <th>Max Users</th>
-                    <th>Modules</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginated.map((p) => (
-                    <tr key={p.id} className={styles.tableRow}>
-                      <td><span className={styles.planName}>{p.planName}</span></td>
-                      <td className={styles.mutedCell}>
-                        {p.price != null ? `\u20B9 ${Number(p.price).toLocaleString('en-IN')}` : '\u2014'}
-                      </td>
-                      <td className={styles.mutedCell}>
-                        {p.durationMonths != null
-                          ? `${p.durationMonths} mo${p.billingCycle ? ` \u00B7 ${p.billingCycle.charAt(0) + p.billingCycle.slice(1).toLowerCase()}` : ''}`
-                          : '\u2014'}
-                      </td>
-                      <td className={styles.mutedCell}>
-                        {p.maxUsers != null ? p.maxUsers.toLocaleString() : '\u2014'}
-                      </td>
-                      <td className={styles.mutedCell}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#94a3b8' }}>
-                          <Package style={{ width: 12, height: 12 }} />
-                          {p.modules?.length ?? 0}
-                        </span>
-                      </td>
-                      <td>
-                        <StatusToggle
-                          active={isActivePlan(p)}
-                          loading={togglingId === p.id}
-                          onToggle={() => handleToggleStatus(p)}
-                        />
-                      </td>
-                      <td>
-                        <div className={styles.actions}>
-                          <button className={styles.actionBtn} title="View" onClick={() => setViewPlan(p)}>
-                            <Eye size={14} />
-                          </button>
-                          <button className={styles.actionBtn} title="Edit" onClick={() => openEdit(p)}>
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
-                            title="Delete"
-                            onClick={() => setDeleteTarget(p)}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className={styles.pagination}>
-                <span className={styles.paginationInfo}>
-                  {`Showing ${currentPage * PAGE_SIZE + 1}\u2013${Math.min((currentPage + 1) * PAGE_SIZE, plans.length)} of ${plans.length}`}
-                </span>
-                <div className={styles.paginationControls}>
-                  <button
-                    className={styles.pageBtn}
-                    disabled={currentPage === 0}
-                    onClick={() => setCurrentPage((prev) => prev - 1)}
-                  >
-                    <ChevronLeft size={14} />
-                  </button>
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <button
-                      key={i}
-                      className={`${styles.pageBtn} ${i === currentPage ? styles.pageBtnActive : ''}`}
-                      onClick={() => setCurrentPage(i)}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                  <button
-                    className={styles.pageBtn}
-                    disabled={currentPage === totalPages - 1}
-                    onClick={() => setCurrentPage((prev) => prev + 1)}
-                  >
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
+          <PlanTable
+            plans={activePlans}
+            loading={loading}
+            onView={setViewPlan}
+            onEdit={openEdit}
+            onDelete={setDeleteTarget}
+            onToggle={(p) => setToggleTarget({ plan: p, newActive: !isActivePlan(p) })}
+            togglingId={togglingId}
+          />
         </div>
       </div>
 
@@ -391,17 +501,21 @@ const Subscriptions = () => {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-                <CreditCard size={18} className="text-blue-400" />
+              <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${modalTab === 'org' ? 'bg-blue-600/20 border border-blue-500/30' : 'bg-[#33AE95]/15 border border-[#33AE95]/30'}`}>
+                {modalTab === 'org'
+                  ? <CreditCard size={18} className="text-blue-400" />
+                  : <Sparkles size={18} className="text-[#33AE95]" />}
               </div>
               <DialogTitle className="text-xl font-bold text-[#263B4F]">
-                {modalMode === 'edit' ? 'Edit Subscription Plan' : 'Create Subscription Plan'}
+                {modalMode === 'edit' ? 'Edit Subscription Plan' : `Create ${modalTab === 'org' ? 'Organisation' : 'Franchise'} Plan`}
               </DialogTitle>
             </div>
             <DialogDescription className="text-[#6B7280] text-sm pl-12">
               {modalMode === 'edit'
                 ? 'Update the plan details and its assigned modules.'
-                : 'Define a reusable plan with pricing, limits, and features.'}
+                : modalTab === 'org'
+                  ? 'Define a global plan for top-level organisations.'
+                  : 'Define a plan to offer your franchise organisations.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -641,7 +755,6 @@ const Subscriptions = () => {
               Are you sure you want to{' '}
               <strong className="text-[#263B4F]">{toggleTarget?.newActive ? 'activate' : 'deactivate'}</strong>{' '}
               <strong className="text-[#263B4F]">{toggleTarget?.plan.planName}</strong>?
-              {!toggleTarget?.newActive && ' Inactive plans will not be available for new organisations.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">

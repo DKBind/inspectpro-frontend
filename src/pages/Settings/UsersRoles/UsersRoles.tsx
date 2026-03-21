@@ -691,7 +691,7 @@ const UsersRoles = () => {
                       <td>
                         <button className={styles.countBtn} onClick={() => openModulesModal(role)}>
                           <Package size={12} style={{ opacity: 0.6 }} />
-                          {grouped.length}
+                          {role.moduleCount ?? 0}
                         </button>
                       </td>
                       {/* Status toggle */}

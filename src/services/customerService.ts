@@ -14,11 +14,20 @@ export const customerService = {
   // ─── Caller-aware endpoints (no orgId required) ──────────────────────────
 
   listClients: async (page = 0, size = 10): Promise<PageResponse<CustomerResponse>> => {
-    const res = await api.get<ApiResponse<PageResponse<CustomerResponse>>>(
+    // Backend returns flat: { status, message, totalElements, object: CustomerResponse[] }
+    const raw = await api.get<{ status: boolean; message: string; totalElements?: number; object: CustomerResponse[] | null }>(
       `/clients?page=${page}&size=${size}`,
     );
-    if (!res.status) throw new Error(res.message || 'Failed to fetch clients');
-    return res.object as PageResponse<CustomerResponse>;
+    if (!raw.status) throw new Error(raw.message || 'Failed to fetch clients');
+    const items = raw.object ?? [];
+    const total = raw.totalElements ?? items.length;
+    return {
+      content: items,
+      totalElements: total,
+      totalPages: Math.ceil(total / size) || 0,
+      currentPage: page,
+      pageSize: size,
+    };
   },
 
   createClient: async (data: CustomerRequest): Promise<CustomerResponse> => {

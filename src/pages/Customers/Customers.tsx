@@ -6,15 +6,21 @@ import { toast } from 'sonner';
 import {
   Users, Plus, RefreshCw, Eye, Pencil, Trash2, Mail, Phone,
   Building2, AlertTriangle, User, Loader2, ChevronLeft, ChevronRight,
+  Lock, Wand2, ChevronDown, GitBranch,
 } from 'lucide-react';
 
 import { customerService } from '@/services/customerService';
+import { organisationService } from '@/services/organisationService';
 import type { CustomerResponse } from '@/services/models/customer';
+import type { OrganisationResponse } from '@/services/models/organisation';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
 } from '@/components/shared-ui/Dialog/dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
 import { Button } from '@/components/shared-ui/Button/button';
 import { Input } from '@/components/shared-ui/Input/input';
 import { Fld, ViewRow, inputCls } from '@/components/shared-ui/form-helpers';
@@ -22,49 +28,102 @@ import styles from './Customers.module.css';
 
 const PAGE_SIZE = 10;
 
-const schema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().optional(),
-  email: z.string().optional().refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Invalid email'),
+// Super admin must pick 'org' or 'franchise'. Org admin may also pick 'own'.
+type Ownership = 'own' | 'org' | 'franchise';
+
+// ─── Schemas ───────────────────────────────────────────────────────────────
+
+const createSchema = z.object({
+  firstName:   z.string().min(1, 'First name is required'),
+  lastName:    z.string().min(1, 'Last name is required'),
+  email:       z.string().min(1, 'Email is required').email('Invalid email'),
+  password:    z.string().optional(),
   phoneNumber: z.string().optional(),
-  companyName: z.string().optional(),
-  notes: z.string().optional(),
 });
 
-type FormValues = z.infer<typeof schema>;
+const editSchema = z.object({
+  firstName:   z.string().min(1, 'First name is required'),
+  lastName:    z.string().optional(),
+  email:       z.string().optional().refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Invalid email'),
+  phoneNumber: z.string().optional(),
+});
 
-const EMPTY: FormValues = { firstName: '', lastName: '', email: '', phoneNumber: '', companyName: '', notes: '' };
+type CreateValues = z.infer<typeof createSchema>;
+type EditValues   = z.infer<typeof editSchema>;
+
+const EMPTY_CREATE: CreateValues = { firstName: '', lastName: '', email: '', password: '', phoneNumber: '' };
+const EMPTY_EDIT:   EditValues   = { firstName: '', lastName: '', email: '', phoneNumber: '' };
+
+const selectCls = (err = false) =>
+  `w-full inline-flex items-center justify-between h-10 rounded-md border bg-white px-3 text-sm font-normal text-[#263B4F] hover:bg-[#F3F4F6] focus:outline-none transition-all ${err ? 'border-[#DF453A]' : 'border-[#E5E7EB]'}`;
+
+function generatePassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────
 
 const Clients = () => {
-  const { user } = useAuthStore();
+  const { user: authUser } = useAuthStore();
+  const isSuperAdmin = authUser?.isSuperAdmin === true || authUser?.role === 'super_admin';
+  const isOrgAdmin   = !isSuperAdmin && !!authUser?.orgId;
 
-  const [clients, setClients] = useState<CustomerResponse[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Franchise admin: org admin whose own org has a parent org
+  const [isFranchiseAdmin, setIsFranchiseAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!isOrgAdmin || !authUser?.orgId) { setIsFranchiseAdmin(false); return; }
+    organisationService.getOrganisationByUuid(authUser.orgId)
+      .then((org) => setIsFranchiseAdmin(!!org.parentOrgId))
+      .catch(() => setIsFranchiseAdmin(false));
+  }, [isOrgAdmin, authUser?.orgId]);
+
+  const [clients,     setClients]     = useState<CustomerResponse[]>([]);
+  const [loading,     setLoading]     = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages,  setTotalPages]  = useState(0);
+  const [totalItems,  setTotalItems]  = useState(0);
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<CustomerResponse | null>(null);
-  const [viewTarget, setViewTarget] = useState<CustomerResponse | null>(null);
+  const [createOpen,   setCreateOpen]   = useState(false);
+  const [editTarget,   setEditTarget]   = useState<CustomerResponse | null>(null);
+  const [viewTarget,   setViewTarget]   = useState<CustomerResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CustomerResponse | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [deleting,     setDeleting]     = useState(false);
+  const [submitting,   setSubmitting]   = useState(false);
 
-  const { register, reset, handleSubmit, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: EMPTY,
-  });
+  // ── "Who is this for?" state ────────────────────────────────────────────
+  const [ownership,          setOwnership]          = useState<Ownership>('own');
+  // Super admin lists
+  const [allOrgs,            setAllOrgs]            = useState<OrganisationResponse[]>([]);
+  const [allFranchises,      setAllFranchises]       = useState<OrganisationResponse[]>([]);
+  // For super admin "Franchise" two-step
+  const [selectedParentOrgId, setSelectedParentOrgId] = useState<string>('');
+  const [filteredFranchises,  setFilteredFranchises]  = useState<OrganisationResponse[]>([]);
+  const [loadingFranchises,   setLoadingFranchises]   = useState(false);
+  // Org admin child franchises
+  const [orgFranchises,      setOrgFranchises]       = useState<OrganisationResponse[]>([]);
+  // Final target (org ID or franchise ID) to pass to backend as franchiseId
+  const [selectedTargetId,   setSelectedTargetId]   = useState<string>('');
 
-  // ─── Fetch ────────────────────────────────────────────────────────────────
+  const createForm = useForm<CreateValues>({ resolver: zodResolver(createSchema), defaultValues: EMPTY_CREATE });
+  const editForm   = useForm<EditValues>({ resolver: zodResolver(editSchema),   defaultValues: EMPTY_EDIT });
+
+  const { register: regCreate, reset: resetCreate, setValue: setCreateValue,
+    watch: watchCreate, formState: { errors: createErrors } } = createForm;
+  const { register: regEdit, reset: resetEdit, formState: { errors: editErrors } } = editForm;
+
+  const passwordValue = watchCreate('password');
+
+  // ─── Fetch clients ───────────────────────────────────────────────────────
 
   const fetchClients = async (page = currentPage) => {
     setLoading(true);
     try {
       const data = await customerService.listClients(page, PAGE_SIZE);
-      setClients(data.content);
-      setTotalPages(data.totalPages);
-      setTotalItems(data.totalElements);
+      setClients(data.content ?? []);
+      setTotalPages(data.totalPages ?? 0);
+      setTotalItems(data.totalElements ?? 0);
     } catch {
       setClients([]);
     } finally {
@@ -72,58 +131,122 @@ const Clients = () => {
     }
   };
 
-  useEffect(() => { fetchClients(currentPage); }, [currentPage, user?.id]);
+  useEffect(() => { fetchClients(currentPage); }, [currentPage, authUser?.id]);
 
-  // ─── Open forms ───────────────────────────────────────────────────────────
+  // ─── Load org/franchise lists ────────────────────────────────────────────
 
-  const openCreate = () => { setEditTarget(null); reset(EMPTY); setFormOpen(true); };
+  useEffect(() => {
+    if (isSuperAdmin) {
+      organisationService.getOrganisations(0, 1000)
+        .then((d) => setAllOrgs(d.content ?? []))
+        .catch(() => {});
+      organisationService.getFranchises(0, 1000)
+        .then((d) => setAllFranchises(d.content ?? []))
+        .catch(() => {});
+    } else if (isOrgAdmin && authUser?.orgId) {
+      organisationService.getFranchises(0, 200, authUser.orgId)
+        .then((d) => setOrgFranchises(d.content ?? []))
+        .catch(() => {});
+    }
+  }, [isSuperAdmin, isOrgAdmin, authUser?.orgId]);
 
-  const openEdit = (c: CustomerResponse) => {
-    setEditTarget(c);
-    reset({
-      firstName: c.firstName ?? '',
-      lastName: c.lastName ?? '',
-      email: c.email ?? '',
-      phoneNumber: c.phoneNumber ?? '',
-      companyName: c.companyName ?? '',
-      notes: c.notes ?? '',
-    });
-    setFormOpen(true);
+  // When super admin picks a parent org for the "Franchise" flow, load its franchises
+  useEffect(() => {
+    if (!isSuperAdmin || ownership !== 'franchise' || !selectedParentOrgId) {
+      setFilteredFranchises([]);
+      return;
+    }
+    setLoadingFranchises(true);
+    organisationService.getFranchises(0, 200, selectedParentOrgId)
+      .then((d) => setFilteredFranchises(d.content ?? []))
+      .catch(() => setFilteredFranchises([]))
+      .finally(() => setLoadingFranchises(false));
+  }, [isSuperAdmin, ownership, selectedParentOrgId]);
+
+  // ─── Modal helpers ───────────────────────────────────────────────────────
+
+  const resetOwnership = () => {
+    // Super admin defaults to 'org'; franchise admin has no choice; org admin defaults to 'own'.
+    setOwnership(isSuperAdmin ? 'org' : 'own');
+    setSelectedTargetId('');
+    setSelectedParentOrgId('');
+    setFilteredFranchises([]);
   };
 
-  const closeForm = () => { setFormOpen(false); setEditTarget(null); reset(EMPTY); };
+  const openCreate = () => { resetCreate(EMPTY_CREATE); resetOwnership(); setCreateOpen(true); };
+  const openEdit   = (c: CustomerResponse) => {
+    resetEdit({ firstName: c.firstName ?? '', lastName: c.lastName ?? '',
+                email: c.email ?? '', phoneNumber: c.phoneNumber ?? '' });
+    setEditTarget(c);
+  };
+  const closeCreate = () => { setCreateOpen(false); resetCreate(EMPTY_CREATE); resetOwnership(); };
+  const closeEdit   = () => { setEditTarget(null); resetEdit(EMPTY_EDIT); };
 
-  // ─── Submit ───────────────────────────────────────────────────────────────
+  // ─── Submit Create ───────────────────────────────────────────────────────
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmitCreate = async (data: CreateValues) => {
+    // Franchise admin: no validation needed — always their own org
+    if (!isFranchiseAdmin) {
+      if (isSuperAdmin) {
+        if (ownership === 'org' && !selectedTargetId)
+          { toast.error('Please select an organisation.'); return; }
+        if (ownership === 'franchise' && !selectedParentOrgId)
+          { toast.error('Please select a parent organisation first.'); return; }
+        if (ownership === 'franchise' && !selectedTargetId)
+          { toast.error('Please select a franchise.'); return; }
+      } else if (isOrgAdmin && ownership === 'franchise' && !selectedTargetId) {
+        toast.error('Please select a franchise.'); return;
+      }
+    }
+
     setSubmitting(true);
     const payload = {
-      firstName: data.firstName.trim(),
-      lastName: data.lastName?.trim() || undefined,
-      email: data.email?.trim() || undefined,
+      firstName:   data.firstName.trim(),
+      lastName:    data.lastName?.trim()    || undefined,
+      email:       data.email?.trim()       || undefined,
+      password:    data.password?.trim()    || undefined,
       phoneNumber: data.phoneNumber?.trim() || undefined,
-      companyName: data.companyName?.trim() || undefined,
-      notes: data.notes?.trim() || undefined,
+      // Franchise admin sends no franchiseId — backend resolves their own org
+      // "My Own" → no franchiseId; org/franchise → use selectedTargetId
+      franchiseId: isFranchiseAdmin ? undefined
+        : (ownership !== 'own' && selectedTargetId ? selectedTargetId : undefined),
     };
     try {
-      if (editTarget) {
-        const updated = await customerService.updateClient(editTarget.id, payload);
-        setClients((prev) => prev.map((c) => c.id === editTarget.id ? updated : c));
-        toast.success('Client updated!');
-      } else {
-        const created = await customerService.createClient(payload);
-        setClients((prev) => [created, ...prev]);
-        toast.success('Client created!');
-      }
-      closeForm();
+      await customerService.createClient(payload);
+      toast.success('Client created!');
+      closeCreate();
+      fetchClients(0);
+      setCurrentPage(0);
     } catch (e: any) {
-      toast.error(e.message || 'Failed to save client');
+      toast.error(e.message || 'Failed to create client');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ─── Delete ───────────────────────────────────────────────────────────────
+  // ─── Submit Edit ─────────────────────────────────────────────────────────
+
+  const onSubmitEdit = async (data: EditValues) => {
+    if (!editTarget) return;
+    setSubmitting(true);
+    try {
+      await customerService.updateClient(editTarget.id, {
+        firstName:   data.firstName.trim(),
+        lastName:    data.lastName?.trim()    || undefined,
+        email:       data.email?.trim()       || undefined,
+        phoneNumber: data.phoneNumber?.trim() || undefined,
+      });
+      toast.success('Client updated!');
+      closeEdit();
+      fetchClients(currentPage);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update client');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ─── Delete ──────────────────────────────────────────────────────────────
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -140,10 +263,65 @@ const Clients = () => {
     }
   };
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── Derived helpers ─────────────────────────────────────────────────────
+
+  // Super admin: must assign to an org or franchise (no "My Own")
+  // Org admin: can create for themselves or a child franchise
+  // Franchise admin: no choice — always their own franchise
+  const ownershipOptions: { key: Ownership; label: string }[] = isSuperAdmin
+    ? [{ key: 'org', label: 'Organisation' }, { key: 'franchise', label: 'Franchise' }]
+    : [{ key: 'own', label: 'My Organisation' }, { key: 'franchise', label: 'Franchise' }];
+
+  // For "Organisation" dropdown (super admin only)
+  const selectedOrg = allOrgs.find((o) => o.uuid === selectedTargetId);
+  // For "Franchise" parent org picker (super admin)
+  const selectedParentOrg = allOrgs.find((o) => o.uuid === selectedParentOrgId);
+  // For "Franchise" final selection
+  const franchiseList  = isSuperAdmin ? filteredFranchises : orgFranchises;
+  const selectedFranchise = franchiseList.find((o) => o.uuid === selectedTargetId);
+
+  // ─── OrgDropdown helper ──────────────────────────────────────────────────
+
+  const OrgDropdown = ({ list, value, placeholder, icon, onSelect }: {
+    list: OrganisationResponse[];
+    value: string;
+    placeholder: string;
+    icon: React.ReactNode;
+    onSelect: (id: string) => void;
+  }) => {
+    const selected = list.find((o) => o.uuid === value);
+    return (
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger className={selectCls(!value && submitting)}>
+          <span className={selected ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+            {selected
+              ? <span className="flex items-center gap-2">{icon}{selected.name}</span>
+              : placeholder}
+          </span>
+          <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999] max-h-52 overflow-y-auto"
+          style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
+        >
+          {list.length === 0
+            ? <DropdownMenuItem disabled className="text-[#9CA3AF]">No items found</DropdownMenuItem>
+            : list.map((o) => (
+                <DropdownMenuItem key={o.uuid} onSelect={() => onSelect(o.uuid)}
+                  className="cursor-pointer focus:bg-[#F3F4F6] py-2.5">
+                  {o.name}
+                </DropdownMenuItem>
+              ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
+  // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
     <div className={styles.page}>
+
       {/* Header */}
       <div className={styles.header}>
         <div>
@@ -151,12 +329,11 @@ const Clients = () => {
           <p className={styles.subtitle}>{totalItems} client{totalItems !== 1 ? 's' : ''} total</p>
         </div>
         <button className={styles.createBtn} onClick={openCreate}>
-          <Plus style={{ width: 15, height: 15 }} />
-          Add Client
+          <Plus style={{ width: 15, height: 15 }} /> Add Client
         </button>
       </div>
 
-      {/* Panel */}
+      {/* Table panel */}
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <div className={styles.panelTitle}>
@@ -171,14 +348,13 @@ const Clients = () => {
         <div className={styles.panelBody}>
           {loading ? (
             <div className={styles.emptyState}>
-              <Loader2 className={styles.spinner} />
-              <p>Loading clients...</p>
+              <Loader2 className={styles.spinner} /><p>Loading clients...</p>
             </div>
           ) : clients.length === 0 ? (
             <div className={styles.emptyState}>
               <div className={styles.emptyIcon}><Users style={{ width: 28, height: 28 }} /></div>
               <p className={styles.emptyTitle}>No clients yet</p>
-              <p className={styles.emptySubtitle}>Click "Add Client" to add your first client.</p>
+              <p className={styles.emptySubtitle}>Click "Add Client" to get started.</p>
             </div>
           ) : (
             <>
@@ -186,8 +362,8 @@ const Clients = () => {
                 <thead>
                   <tr>
                     <th>Client</th>
-                    <th>Company</th>
                     <th>Phone</th>
+                    <th>Organisation</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
@@ -197,28 +373,25 @@ const Clients = () => {
                     <tr key={c.id} className={styles.row}>
                       <td>
                         <div className={styles.clientCell}>
-                          <div className={styles.avatar}>
-                            {(c.firstName?.[0] ?? '?').toUpperCase()}
-                          </div>
+                          <div className={styles.avatar}>{(c.firstName?.[0] ?? '?').toUpperCase()}</div>
                           <div>
                             <p className={styles.clientName}>{c.fullName || c.firstName}</p>
                             {c.email && (
                               <p className={styles.clientEmail}>
-                                <Mail style={{ width: 11, height: 11, display: 'inline', marginRight: 3 }} />
-                                {c.email}
+                                <Mail style={{ width: 11, height: 11, display: 'inline', marginRight: 3 }} />{c.email}
                               </p>
                             )}
                           </div>
                         </div>
                       </td>
                       <td className={styles.muted}>
-                        {c.companyName
-                          ? <span className={styles.company}><Building2 style={{ width: 12, height: 12 }} />{c.companyName}</span>
+                        {c.phoneNumber
+                          ? <span className={styles.company}><Phone style={{ width: 12, height: 12 }} />{c.phoneNumber}</span>
                           : '—'}
                       </td>
                       <td className={styles.muted}>
-                        {c.phoneNumber
-                          ? <span className={styles.company}><Phone style={{ width: 12, height: 12 }} />{c.phoneNumber}</span>
+                        {c.franchiseName
+                          ? <span className={styles.company}><Building2 style={{ width: 12, height: 12 }} />{c.franchiseName}</span>
                           : '—'}
                       </td>
                       <td>
@@ -238,7 +411,6 @@ const Clients = () => {
                 </tbody>
               </table>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className={styles.pagination}>
                   <span className={styles.paginationInfo}>
@@ -249,9 +421,8 @@ const Clients = () => {
                       <ChevronLeft size={14} />
                     </button>
                     {Array.from({ length: totalPages }, (_, i) => (
-                      <button key={i} className={`${styles.pageBtn} ${i === currentPage ? styles.pageBtnActive : ''}`} onClick={() => setCurrentPage(i)}>
-                        {i + 1}
-                      </button>
+                      <button key={i} className={`${styles.pageBtn} ${i === currentPage ? styles.pageBtnActive : ''}`}
+                        onClick={() => setCurrentPage(i)}>{i + 1}</button>
                     ))}
                     <button className={styles.pageBtn} disabled={currentPage === totalPages - 1} onClick={() => setCurrentPage((p) => p + 1)}>
                       <ChevronRight size={14} />
@@ -264,66 +435,234 @@ const Clients = () => {
         </div>
       </div>
 
-      {/* Create / Edit Modal */}
-      <Dialog open={formOpen} onOpenChange={(open) => { if (!open) closeForm(); }}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto shadow-xl rounded-2xl p-0">
+      {/* ──────────────────────── CREATE MODAL ──────────────────────────── */}
+      <Dialog open={createOpen} onOpenChange={(o) => { if (!o) closeCreate(); }}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/15 border border-[#33AE95]/30 flex items-center justify-center">
+              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
                 <User size={18} className="text-[#33AE95]" />
               </div>
-              <DialogTitle className="text-xl font-bold text-[#263B4F]">
-                {editTarget ? 'Edit Client' : 'Add Client'}
-              </DialogTitle>
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">Add Client</DialogTitle>
             </div>
             <DialogDescription className="text-[#6B7280] text-sm pl-12">
-              {editTarget ? 'Update the client details.' : 'Add a new client to your organisation.'}
+              First select who this client is for, then fill in their details.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit(onSubmit, () => toast.error('Please fix the errors.'))}>
-            <div className="px-7 py-6 space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Fld label="First Name" required error={errors.firstName?.message}>
-                  <Input placeholder="John" {...register('firstName')} className={inputCls(!!errors.firstName)} />
-                </Fld>
-                <Fld label="Last Name">
-                  <Input placeholder="Doe" {...register('lastName')} className={inputCls(false)} />
-                </Fld>
+          <form onSubmit={createForm.handleSubmit(onSubmitCreate, () => toast.error('Please fix the errors.'))}>
+            <div className="px-7 py-6 space-y-6">
+
+              {/* ── STEP 1: Who is this for? (hidden for franchise admin) ─ */}
+              {!isFranchiseAdmin && <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[#33AE95]"><Building2 size={13} /></span>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">
+                    Who is this client for?
+                  </span>
+                </div>
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5 space-y-4">
+
+                  {/* Toggle buttons */}
+                  <div className="flex gap-2 flex-wrap">
+                    {ownershipOptions.map(({ key, label }) => (
+                      <button key={key} type="button"
+                        onClick={() => { setOwnership(key); setSelectedTargetId(''); setSelectedParentOrgId(''); }}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                          ownership === key
+                            ? 'bg-[#33AE95] text-white border-[#33AE95]'
+                            : 'bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#33AE95] hover:text-[#33AE95]'
+                        }`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Own — only shown for org admin */}
+                  {ownership === 'own' && (
+                    <p className="text-xs text-[#9CA3AF]">
+                      Client will be created directly under your organisation.
+                    </p>
+                  )}
+
+                  {/* Super admin → Organisation */}
+                  {isSuperAdmin && ownership === 'org' && (
+                    <Fld label="Select Organisation" required>
+                      <OrgDropdown
+                        list={allOrgs}
+                        value={selectedTargetId}
+                        placeholder="— Select organisation —"
+                        icon={<Building2 size={13} />}
+                        onSelect={setSelectedTargetId}
+                      />
+                    </Fld>
+                  )}
+
+                  {/* Super admin → Franchise: two-step */}
+                  {isSuperAdmin && ownership === 'franchise' && (
+                    <div className="space-y-3">
+                      <Fld label="Step 1 — Select Parent Organisation" required>
+                        <OrgDropdown
+                          list={allOrgs}
+                          value={selectedParentOrgId}
+                          placeholder="— Select parent organisation —"
+                          icon={<Building2 size={13} />}
+                          onSelect={(id) => { setSelectedParentOrgId(id); setSelectedTargetId(''); }}
+                        />
+                      </Fld>
+                      {selectedParentOrgId && (
+                        <Fld label="Step 2 — Select Franchise" required>
+                          {loadingFranchises
+                            ? <div className="flex items-center gap-2 text-xs text-[#9CA3AF] h-10 px-3"><Loader2 size={14} className="animate-spin" />Loading franchises…</div>
+                            : <OrgDropdown
+                                list={filteredFranchises}
+                                value={selectedTargetId}
+                                placeholder={filteredFranchises.length === 0 ? 'No franchises found for this organisation' : '— Select franchise —'}
+                                icon={<GitBranch size={13} />}
+                                onSelect={setSelectedTargetId}
+                              />
+                          }
+                        </Fld>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Org admin → Franchise */}
+                  {isOrgAdmin && ownership === 'franchise' && (
+                    <Fld label="Select Franchise" required>
+                      <OrgDropdown
+                        list={orgFranchises}
+                        value={selectedTargetId}
+                        placeholder={orgFranchises.length === 0 ? 'No franchises under your organisation' : '— Select franchise —'}
+                        icon={<GitBranch size={13} />}
+                        onSelect={setSelectedTargetId}
+                      />
+                    </Fld>
+                  )}
+                </div>
+              </section>}
+
+              {/* ── STEP 2: Personal Details ───────────────────────────── */}
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-[#33AE95]"><User size={13} /></span>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Client Details</span>
+                </div>
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Fld label="First Name" required error={createErrors.firstName?.message}>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10"><User size={15} /></span>
+                        <Input placeholder="John" {...regCreate('firstName')} className={`${inputCls(!!createErrors.firstName)} pl-9`} />
+                      </div>
+                    </Fld>
+                    <Fld label="Last Name" required error={createErrors.lastName?.message}>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10"><User size={15} /></span>
+                        <Input placeholder="Doe" {...regCreate('lastName')} className={`${inputCls(!!createErrors.lastName)} pl-9`} />
+                      </div>
+                    </Fld>
+                    <Fld label="Email" required error={createErrors.email?.message}>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10"><Mail size={15} /></span>
+                        <Input type="email" autoComplete="off" placeholder="john@example.com"
+                          {...regCreate('email')} className={`${inputCls(!!createErrors.email)} pl-9`} />
+                      </div>
+                    </Fld>
+                    <Fld label="Password">
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10"><Lock size={15} /></span>
+                          <Input type="text" autoComplete="new-password" placeholder="Set a password"
+                            {...regCreate('password')} className={`${inputCls(false)} pl-9`} />
+                        </div>
+                        <button type="button" onClick={() => setCreateValue('password', generatePassword())}
+                          className="shrink-0 h-10 px-3 rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#33AE95] hover:border-[#33AE95] transition-all flex items-center gap-1.5 text-xs font-medium">
+                          <Wand2 size={13} /> Generate
+                        </button>
+                      </div>
+                      {passwordValue && <p className="text-xs text-[#6B7280] mt-1 font-mono break-all">{passwordValue}</p>}
+                    </Fld>
+                    <Fld label="Phone">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10"><Phone size={15} /></span>
+                        <Input placeholder="+91 98765 43210" {...regCreate('phoneNumber')} className={`${inputCls(false)} pl-9`} />
+                      </div>
+                    </Fld>
+                  </div>
+                </div>
+              </section>
+
+              {/* Role badge */}
+              <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] px-5 py-3 flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#33AE95]/10 border border-[#33AE95]/30 text-[#33AE95] text-xs font-semibold">
+                  <User size={12} /> Client
+                </span>
+                <span className="text-xs text-[#9CA3AF]">Role is fixed — clients are end users of the organisation.</span>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Fld label="Email" error={errors.email?.message}>
-                  <Input type="email" placeholder="john@company.com" {...register('email')} className={inputCls(!!errors.email)} />
-                </Fld>
-                <Fld label="Phone">
-                  <Input placeholder="+91 98765 43210" {...register('phoneNumber')} className={inputCls(false)} />
-                </Fld>
-              </div>
-              <Fld label="Company Name">
-                <Input placeholder="Company Pvt. Ltd." {...register('companyName')} className={inputCls(false)} />
-              </Fld>
-              <Fld label="Notes" hint="Optional">
-                <textarea rows={3} placeholder="Any additional notes..." {...register('notes')}
-                  className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 text-sm px-3 py-2 resize-none outline-none" />
-              </Fld>
             </div>
 
             <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F9FAFB] rounded-b-2xl flex gap-3">
-              <Button type="button" variant="ghost" onClick={closeForm} disabled={submitting}
+              <Button type="button" variant="ghost" onClick={closeCreate} disabled={submitting}
                 className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Cancel</Button>
               <Button type="submit" disabled={submitting}
                 className="flex-1 sm:flex-none sm:min-w-40 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg">
                 {submitting
-                  ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />{editTarget ? 'Updating...' : 'Adding...'}</span>
-                  : editTarget ? 'Update Client' : 'Add Client'}
+                  ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Adding…</span>
+                  : 'Add Client'}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* View Modal */}
-      <Dialog open={!!viewTarget} onOpenChange={(open) => { if (!open) setViewTarget(null); }}>
+      {/* ───────────────────────── EDIT MODAL ───────────────────────────── */}
+      <Dialog open={!!editTarget} onOpenChange={(o) => { if (!o) closeEdit(); }}>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto shadow-xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/15 border border-[#33AE95]/30 flex items-center justify-center">
+                <User size={18} className="text-[#33AE95]" />
+              </div>
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">Edit Client</DialogTitle>
+            </div>
+            <DialogDescription className="text-[#6B7280] text-sm pl-12">Update client details.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={editForm.handleSubmit(onSubmitEdit, () => toast.error('Please fix the errors.'))}>
+            <div className="px-7 py-6 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Fld label="First Name" required error={editErrors.firstName?.message}>
+                  <Input placeholder="John" {...regEdit('firstName')} className={inputCls(!!editErrors.firstName)} />
+                </Fld>
+                <Fld label="Last Name">
+                  <Input placeholder="Doe" {...regEdit('lastName')} className={inputCls(false)} />
+                </Fld>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Fld label="Email" error={editErrors.email?.message}>
+                  <Input type="email" placeholder="john@company.com" {...regEdit('email')} className={inputCls(!!editErrors.email)} />
+                </Fld>
+                <Fld label="Phone">
+                  <Input placeholder="+91 98765 43210" {...regEdit('phoneNumber')} className={inputCls(false)} />
+                </Fld>
+              </div>
+            </div>
+            <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F9FAFB] rounded-b-2xl flex gap-3">
+              <Button type="button" variant="ghost" onClick={closeEdit} disabled={submitting}
+                className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Cancel</Button>
+              <Button type="submit" disabled={submitting}
+                className="flex-1 sm:flex-none sm:min-w-40 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg">
+                {submitting
+                  ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Updating…</span>
+                  : 'Update Client'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ──────────────────────── VIEW MODAL ────────────────────────────── */}
+      <Dialog open={!!viewTarget} onOpenChange={(o) => { if (!o) setViewTarget(null); }}>
         <DialogContent className="sm:max-w-md shadow-xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
@@ -335,12 +674,12 @@ const Clients = () => {
           </DialogHeader>
           {viewTarget && (
             <div className="px-7 py-5 space-y-0">
-              <ViewRow label="Name" value={viewTarget.fullName || viewTarget.firstName} />
-              <ViewRow label="Email" value={viewTarget.email ?? '—'} />
-              <ViewRow label="Phone" value={viewTarget.phoneNumber ?? '—'} />
-              <ViewRow label="Company" value={viewTarget.companyName ?? '—'} />
-              <ViewRow label="Status" value={viewTarget.isActive ? 'Active' : 'Inactive'} />
-              {viewTarget.notes && <ViewRow label="Notes" value={viewTarget.notes} />}
+              <ViewRow label="Name"         value={viewTarget.fullName || viewTarget.firstName} />
+              <ViewRow label="Email"        value={viewTarget.email        ?? '—'} />
+              <ViewRow label="Phone"        value={viewTarget.phoneNumber  ?? '—'} />
+              <ViewRow label="Organisation" value={viewTarget.franchiseName ?? '—'} />
+              <ViewRow label="Status"       value={viewTarget.isActive ? 'Active' : 'Inactive'} />
+              <ViewRow label="Created"      value={viewTarget.createdAt    ?? '—'} />
             </div>
           )}
           <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">
@@ -356,8 +695,8 @@ const Clients = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirm */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      {/* ─────────────────────── DELETE CONFIRM ─────────────────────────── */}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
         <DialogContent className="sm:max-w-sm shadow-xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
@@ -375,7 +714,7 @@ const Clients = () => {
               className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Cancel</Button>
             <Button onClick={handleDelete} disabled={deleting}
               className="bg-red-600 hover:bg-red-500 text-white font-semibold min-w-28">
-              {deleting ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Deleting...</span> : 'Delete'}
+              {deleting ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Deleting…</span> : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>

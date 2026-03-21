@@ -12,6 +12,11 @@ import {
 import { subscriptionService } from '@/services/subscriptionService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function formatDate(d: Date): string {
+  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 export function PlanSelector() {
   const { watch, setValue, register, formState: { errors } } = useFormContext();
   const selectedPlanId = watch('subscriptionId');
@@ -34,7 +39,7 @@ export function PlanSelector() {
     const d = new Date(subscriptionStartDate);
     if (isNaN(d.getTime())) return '';
     d.setMonth(d.getMonth() + selectedPlan.durationMonths);
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    return formatDate(d);
   })();
 
   return (

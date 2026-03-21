@@ -24,6 +24,11 @@ import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function formatEndDate(d: Date): string {
+  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 function formatDisplayDate(iso?: string | null): string {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -125,7 +130,7 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
     const d = new Date(subscriptionStartDate);
     if (isNaN(d.getTime())) return '';
     d.setMonth(d.getMonth() + selectedPlan.durationMonths);
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    return formatEndDate(d);
   })();
 
   // Load parent orgs
