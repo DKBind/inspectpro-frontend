@@ -74,6 +74,7 @@ export interface RoleResponse {
   createdByName?: string;
   createdDate?: string;
   assignedUsersCount?: number;
+  moduleCount?: number;
 }
 
 export interface RoleModulePermission {
