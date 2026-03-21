@@ -47,6 +47,12 @@ export const customerService = {
     if (!res.status) throw new Error(res.message || 'Failed to delete client');
   },
 
+  toggleClientStatus: async (id: string): Promise<CustomerResponse> => {
+    const res = await api.patch<ApiResponse<CustomerResponse>>(`/clients/${id}/status`, {});
+    if (!res.status) throw new Error(res.message || 'Failed to toggle status');
+    return res.object as CustomerResponse;
+  },
+
   // ─── Org-scoped endpoints (legacy) ───────────────────────────────────────
 
   createCustomer: async (franchiseId: string, data: CustomerRequest): Promise<CustomerResponse> => {

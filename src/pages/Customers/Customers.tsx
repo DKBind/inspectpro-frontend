@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { toast } from 'sonner';
 import {
   Users, Plus, RefreshCw, Eye, Pencil, Trash2, Mail, Phone,
-  Building2, AlertTriangle, User, Loader2, ChevronLeft, ChevronRight,
+  Building2, AlertTriangle, User, Loader2,
   Lock, Wand2, ChevronDown, GitBranch,
 } from 'lucide-react';
 
@@ -14,6 +14,7 @@ import { organisationService } from '@/services/organisationService';
 import type { CustomerResponse } from '@/services/models/customer';
 import type { OrganisationResponse } from '@/services/models/organisation';
 import { useAuthStore } from '@/store/useAuthStore';
+import Pagination from '@/components/shared-ui/Pagination/Pagination';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
@@ -34,25 +35,25 @@ type Ownership = 'own' | 'org' | 'franchise';
 // ─── Schemas ───────────────────────────────────────────────────────────────
 
 const createSchema = z.object({
-  firstName:   z.string().min(1, 'First name is required'),
-  lastName:    z.string().min(1, 'Last name is required'),
-  email:       z.string().min(1, 'Email is required').email('Invalid email'),
-  password:    z.string().optional(),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().min(1, 'Email is required').email('Invalid email'),
+  password: z.string().optional(),
   phoneNumber: z.string().optional(),
 });
 
 const editSchema = z.object({
-  firstName:   z.string().min(1, 'First name is required'),
-  lastName:    z.string().optional(),
-  email:       z.string().optional().refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Invalid email'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().optional(),
+  email: z.string().optional().refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Invalid email'),
   phoneNumber: z.string().optional(),
 });
 
 type CreateValues = z.infer<typeof createSchema>;
-type EditValues   = z.infer<typeof editSchema>;
+type EditValues = z.infer<typeof editSchema>;
 
 const EMPTY_CREATE: CreateValues = { firstName: '', lastName: '', email: '', password: '', phoneNumber: '' };
-const EMPTY_EDIT:   EditValues   = { firstName: '', lastName: '', email: '', phoneNumber: '' };
+const EMPTY_EDIT: EditValues = { firstName: '', lastName: '', email: '', phoneNumber: '' };
 
 const selectCls = (err = false) =>
   `w-full inline-flex items-center justify-between h-10 rounded-md border bg-white px-3 text-sm font-normal text-[#263B4F] hover:bg-[#F3F4F6] focus:outline-none transition-all ${err ? 'border-[#DF453A]' : 'border-[#E5E7EB]'}`;
@@ -67,7 +68,7 @@ function generatePassword(): string {
 const Clients = () => {
   const { user: authUser } = useAuthStore();
   const isSuperAdmin = authUser?.isSuperAdmin === true || authUser?.role === 'super_admin';
-  const isOrgAdmin   = !isSuperAdmin && !!authUser?.orgId;
+  const isOrgAdmin = !isSuperAdmin && !!authUser?.orgId;
 
   // Franchise admin: org admin whose own org has a parent org
   const [isFranchiseAdmin, setIsFranchiseAdmin] = useState(false);
@@ -79,35 +80,38 @@ const Clients = () => {
       .catch(() => setIsFranchiseAdmin(false));
   }, [isOrgAdmin, authUser?.orgId]);
 
-  const [clients,     setClients]     = useState<CustomerResponse[]>([]);
-  const [loading,     setLoading]     = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages,  setTotalPages]  = useState(0);
-  const [totalItems,  setTotalItems]  = useState(0);
+  const [clients, setClients] = useState<CustomerResponse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
 
-  const [createOpen,   setCreateOpen]   = useState(false);
-  const [editTarget,   setEditTarget]   = useState<CustomerResponse | null>(null);
-  const [viewTarget,   setViewTarget]   = useState<CustomerResponse | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<CustomerResponse | null>(null);
+  const [viewTarget, setViewTarget] = useState<CustomerResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CustomerResponse | null>(null);
-  const [deleting,     setDeleting]     = useState(false);
-  const [submitting,   setSubmitting]   = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [statusToggleTarget, setStatusToggleTarget] = useState<CustomerResponse | null>(null);
+  const [toggling, setToggling] = useState(false);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
 
   // ── "Who is this for?" state ────────────────────────────────────────────
-  const [ownership,          setOwnership]          = useState<Ownership>('own');
+  const [ownership, setOwnership] = useState<Ownership>('own');
   // Super admin lists
-  const [allOrgs,            setAllOrgs]            = useState<OrganisationResponse[]>([]);
-  const [allFranchises,      setAllFranchises]       = useState<OrganisationResponse[]>([]);
+  const [allOrgs, setAllOrgs] = useState<OrganisationResponse[]>([]);
+  const [allFranchises, setAllFranchises] = useState<OrganisationResponse[]>([]);
   // For super admin "Franchise" two-step
   const [selectedParentOrgId, setSelectedParentOrgId] = useState<string>('');
-  const [filteredFranchises,  setFilteredFranchises]  = useState<OrganisationResponse[]>([]);
-  const [loadingFranchises,   setLoadingFranchises]   = useState(false);
+  const [filteredFranchises, setFilteredFranchises] = useState<OrganisationResponse[]>([]);
+  const [loadingFranchises, setLoadingFranchises] = useState(false);
   // Org admin child franchises
-  const [orgFranchises,      setOrgFranchises]       = useState<OrganisationResponse[]>([]);
+  const [orgFranchises, setOrgFranchises] = useState<OrganisationResponse[]>([]);
   // Final target (org ID or franchise ID) to pass to backend as franchiseId
-  const [selectedTargetId,   setSelectedTargetId]   = useState<string>('');
+  const [selectedTargetId, setSelectedTargetId] = useState<string>('');
 
   const createForm = useForm<CreateValues>({ resolver: zodResolver(createSchema), defaultValues: EMPTY_CREATE });
-  const editForm   = useForm<EditValues>({ resolver: zodResolver(editSchema),   defaultValues: EMPTY_EDIT });
+  const editForm = useForm<EditValues>({ resolver: zodResolver(editSchema), defaultValues: EMPTY_EDIT });
 
   const { register: regCreate, reset: resetCreate, setValue: setCreateValue,
     watch: watchCreate, formState: { errors: createErrors } } = createForm;
@@ -117,10 +121,10 @@ const Clients = () => {
 
   // ─── Fetch clients ───────────────────────────────────────────────────────
 
-  const fetchClients = async (page = currentPage) => {
+  const fetchClients = async (page = currentPage, size = pageSize) => {
     setLoading(true);
     try {
-      const data = await customerService.listClients(page, PAGE_SIZE);
+      const data = await customerService.listClients(page - 1, size);
       setClients(data.content ?? []);
       setTotalPages(data.totalPages ?? 0);
       setTotalItems(data.totalElements ?? 0);
@@ -131,7 +135,7 @@ const Clients = () => {
     }
   };
 
-  useEffect(() => { fetchClients(currentPage); }, [currentPage, authUser?.id]);
+  useEffect(() => { fetchClients(currentPage, pageSize); }, [currentPage, pageSize, authUser?.id]);
 
   // ─── Load org/franchise lists ────────────────────────────────────────────
 
@@ -139,14 +143,14 @@ const Clients = () => {
     if (isSuperAdmin) {
       organisationService.getOrganisations(0, 1000)
         .then((d) => setAllOrgs(d.content ?? []))
-        .catch(() => {});
+        .catch(() => { });
       organisationService.getFranchises(0, 1000)
         .then((d) => setAllFranchises(d.content ?? []))
-        .catch(() => {});
+        .catch(() => { });
     } else if (isOrgAdmin && authUser?.orgId) {
       organisationService.getFranchises(0, 200, authUser.orgId)
         .then((d) => setOrgFranchises(d.content ?? []))
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [isSuperAdmin, isOrgAdmin, authUser?.orgId]);
 
@@ -174,13 +178,15 @@ const Clients = () => {
   };
 
   const openCreate = () => { resetCreate(EMPTY_CREATE); resetOwnership(); setCreateOpen(true); };
-  const openEdit   = (c: CustomerResponse) => {
-    resetEdit({ firstName: c.firstName ?? '', lastName: c.lastName ?? '',
-                email: c.email ?? '', phoneNumber: c.phoneNumber ?? '' });
+  const openEdit = (c: CustomerResponse) => {
+    resetEdit({
+      firstName: c.firstName ?? '', lastName: c.lastName ?? '',
+      email: c.email ?? '', phoneNumber: c.phoneNumber ?? ''
+    });
     setEditTarget(c);
   };
   const closeCreate = () => { setCreateOpen(false); resetCreate(EMPTY_CREATE); resetOwnership(); };
-  const closeEdit   = () => { setEditTarget(null); resetEdit(EMPTY_EDIT); };
+  const closeEdit = () => { setEditTarget(null); resetEdit(EMPTY_EDIT); };
 
   // ─── Submit Create ───────────────────────────────────────────────────────
 
@@ -188,12 +194,9 @@ const Clients = () => {
     // Franchise admin: no validation needed — always their own org
     if (!isFranchiseAdmin) {
       if (isSuperAdmin) {
-        if (ownership === 'org' && !selectedTargetId)
-          { toast.error('Please select an organisation.'); return; }
-        if (ownership === 'franchise' && !selectedParentOrgId)
-          { toast.error('Please select a parent organisation first.'); return; }
-        if (ownership === 'franchise' && !selectedTargetId)
-          { toast.error('Please select a franchise.'); return; }
+        if (ownership === 'org' && !selectedTargetId) { toast.error('Please select an organisation.'); return; }
+        if (ownership === 'franchise' && !selectedParentOrgId) { toast.error('Please select a parent organisation first.'); return; }
+        if (ownership === 'franchise' && !selectedTargetId) { toast.error('Please select a franchise.'); return; }
       } else if (isOrgAdmin && ownership === 'franchise' && !selectedTargetId) {
         toast.error('Please select a franchise.'); return;
       }
@@ -201,10 +204,10 @@ const Clients = () => {
 
     setSubmitting(true);
     const payload = {
-      firstName:   data.firstName.trim(),
-      lastName:    data.lastName?.trim()    || undefined,
-      email:       data.email?.trim()       || undefined,
-      password:    data.password?.trim()    || undefined,
+      firstName: data.firstName.trim(),
+      lastName: data.lastName?.trim() || undefined,
+      email: data.email?.trim() || undefined,
+      password: data.password?.trim() || undefined,
       phoneNumber: data.phoneNumber?.trim() || undefined,
       // Franchise admin sends no franchiseId — backend resolves their own org
       // "My Own" → no franchiseId; org/franchise → use selectedTargetId
@@ -215,8 +218,8 @@ const Clients = () => {
       await customerService.createClient(payload);
       toast.success('Client created!');
       closeCreate();
-      fetchClients(0);
-      setCurrentPage(0);
+      setCurrentPage(1);
+      fetchClients(1, pageSize);
     } catch (e: any) {
       toast.error(e.message || 'Failed to create client');
     } finally {
@@ -231,9 +234,9 @@ const Clients = () => {
     setSubmitting(true);
     try {
       await customerService.updateClient(editTarget.id, {
-        firstName:   data.firstName.trim(),
-        lastName:    data.lastName?.trim()    || undefined,
-        email:       data.email?.trim()       || undefined,
+        firstName: data.firstName.trim(),
+        lastName: data.lastName?.trim() || undefined,
+        email: data.email?.trim() || undefined,
         phoneNumber: data.phoneNumber?.trim() || undefined,
       });
       toast.success('Client updated!');
@@ -247,6 +250,21 @@ const Clients = () => {
   };
 
   // ─── Delete ──────────────────────────────────────────────────────────────
+
+  const handleToggleStatus = async () => {
+    if (!statusToggleTarget) return;
+    setToggling(true);
+    try {
+      const updated = await customerService.toggleClientStatus(statusToggleTarget.id);
+      setClients((prev) => prev.map((c) => c.id === updated.id ? updated : c));
+      toast.success(`Client marked as ${updated.isActive ? 'Active' : 'Inactive'}`);
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update status');
+    } finally {
+      setToggling(false);
+      setStatusToggleTarget(null);
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -277,7 +295,7 @@ const Clients = () => {
   // For "Franchise" parent org picker (super admin)
   const selectedParentOrg = allOrgs.find((o) => o.uuid === selectedParentOrgId);
   // For "Franchise" final selection
-  const franchiseList  = isSuperAdmin ? filteredFranchises : orgFranchises;
+  const franchiseList = isSuperAdmin ? filteredFranchises : orgFranchises;
   const selectedFranchise = franchiseList.find((o) => o.uuid === selectedTargetId);
 
   // ─── OrgDropdown helper ──────────────────────────────────────────────────
@@ -307,11 +325,11 @@ const Clients = () => {
           {list.length === 0
             ? <DropdownMenuItem disabled className="text-[#9CA3AF]">No items found</DropdownMenuItem>
             : list.map((o) => (
-                <DropdownMenuItem key={o.uuid} onSelect={() => onSelect(o.uuid)}
-                  className="cursor-pointer focus:bg-[#F3F4F6] py-2.5">
-                  {o.name}
-                </DropdownMenuItem>
-              ))}
+              <DropdownMenuItem key={o.uuid} onSelect={() => onSelect(o.uuid)}
+                className="cursor-pointer focus:bg-[#F3F4F6] py-2.5">
+                {o.name}
+              </DropdownMenuItem>
+            ))}
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -326,7 +344,7 @@ const Clients = () => {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Clients</h1>
-          <p className={styles.subtitle}>{totalItems} client{totalItems !== 1 ? 's' : ''} total</p>
+          {/* <p className={styles.subtitle}>{totalItems} client{totalItems !== 1 ? 's' : ''} total</p> */}
         </div>
         <button className={styles.createBtn} onClick={openCreate}>
           <Plus style={{ width: 15, height: 15 }} /> Add Client
@@ -362,6 +380,7 @@ const Clients = () => {
                 <thead>
                   <tr>
                     <th>Client</th>
+                    <th>Email</th>
                     <th>Phone</th>
                     <th>Organisation</th>
                     <th>Status</th>
@@ -374,15 +393,13 @@ const Clients = () => {
                       <td>
                         <div className={styles.clientCell}>
                           <div className={styles.avatar}>{(c.firstName?.[0] ?? '?').toUpperCase()}</div>
-                          <div>
-                            <p className={styles.clientName}>{c.fullName || c.firstName}</p>
-                            {c.email && (
-                              <p className={styles.clientEmail}>
-                                <Mail style={{ width: 11, height: 11, display: 'inline', marginRight: 3 }} />{c.email}
-                              </p>
-                            )}
-                          </div>
+                          <p className={styles.clientName}>{c.fullName || c.firstName}</p>
                         </div>
+                      </td>
+                      <td className={styles.muted}>
+                        {c.email
+                          ? <span className={styles.company}><Mail style={{ width: 12, height: 12 }} />{c.email}</span>
+                          : '—'}
                       </td>
                       <td className={styles.muted}>
                         {c.phoneNumber
@@ -395,9 +412,11 @@ const Clients = () => {
                           : '—'}
                       </td>
                       <td>
-                        <span className={c.isActive ? styles.badgeActive : styles.badgeInactive}>
-                          {c.isActive ? 'Active' : 'Inactive'}
-                        </span>
+                        <button
+                          className={`${styles.statusToggle} ${c.isActive ? styles.toggleOn : styles.toggleOff}`}
+                          onClick={() => setStatusToggleTarget(c)}
+                          title={c.isActive ? 'Click to deactivate' : 'Click to activate'}
+                        />
                       </td>
                       <td>
                         <div className={styles.actions}>
@@ -411,25 +430,16 @@ const Clients = () => {
                 </tbody>
               </table>
 
-              {totalPages > 1 && (
-                <div className={styles.pagination}>
-                  <span className={styles.paginationInfo}>
-                    Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, totalItems)} of {totalItems}
-                  </span>
-                  <div className={styles.paginationControls}>
-                    <button className={styles.pageBtn} disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}>
-                      <ChevronLeft size={14} />
-                    </button>
-                    {Array.from({ length: totalPages }, (_, i) => (
-                      <button key={i} className={`${styles.pageBtn} ${i === currentPage ? styles.pageBtnActive : ''}`}
-                        onClick={() => setCurrentPage(i)}>{i + 1}</button>
-                    ))}
-                    <button className={styles.pageBtn} disabled={currentPage === totalPages - 1} onClick={() => setCurrentPage((p) => p + 1)}>
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </div>
-              )}
+              <div className={styles.paginationArea}>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+                />
+              </div>
             </>
           )}
         </div>
@@ -468,11 +478,10 @@ const Clients = () => {
                     {ownershipOptions.map(({ key, label }) => (
                       <button key={key} type="button"
                         onClick={() => { setOwnership(key); setSelectedTargetId(''); setSelectedParentOrgId(''); }}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                          ownership === key
+                        className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${ownership === key
                             ? 'bg-[#33AE95] text-white border-[#33AE95]'
                             : 'bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#33AE95] hover:text-[#33AE95]'
-                        }`}>
+                          }`}>
                         {label}
                       </button>
                     ))}
@@ -515,12 +524,12 @@ const Clients = () => {
                           {loadingFranchises
                             ? <div className="flex items-center gap-2 text-xs text-[#9CA3AF] h-10 px-3"><Loader2 size={14} className="animate-spin" />Loading franchises…</div>
                             : <OrgDropdown
-                                list={filteredFranchises}
-                                value={selectedTargetId}
-                                placeholder={filteredFranchises.length === 0 ? 'No franchises found for this organisation' : '— Select franchise —'}
-                                icon={<GitBranch size={13} />}
-                                onSelect={setSelectedTargetId}
-                              />
+                              list={filteredFranchises}
+                              value={selectedTargetId}
+                              placeholder={filteredFranchises.length === 0 ? 'No franchises found for this organisation' : '— Select franchise —'}
+                              icon={<GitBranch size={13} />}
+                              onSelect={setSelectedTargetId}
+                            />
                           }
                         </Fld>
                       )}
@@ -674,12 +683,12 @@ const Clients = () => {
           </DialogHeader>
           {viewTarget && (
             <div className="px-7 py-5 space-y-0">
-              <ViewRow label="Name"         value={viewTarget.fullName || viewTarget.firstName} />
-              <ViewRow label="Email"        value={viewTarget.email        ?? '—'} />
-              <ViewRow label="Phone"        value={viewTarget.phoneNumber  ?? '—'} />
+              <ViewRow label="Name" value={viewTarget.fullName || viewTarget.firstName} />
+              <ViewRow label="Email" value={viewTarget.email ?? '—'} />
+              <ViewRow label="Phone" value={viewTarget.phoneNumber ?? '—'} />
               <ViewRow label="Organisation" value={viewTarget.franchiseName ?? '—'} />
-              <ViewRow label="Status"       value={viewTarget.isActive ? 'Active' : 'Inactive'} />
-              <ViewRow label="Created"      value={viewTarget.createdAt    ?? '—'} />
+              <ViewRow label="Status" value={viewTarget.isActive ? 'Active' : 'Inactive'} />
+              <ViewRow label="Created" value={viewTarget.createdAt ?? '—'} />
             </div>
           )}
           <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">
@@ -691,6 +700,34 @@ const Clients = () => {
                 <Pencil size={14} className="mr-2" /> Edit
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ──────────────────── STATUS TOGGLE CONFIRM ─────────────────────── */}
+      <Dialog open={!!statusToggleTarget} onOpenChange={(o) => { if (!o) setStatusToggleTarget(null); }}>
+        <DialogContent className="sm:max-w-sm shadow-xl rounded-2xl p-0">
+          <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="h-9 w-9 rounded-xl bg-[#E7970E]/10 border border-[#E7970E]/30 flex items-center justify-center">
+                <AlertTriangle size={18} className="text-[#E7970E]" />
+              </div>
+              <DialogTitle className="text-xl font-bold text-[#263B4F]">Confirm Status Change</DialogTitle>
+            </div>
+            <DialogDescription className="text-[#6B7280] pl-12">
+              Mark <strong className="text-[#263B4F]">{statusToggleTarget?.fullName || statusToggleTarget?.firstName}</strong> as{' '}
+              <strong>{statusToggleTarget?.isActive ? 'Inactive' : 'Active'}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="px-7 py-5 flex gap-3">
+            <Button variant="ghost" onClick={() => setStatusToggleTarget(null)} disabled={toggling}
+              className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Cancel</Button>
+            <Button onClick={handleToggleStatus} disabled={toggling}
+              className="bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold min-w-28">
+              {toggling
+                ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Updating…</span>
+                : 'Confirm'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

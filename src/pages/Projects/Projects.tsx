@@ -7,12 +7,14 @@ import {
   FolderOpen, Plus, RefreshCw, Eye, Pencil, Trash2,
   User, Calendar, IndianRupee, MapPin, Loader2,
   ChevronLeft, ChevronRight, AlertTriangle, Users, Building2,
-  Banknote, Navigation,
+  Banknote, Navigation, ClipboardList, PlusCircle, X,
 } from 'lucide-react';
 
 import { projectService } from '@/services/projectService';
 import { customerService } from '@/services/customerService';
 import { userService } from '@/services/userService';
+import { propertyTypeService, parseSpecFields } from '@/services/propertyTypeService';
+import type { PropertyTypeResponse, SpecField } from '@/services/propertyTypeService';
 import type { ProjectResponse } from '@/services/models/project';
 import type { CustomerResponse } from '@/services/models/customer';
 import type { UserResponse } from '@/services/models/user';
@@ -44,6 +46,7 @@ const schema = z.object({
   name: z.string().min(1, 'Project name is required'),
   clientId: z.string().min(1, 'Client is required'),
   managerId: z.string().optional(),
+  propertyTypeId: z.string().min(1, 'Property type is required'),
   projectStatus: z.enum(PROJECT_STATUSES),
   description: z.string().optional(),
   addressLine1: z.string().optional(),
@@ -66,7 +69,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const EMPTY: FormValues = {
-  name: '', clientId: '', managerId: '', projectStatus: 'PLANNING',
+  name: '', clientId: '', managerId: '', propertyTypeId: '', projectStatus: 'PLANNING',
   description: '', addressLine1: '', addressLine2: '', street: '',
   city: '', state: '', country: '', pincode: '', latitude: '', longitude: '',
   startDatePlanned: '', startDateActual: '',
@@ -98,6 +101,9 @@ const Projects = () => {
   const [projects, setProjects] = useState<ProjectResponse[]>([]);
   const [clients, setClients] = useState<CustomerResponse[]>([]);
   const [managers, setManagers] = useState<UserResponse[]>([]);
+  const [propertyTypes, setPropertyTypes] = useState<PropertyTypeResponse[]>([]);
+  const [specValues, setSpecValues] = useState<Record<string, string>>({});
+  const [customFields, setCustomFields] = useState<Array<{ label: string; value: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -117,6 +123,9 @@ const Projects = () => {
   });
 
   const selectedStatus = watch('projectStatus');
+  const selectedPropertyTypeId = watch('propertyTypeId');
+  const selectedPropertyType = propertyTypes.find(pt => String(pt.id) === selectedPropertyTypeId);
+  const specFields: SpecField[] = parseSpecFields(selectedPropertyType?.specTemplate);
 
   // ─── Fetch ────────────────────────────────────────────────────────────────
 
@@ -139,6 +148,7 @@ const Projects = () => {
   useEffect(() => {
     customerService.listClients(0, 200).then(d => setClients(d.content ?? [])).catch(() => setClients([]));
     userService.listUsers(0, 200).then(d => setManagers(d.users ?? [])).catch(() => setManagers([]));
+    propertyTypeService.listPropertyTypes().then(setPropertyTypes).catch(() => setPropertyTypes([]));
   }, [user?.id]);
 
   // ─── Dropdown options ─────────────────────────────────────────────────────
@@ -149,6 +159,11 @@ const Projects = () => {
     meta: c.companyName || undefined,
   }));
 
+  const propertyTypeOptions = propertyTypes.map(pt => ({
+    value: String(pt.id),
+    label: pt.name,
+  }));
+
   const managerOptions = managers.map(m => ({
     value: m.id,
     label: `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim(),
@@ -157,14 +172,40 @@ const Projects = () => {
 
   // ─── Form helpers ─────────────────────────────────────────────────────────
 
-  const openCreate = () => { setEditTarget(null); reset(EMPTY); setFormOpen(true); };
+  const openCreate = () => {
+    setEditTarget(null);
+    reset(EMPTY);
+    setSpecValues({});
+    setCustomFields([]);
+    setFormOpen(true);
+  };;
 
   const openEdit = (p: ProjectResponse) => {
     setEditTarget(p);
+
+    // Populate spec values from saved projectSpecs
+    if (p.projectSpecs && typeof p.projectSpecs === 'object') {
+      const templateKeys = new Set<string>(
+        parseSpecFields(p.specTemplate as SpecField[] | string | undefined).map(f => f.label)
+      );
+      const sv: Record<string, string> = {};
+      const cf: Array<{ label: string; value: string }> = [];
+      Object.entries(p.projectSpecs as Record<string, string>).forEach(([k, v]) => {
+        if (templateKeys.has(k)) sv[k] = v;
+        else cf.push({ label: k, value: v });
+      });
+      setSpecValues(sv);
+      setCustomFields(cf);
+    } else {
+      setSpecValues({});
+      setCustomFields([]);
+    }
+
     reset({
       name: p.name ?? '',
       clientId: p.clientId ?? '',
       managerId: p.managerId ?? '',
+      propertyTypeId: p.propertyTypeId != null ? String(p.propertyTypeId) : '',
       projectStatus: (p.projectStatus as ProjectStatus) ?? 'PLANNING',
       description: p.description ?? '',
       addressLine1: p.addressLine1 ?? '',
@@ -186,16 +227,30 @@ const Projects = () => {
     setFormOpen(true);
   };
 
-  const closeForm = () => { setFormOpen(false); setEditTarget(null); reset(EMPTY); };
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditTarget(null);
+    reset(EMPTY);
+    setSpecValues({});
+    setCustomFields([]);
+  };
 
   // ─── Submit ───────────────────────────────────────────────────────────────
 
   const onSubmit = async (data: FormValues) => {
     setSubmitting(true);
+
+    // Merge template spec values + custom fields into projectSpecs
+    const specs: Record<string, string> = {};
+    Object.entries(specValues).forEach(([k, v]) => { if (v?.trim()) specs[k] = v.trim(); });
+    customFields.forEach(cf => { if (cf.label.trim() && cf.value.trim()) specs[cf.label.trim()] = cf.value.trim(); });
+
     const payload = {
       name: data.name.trim(),
       clientId: data.clientId,
       managerId: data.managerId || undefined,
+      propertyTypeId: data.propertyTypeId ? Number(data.propertyTypeId) : undefined,
+      projectSpecs: Object.keys(specs).length > 0 ? specs : undefined,
       projectStatus: data.projectStatus,
       description: data.description?.trim() || undefined,
       addressLine1: data.addressLine1?.trim() || undefined,
@@ -503,6 +558,115 @@ const Projects = () => {
                   </Fld>
                 </div>
 
+                {/* Property Details */}
+                <div className="space-y-4">
+                  <p className={styles.sectionLabel}>
+                    <span className="flex items-center gap-2">
+                      <ClipboardList size={13} className="text-[#33AE95]" />
+                      Property Details
+                    </span>
+                  </p>
+
+                  {/* Property Type selector */}
+                  <Fld label="Property Type" hint="Required">
+                    <Controller
+                      name="propertyTypeId"
+                      control={control}
+                      render={({ field }) => (
+                        <DropdownSelect
+                          options={propertyTypeOptions}
+                          value={field.value || null}
+                          onChange={(val) => {
+                            field.onChange(val ?? '');
+                            setSpecValues({});
+                          }}
+                          placeholder="Select property type…"
+                          searchable
+                          searchPlaceholder="Search types…"
+                        />
+                      )}
+                    />
+                  </Fld>
+
+                  {/* Dynamic spec fields from template */}
+                  {specFields.length > 0 && (
+                    <div className="space-y-3 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+                        {selectedPropertyType?.name} Details
+                      </p>
+                      {specFields.map(f => (
+                        <Fld key={f.label} label={f.label}>
+                          {f.type === 'dropdown' ? (
+                            <select
+                              value={specValues[f.label] ?? ''}
+                              onChange={e => setSpecValues(prev => ({ ...prev, [f.label]: e.target.value }))}
+                              className="w-full rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#263B4F] focus:border-[#33AE95] focus:outline-none focus:ring-1 focus:ring-[#33AE95]/20"
+                            >
+                              <option value="">Select…</option>
+                              {f.options?.map(o => (
+                                <option key={o} value={o}>{o}</option>
+                              ))}
+                            </select>
+                          ) : f.type === 'boolean' ? (
+                            <select
+                              value={specValues[f.label] ?? ''}
+                              onChange={e => setSpecValues(prev => ({ ...prev, [f.label]: e.target.value }))}
+                              className="w-full rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#263B4F] focus:border-[#33AE95] focus:outline-none focus:ring-1 focus:ring-[#33AE95]/20"
+                            >
+                              <option value="">Select…</option>
+                              <option value="Yes">Yes</option>
+                              <option value="No">No</option>
+                            </select>
+                          ) : (
+                            <input
+                              type={f.type === 'number' ? 'number' : 'text'}
+                              placeholder={`Enter ${f.label.toLowerCase()}…`}
+                              value={specValues[f.label] ?? ''}
+                              onChange={e => setSpecValues(prev => ({ ...prev, [f.label]: e.target.value }))}
+                              className="w-full rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:outline-none focus:ring-1 focus:ring-[#33AE95]/20"
+                            />
+                          )}
+                        </Fld>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Custom fields */}
+                  <div className="space-y-2">
+                    {customFields.map((cf, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input
+                          placeholder="Label…"
+                          value={cf.label}
+                          onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, label: e.target.value } : f))}
+                          className="flex-1 rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:outline-none focus:ring-1 focus:ring-[#33AE95]/20"
+                        />
+                        <input
+                          placeholder="Value…"
+                          value={cf.value}
+                          onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, value: e.target.value } : f))}
+                          className="flex-1 rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:outline-none focus:ring-1 focus:ring-[#33AE95]/20"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setCustomFields(prev => prev.filter((_, i) => i !== idx))}
+                          className="shrink-0 rounded-md p-2 text-[#9CA3AF] transition-colors hover:text-red-500"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setCustomFields(prev => [...prev, { label: '', value: '' }])}
+                      className="flex items-center gap-2 text-sm font-semibold text-[#33AE95] transition-colors hover:text-[#2a9a84]"
+                    >
+                      <PlusCircle size={14} />
+                      Add Custom Detail
+                    </button>
+                  </div>
+                </div>
+
                 {/* Address */}
                 <div>
                   <p className={styles.sectionLabel}>Address</p>
@@ -606,6 +770,18 @@ const Projects = () => {
               <ViewRow label="Organisation" value={viewTarget.franchiseName ?? '—'} />
               <ViewRow label="Manager" value={viewTarget.managerName ?? 'Unassigned'} />
               <ViewRow label="Manager Email" value={viewTarget.managerEmail ?? '—'} />
+              <ViewRow label="Property Type" value={viewTarget.propertyTypeName ?? '—'} />
+              {viewTarget.projectSpecs && Object.keys(viewTarget.projectSpecs).length > 0 && (
+                <div className="py-3 border-b border-[#F3F4F6]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Property Specs</p>
+                  {Object.entries(viewTarget.projectSpecs as Record<string, string>).map(([k, v]) => (
+                    <div key={k} className="flex justify-between py-1 text-sm">
+                      <span className="text-[#6B7280]">{k}</span>
+                      <span className="font-medium text-[#263B4F]">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <ViewRow label="Location" value={[viewTarget.city, viewTarget.state, viewTarget.country].filter(Boolean).join(', ') || '—'} />
               <ViewRow label="Pincode" value={viewTarget.pincode ?? '—'} />
               <ViewRow label="Planned Start" value={fmt(viewTarget.startDatePlanned)} />

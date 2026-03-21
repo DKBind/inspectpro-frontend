@@ -33,6 +33,11 @@ export interface ProjectResponse {
   totalBudget?: number;
   contractValue?: number;
 
+  propertyTypeId?: number;
+  propertyTypeName?: string;
+  projectSpecs?: Record<string, string>;
+  specTemplate?: { fields: Array<{ key: string; label: string; type: string; required?: boolean; options?: string[] }> };
+
   createdAt?: string;
 }
 
@@ -60,4 +65,7 @@ export interface ProjectRequest {
 
   totalBudget?: number;
   contractValue?: number;
+
+  propertyTypeId?: number;
+  projectSpecs?: Record<string, string>;
 }
