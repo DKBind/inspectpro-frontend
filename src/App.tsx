@@ -19,10 +19,10 @@ import Projects from './pages/Projects/Projects';
 import Checklists from './pages/Checklists/Checklists';
 import UsersRolesPage from './pages/UsersRoles/UsersRolesPage';
 import Notifications from './pages/Notifications/Notifications';
-import ProfilePage from './pages/Profile/ProfilePage';
 import Users from './pages/Users/Users';
 import NotFound from './components/shared-ui/NotFound/NotFound';
 import Unauthorized from './pages/Unauthorized/Unauthorized';
+import Profile from './pages/Settings/Profile/Profile';
 
 function App() {
   return (
@@ -63,7 +63,7 @@ function App() {
             <Route path={ROUTES.CLIENTS} element={<Customers />} />
             <Route path={ROUTES.USERS_ROLES} element={<UsersRolesPage />} />
             <Route path={ROUTES.NOTIFICATIONS} element={<Notifications />} />
-            <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
+            <Route path={ROUTES.PROFILE} element={<Profile />} />
           </Route>
         </Route>
 

@@ -31,8 +31,10 @@ export interface UserResponse {
   email: string;
   phoneNumber?: string;
   gender?: string;
+  dateOfBirth?: string;
   bio?: string;
   remark?: string;
+  imageUrl?: string;
   address?: UserAddressResponse;
   orgId?: string;
   orgName?: string;
@@ -52,6 +54,7 @@ export interface UserRequest {
   password?: string;
   phoneNumber?: string;
   gender?: string;
+  dateOfBirth?: string;
   bio?: string;
   remark?: string;
   address?: UserAddressRequest;

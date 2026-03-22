@@ -1,0 +1,78 @@
+.avatarUpload {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+  border-radius: 16px;
+  flex-shrink: 0;
+}
+
+.avatarUpload:focus-visible .avatarOverlay {
+  opacity: 1;
+}
+
+.avatarImage {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  object-fit: cover;
+  display: block;
+}
+
+.avatarInitials {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  background: var(--ip-gradient-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 800;
+  color: white;
+  user-select: none;
+}
+
+.avatarOverlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.avatarUpload:hover .avatarOverlay {
+  opacity: 1;
+}
+
+.avatarOverlay svg {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+.avatarSpinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
