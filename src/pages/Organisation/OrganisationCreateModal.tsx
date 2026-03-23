@@ -184,7 +184,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
       ? subscriptionService.listActiveSubscriptions()
       : subscriptionService.listActiveSubscriptionsByOrgId(user!.orgId!);
     fetch
-      .then(setPlans)
+      .then((data) => setPlans(data.filter((p) => p.global !== false && p.createdByOrgId == null)))
       .catch(() => setPlans([]))
       .finally(() => setPlansLoading(false));
   }, [open, isEditMode]);

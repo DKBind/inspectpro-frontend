@@ -19,8 +19,10 @@ import {
 
 import { subscriptionService } from '@/services/subscriptionService';
 import { moduleService } from '@/services/moduleService';
+import { organisationService } from '@/services/organisationService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
 import type { ModuleResponse } from '@/services/models/module';
+import type { OrganisationResponse } from '@/services/models/organisation';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -29,6 +31,7 @@ import {
 import { Button } from '@/components/shared-ui/Button/button';
 import { Input } from '@/components/shared-ui/Input/input';
 import { Label } from '@/components/shared-ui/Label/label';
+import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
 import styles from '@/pages/Subscriptions/Subscriptions.module.css';
 
 const PAGE_SIZE = 10;
@@ -53,8 +56,11 @@ const isActivePlan = (plan: SubscriptionResponse) =>
 
 const FranchiseSubscriptions = () => {
   const { user } = useAuthStore();
+  const isSuperAdmin = user?.isSuperAdmin === true || (user as any)?.role === 'super_admin';
 
   const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
+  const [organisations, setOrganisations] = useState<OrganisationResponse[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -82,11 +88,11 @@ const FranchiseSubscriptions = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const isSuperAdmin = user.isSuperAdmin === true || (user as any).role === 'super_admin';
       const p = isSuperAdmin
         ? await subscriptionService.listSubscriptions()
         : await subscriptionService.listMySubscriptions();
-      setPlans(p);
+      // Show only franchise plans (non-global or org-owned)
+      setPlans(p.filter((plan) => plan.global === false || plan.createdByOrgId != null));
     } catch {
       toast.error('Failed to load subscription data');
     } finally {
@@ -94,7 +100,14 @@ const FranchiseSubscriptions = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, [user?.id]);
+  useEffect(() => {
+    fetchData();
+    if (isSuperAdmin) {
+      organisationService.getOrganisations(0, 200)
+        .then((d) => setOrganisations(d.content ?? []))
+        .catch(() => { });
+    }
+  }, [user?.id]);
 
   // ─── Load all DB modules for the picker ──────────────────────────────────
 
@@ -115,6 +128,7 @@ const FranchiseSubscriptions = () => {
   const openCreate = () => {
     setEditTarget(null);
     setSelectedModuleIds([]);
+    setSelectedOrgId('');
     reset({ planName: '', price: '', durationMonths: '', maxUsers: '', billingCycle: 'MONTHLY', isActive: true, notes: '' });
     setModalMode('create');
     loadModules();
@@ -140,6 +154,10 @@ const FranchiseSubscriptions = () => {
     setSelectedModuleIds((prev) => prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]);
 
   const onSubmit = async (data: FormValues) => {
+    if (isSuperAdmin && modalMode === 'create' && !selectedOrgId) {
+      toast.error('Please select an organisation for this plan');
+      return;
+    }
     setSubmitting(true);
     const payload = {
       planName: data.planName,
@@ -150,7 +168,7 @@ const FranchiseSubscriptions = () => {
       statusId: data.isActive ? 1 : 2,
       notes: data.notes || undefined,
       moduleIds: selectedModuleIds,
-      // createdByOrgId is now derived server-side from JWT claims — no need to send it
+      createdByOrgId: isSuperAdmin && modalMode === 'create' ? selectedOrgId : undefined,
     };
     try {
       if (modalMode === 'edit' && editTarget) {
@@ -354,6 +372,26 @@ const FranchiseSubscriptions = () => {
 
           <form onSubmit={handleSubmit(onSubmit, () => toast.error('Please fix the errors before submitting.'))}>
             <div className="px-7 py-6 space-y-5">
+
+              {/* Organisation selector — super admin only, create mode only */}
+              {isSuperAdmin && modalMode === 'create' && (
+                <Fld label="Organisation" required>
+                  <DropdownSelect
+                    options={organisations.map((o) => ({
+                      value: o.uuid,
+                      label: o.name,
+                      meta: o.parentOrgId ? 'Franchise' : 'Organisation',
+                    }))}
+                    value={selectedOrgId || null}
+                    onChange={(val) => setSelectedOrgId(String(val ?? ''))}
+                    placeholder="— Select organisation —"
+                    searchable
+                  />
+                  {!selectedOrgId && (
+                    <p className="text-xs text-[#6B7280] mt-1">This plan will be available as a subscription for the selected organisation's franchises.</p>
+                  )}
+                </Fld>
+              )}
 
               <Fld label="Plan Name" required error={errors.planName?.message}>
                 <Input placeholder="e.g. Basic Plan" {...register('planName')} className={inputCls(!!errors.planName)} />

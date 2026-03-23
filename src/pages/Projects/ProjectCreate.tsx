@@ -41,8 +41,13 @@ const STATUS_META: Record<ProjectStatus, { label: string; color: string; bg: str
   CANCELLED: { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
 };
 
+const positiveNumber = z
+  .string()
+  .optional()
+  .refine((v) => !v || (/^\d+(\.\d{1,2})?$/.test(v) && parseFloat(v) >= 0), 'Enter a valid positive number');
+
 const schema = z.object({
-  name: z.string().min(1, 'Project name is required'),
+  name: z.string().min(1, 'Project name is required').max(250, 'Max 250 characters'),
   clientId: z.string().min(1, 'Client is required'),
   organisationId: z.string().optional(),
   managerId: z.string().min(1, 'Manager is required'),
@@ -51,22 +56,22 @@ const schema = z.object({
   contractorId: z.string().min(1, 'Contractor is required'),
   propertyTypeId: z.string().min(1, 'Property type is required'),
   projectStatus: z.enum(PROJECT_STATUSES),
-  description: z.string().optional(),
-  addressLine1: z.string().optional(),
-  addressLine2: z.string().optional(),
-  street: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  country: z.string().optional(),
-  pincode: z.string().optional(),
-  latitude: z.string().optional(),
-  longitude: z.string().optional(),
+  description: z.string().max(250, 'Max 250 characters').optional(),
+  addressLine1: z.string().max(250, 'Max 250 characters').optional(),
+  addressLine2: z.string().max(250, 'Max 250 characters').optional(),
+  street: z.string().max(250, 'Max 250 characters').optional(),
+  city: z.string().max(250, 'Max 250 characters').optional(),
+  state: z.string().max(250, 'Max 250 characters').optional(),
+  country: z.string().max(250, 'Max 250 characters').optional(),
+  pincode: z.string().max(10, 'Max 10 characters').optional(),
+  latitude: positiveNumber,
+  longitude: positiveNumber,
   startDatePlanned: z.string().optional(),
   startDateActual: z.string().optional(),
   estimatedCompletionDate: z.string().optional(),
   actualCompletionDate: z.string().optional(),
-  totalBudget: z.string().optional(),
-  contractValue: z.string().optional(),
+  totalBudget: positiveNumber,
+  contractValue: positiveNumber,
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -122,14 +127,15 @@ const ProjectCreate = () => {
   useEffect(() => {
     propertyTypeService.listPropertyTypes().then(setPropertyTypes).catch(() => { });
 
+    // All roles (including super admin) load clients via the caller-aware endpoint
+    customerService.listClients(0, 500)
+      .then(d => setClients(d.content ?? []))
+      .catch(() => setClients([]));
+
     if (isSuperAdmin) {
       organisationService.getOrganisations(0, 200)
         .then(d => setOrganisations(d.content ?? []))
         .catch(() => { });
-    } else {
-      customerService.listClients(0, 200)
-        .then(d => setClients(d.content ?? []))
-        .catch(() => setClients([]));
     }
 
     userService.listRoles().then(roles => {
@@ -150,12 +156,17 @@ const ProjectCreate = () => {
     }).catch(() => { });
   }, [user?.id]);
 
-  // Super admin: reload when org changes
+  // Super admin: reload users (and try org-scoped clients) when org changes
   useEffect(() => {
     if (!isSuperAdmin || !selectedOrgId) return;
-    customerService.listCustomers(selectedOrgId, 0, 200)
-      .then(d => setClients(d.content ?? []))
-      .catch(() => setClients([]));
+    // Try org-scoped clients; fall back to global list if the endpoint returns nothing
+    customerService.listCustomers(selectedOrgId, 0, 500)
+      .then(d => {
+        const items = d.content ?? (Array.isArray(d) ? d as any[] : []);
+        if (items.length > 0) setClients(items);
+        // else keep the already-loaded global list
+      })
+      .catch(() => { /* keep global list */ });
 
     const load = (name: string, setter: (u: UserResponse[]) => void) => {
       const id = roleMap[name.toLowerCase()];
@@ -658,16 +669,16 @@ const ProjectCreate = () => {
                   </Fld>
                 </div>
                 <div className={styles.grid2}>
-                  <Fld label="Latitude">
+                  <Fld label="Latitude" error={errors.latitude?.message}>
                     <div className="relative">
                       <Navigation style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
-                      <Input type="number" step="any" placeholder="19.0760" {...register('latitude')} className={inputCls(false) + ' pl-9'} />
+                      <Input type="number" step="any" placeholder="19.0760" {...register('latitude')} className={inputCls(!!errors.latitude) + ' pl-9'} />
                     </div>
                   </Fld>
-                  <Fld label="Longitude">
+                  <Fld label="Longitude" error={errors.longitude?.message}>
                     <div className="relative">
                       <Navigation style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none rotate-90" />
-                      <Input type="number" step="any" placeholder="72.8777" {...register('longitude')} className={inputCls(false) + ' pl-9'} />
+                      <Input type="number" step="any" placeholder="72.8777" {...register('longitude')} className={inputCls(!!errors.longitude) + ' pl-9'} />
                     </div>
                   </Fld>
                 </div>
@@ -706,16 +717,16 @@ const ProjectCreate = () => {
               </div>
               <div className={styles.sectionBody}>
                 <div className={styles.grid2}>
-                  <Fld label="Total Budget">
+                  <Fld label="Total Budget" error={errors.totalBudget?.message}>
                     <div className="relative">
                       <IndianRupee style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
-                      <Input type="number" step="any" placeholder="0.00" {...register('totalBudget')} className={inputCls(false) + ' pl-9'} />
+                      <Input type="number" step="any" placeholder="0.00" {...register('totalBudget')} className={inputCls(!!errors.totalBudget) + ' pl-9'} />
                     </div>
                   </Fld>
-                  <Fld label="Contract Value">
+                  <Fld label="Contract Value" error={errors.contractValue?.message}>
                     <div className="relative">
                       <Banknote style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
-                      <Input type="number" step="any" placeholder="0.00" {...register('contractValue')} className={inputCls(false) + ' pl-9'} />
+                      <Input type="number" step="any" placeholder="0.00" {...register('contractValue')} className={inputCls(!!errors.contractValue) + ' pl-9'} />
                     </div>
                   </Fld>
                 </div>
