@@ -197,10 +197,12 @@
   font-size: 14px;
   font-weight: 700;
   color: #263B4F;
-  margin: 0 0 3px;
-  white-space: nowrap;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cardCompany {
@@ -224,7 +226,97 @@
   overflow: hidden;
 }
 
-/* Card Info */
+/* Card header row: name (left) + status (right) */
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Card top row (status) — kept for compat */
+.cardTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* "…more" link in truncated description */
+.descMore {
+  color: #3B82F6;
+  font-weight: 600;
+  margin-left: 1px;
+}
+
+/* Two-column split */
+.cardSplit {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+}
+
+.cardLeft {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cardRight {
+  width: 120px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.cardTeamLabel {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 2px;
+}
+
+.teamRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #4B5563;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.teamRow span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teamRoleTag {
+  font-size: 9px;
+  font-weight: 700;
+  color: #6B7280;
+  background: #F3F4F6;
+  border-radius: 4px;
+  padding: 1px 4px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.teamEmpty {
+  font-size: 11px;
+  color: #D1D5DB;
+  font-style: italic;
+}
+
+/* Card Info (legacy — kept for compat) */
 .cardInfo {
   display: flex;
   flex-direction: column;
@@ -235,8 +327,8 @@
 .infoRow {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 12.5px;
+  gap: 6px;
+  font-size: 12px;
   color: #4B5563;
 }
 
@@ -244,6 +336,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.infoMeta {
+  color: #9CA3AF;
+  font-size: 11.5px;
 }
 
 /* Budget Row */

@@ -1,11 +1,10 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { useAuthStore } from '@/store/useAuthStore';
 import { useModuleStore } from '@/store/useModuleStore';
 import { ROUTES } from '@/components/Constant/Route';
 import {
   LayoutDashboard, FolderKanban, ClipboardCheck, ListChecks, Bug,
   BarChart3, Settings, Shield, Building2, CreditCard, GitBranch,
-  Sparkles, Users, Bell, UserCircle,
+  Sparkles, Users, Bell, UserCircle, FileText, Home,
   type LucideIcon,
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
@@ -22,97 +21,80 @@ interface NavItem {
   badge?: number;
 }
 
-// ─── Static fallback list (used for super_admin who bypasses DB filtering) ────
-const ALL_MAIN_ITEMS: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: ROUTES.DASHBOARD },
-  { label: 'Projects', icon: FolderKanban, path: ROUTES.PROJECTS },
-  { label: 'Inspections', icon: ClipboardCheck, path: ROUTES.INSPECTIONS },
-  { label: 'Checklists', icon: ListChecks, path: ROUTES.CHECKLISTS },
-  { label: 'Defects', icon: Bug, path: ROUTES.DEFECTS },
-];
-
-const ALL_SYSTEM_ITEMS: NavItem[] = [
-  { label: 'Reports', icon: BarChart3, path: ROUTES.REPORTS },
-  { label: 'Organisation', icon: Building2, path: ROUTES.ORGANISATION },
-  { label: 'Franchise', icon: GitBranch, path: ROUTES.FRANCHISE },
-  { label: 'Subscriptions', icon: CreditCard, path: ROUTES.SUBSCRIPTIONS },
-  { label: 'Clients', icon: Users, path: ROUTES.CLIENTS },
-  { label: 'Users & Roles', icon: Users, path: ROUTES.USERS_ROLES },
-  { label: 'Notifications', icon: Bell, path: ROUTES.NOTIFICATIONS },
-  { label: 'Profile', icon: UserCircle, path: ROUTES.PROFILE },
-  { label: 'Settings', icon: Settings, path: ROUTES.SETTINGS },
-];
-
-// ─── Route → icon / label / section metadata (drives dynamic sidebar) ─────────
-type SectionKey = 'main' | 'system';
-const MODULE_META: Record<string, { label: string; icon: LucideIcon; section: SectionKey; path?: string }> = {
-  '/dashboard': { label: 'Dashboard', icon: LayoutDashboard, section: 'main' },
-  '/projects': { label: 'Projects', icon: FolderKanban, section: 'main' },
-  '/inspections': { label: 'Inspections', icon: ClipboardCheck, section: 'main' },
-  '/checklists': { label: 'Checklists', icon: ListChecks, section: 'main' },
-  '/defects': { label: 'Defects', icon: Bug, section: 'main' },
-  '/reports': { label: 'Reports', icon: BarChart3, section: 'system' },
-  '/organisation': { label: 'Organisation', icon: Building2, section: 'system' },
-  '/franchise': { label: 'Franchise', icon: GitBranch, section: 'system' },
-  '/subscriptions': { label: 'Subscriptions', icon: CreditCard, section: 'system' },
-  '/franchise-subscriptions': { label: 'Franchise Subscriptions', icon: Sparkles, section: 'system' },
-  '/clients': { label: 'Clients', icon: Users, section: 'system' },
-  '/client': { label: 'Clients', icon: Users, section: 'system', path: '/clients' },
-  '/users-roles': { label: 'Users & Roles', icon: Users, section: 'system' },
-  '/notifications': { label: 'Notifications', icon: Bell, section: 'system' },
-  '/profile': { label: 'Profile', icon: UserCircle, section: 'system' },
-  '/settings': { label: 'Settings', icon: Settings, section: 'system' },
+// ─── Icon registry — maps DB icon string → Lucide component ──────────────────
+const ICON_MAP: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  FolderKanban,
+  ClipboardCheck,
+  ListChecks,
+  Bug,
+  BarChart3,
+  Settings,
+  Building2,
+  CreditCard,
+  GitBranch,
+  Sparkles,
+  Users,
+  Bell,
+  UserCircle,
+  FileText,
+  Home,
+  Shield,
 };
+
+function resolveIcon(iconName: string | undefined | null): LucideIcon {
+  if (!iconName) return LayoutDashboard;
+  return ICON_MAP[iconName] ?? LayoutDashboard;
+}
+
+// ─── "Main" always comes first; other categories follow in DB order ───────────
+const CATEGORY_ORDER: Record<string, number> = { main: 0 };
 
 const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
   const location = useLocation();
-  const { user } = useAuthStore();
   const { accessModules } = useModuleStore();
-  const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
-  // ─── Build nav items from DB modules ──────────────────────────────────────
-  const buildFromDB = () => {
-    const seen = new Set<string>();
-    const main: NavItem[] = [];
-    const system: NavItem[] = [];
+  // ─── Build sections dynamically from DB categories ────────────────────────
+  const buildSections = (): { label: string; items: NavItem[] }[] => {
+    const seenPaths = new Set<string>();
+    // Ordered map: category label → items
+    const sectionMap = new Map<string, NavItem[]>();
 
     accessModules.forEach((m) => {
-      // Map fine-grained DB routes (/organisation/create) to top-level paths (/organisation)
+      if (!m.route) return;
       const topPath = '/' + m.route.split('/').filter(Boolean)[0];
-      if (seen.has(topPath)) return;
-      seen.add(topPath);
-      const meta = MODULE_META[topPath];
-      if (!meta) return;
-      const item: NavItem = { label: meta.label, icon: meta.icon, path: meta.path ?? topPath };
-      if (meta.section === 'main') main.push(item);
-      else system.push(item);
+      if (seenPaths.has(topPath)) return;
+      seenPaths.add(topPath);
+
+      const category = m.category || 'Other';
+      if (!sectionMap.has(category)) sectionMap.set(category, []);
+      sectionMap.get(category)!.push({
+        label: m.name,
+        icon: resolveIcon(m.icon),
+        path: topPath,
+      });
     });
 
-    // Always ensure Profile is visible
-    if (!seen.has('/profile')) system.push({ label: 'Profile', icon: UserCircle, path: ROUTES.PROFILE });
+    // Profile always present
+    if (!seenPaths.has('/profile')) {
+      const systemKey = [...sectionMap.keys()].find(k => k.toLowerCase() !== 'main') ?? 'System';
+      if (!sectionMap.has(systemKey)) sectionMap.set(systemKey, []);
+      sectionMap.get(systemKey)!.push({ label: 'Profile', icon: UserCircle, path: ROUTES.PROFILE });
+    }
 
-    return { main, system };
+    // Sort sections: Main first, rest in DB encounter order
+    return [...sectionMap.entries()]
+      .sort(([a], [b]) => {
+        const ao = CATEGORY_ORDER[a.toLowerCase()] ?? 1;
+        const bo = CATEGORY_ORDER[b.toLowerCase()] ?? 1;
+        return ao - bo;
+      })
+      .map(([label, items]) => ({ label, items }));
   };
 
-  let visibleMain: NavItem[];
-  let visibleSystem: NavItem[];
-
-  if (accessModules.length > 0) {
-    // Use DB modules for all users (super admin modules are fetched from API too)
-    const built = buildFromDB();
-    visibleMain = built.main;
-    visibleSystem = built.system;
-  } else if (isSuperAdmin) {
-    // Super admin fallback while API loads
-    visibleMain = ALL_MAIN_ITEMS;
-    visibleSystem = ALL_SYSTEM_ITEMS;
-  } else {
-    // Not yet loaded — show nothing except Profile
-    visibleMain = [];
-    visibleSystem = [{ label: 'Profile', icon: UserCircle, path: ROUTES.PROFILE }];
-  }
+  const sections = buildSections();
 
   const renderNavItem = (item: NavItem) => (
     <NavLink
@@ -137,8 +119,7 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
 
   return (
     <aside
-      className={`${styles.sidebar} ${collapsed ? styles.sidebarCollapsed : ''} ${mobileOpen ? styles.sidebarMobileOpen : ''
-        }`}
+      className={`${styles.sidebar} ${collapsed ? styles.sidebarCollapsed : ''} ${mobileOpen ? styles.sidebarMobileOpen : ''}`}
     >
       {/* Brand */}
       <div className={styles.brand}>
@@ -147,29 +128,19 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
         </div>
         <div className={`${styles.brandText} ${collapsed ? styles.hideBrandText : ''}`}>
           <h1>InspectWisePro</h1>
-          {/* <span>Inspection & Quality Management</span> */}
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation — one section per DB category */}
       <nav className={styles.nav}>
-        {visibleMain.length > 0 && (
-          <div className={styles.navSection}>
+        {sections.map(({ label, items }) => (
+          <div key={label} className={styles.navSection}>
             <div className={`${styles.navLabel} ${collapsed ? styles.navLabelHidden : ''}`}>
-              Main Menu
+              {label}
             </div>
-            {visibleMain.map(renderNavItem)}
+            {items.map(renderNavItem)}
           </div>
-        )}
-
-        {visibleSystem.length > 0 && (
-          <div className={styles.navSection}>
-            <div className={`${styles.navLabel} ${collapsed ? styles.navLabelHidden : ''}`}>
-              System
-            </div>
-            {visibleSystem.map(renderNavItem)}
-          </div>
-        )}
+        ))}
       </nav>
     </aside>
   );

@@ -16,6 +16,8 @@ import Subscriptions from './pages/Subscriptions/Subscriptions';
 import FranchiseSubscriptions from './pages/FranchiseSubscriptions/FranchiseSubscriptions';
 import Customers from './pages/Customers/Customers';
 import Projects from './pages/Projects/Projects';
+import ProjectDetail from './pages/Projects/ProjectDetail';
+import ProjectCreate from './pages/Projects/ProjectCreate';
 import Checklists from './pages/Checklists/Checklists';
 import UsersRolesPage from './pages/UsersRoles/UsersRolesPage';
 import Notifications from './pages/Notifications/Notifications';
@@ -47,6 +49,8 @@ function App() {
           <Route element={<AdminLayout />}>
             <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
             <Route path={ROUTES.PROJECTS} element={<Projects />} />
+            <Route path={ROUTES.PROJECT_CREATE} element={<ProjectCreate />} />
+            <Route path={ROUTES.PROJECT_DETAIL} element={<ProjectDetail />} />
             <Route path={ROUTES.INSPECTIONS} element={<Dashboard />} />
             <Route path={ROUTES.CHECKLISTS} element={<Checklists />} />
             <Route path={ROUTES.DEFECTS} element={<Dashboard />} />

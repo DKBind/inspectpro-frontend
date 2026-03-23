@@ -15,6 +15,13 @@ interface ApiResponse<T> {
 export const userService = {
   // ── Users ─────────────────────────────────────────────────────────────────
 
+  listUsersByRole: async (roleId: number, orgId?: string): Promise<UserResponse[]> => {
+    const url = orgId ? `/users/by-role/${roleId}?orgId=${orgId}` : `/users/by-role/${roleId}`;
+    const res = await api.get<ApiResponse<UserResponse[]>>(url);
+    if (!res.status) throw new Error(res.message || 'Failed to fetch users by role');
+    return res.object ?? [];
+  },
+
   listUsers: async (page = 0, size = 10): Promise<{ users: UserResponse[]; total: number }> => {
     const res = await api.get<ApiResponse<UserResponse[]>>(`/users?page=${page}&size=${size}`);
     if (!res.status) throw new Error(res.message || 'Failed to fetch users');

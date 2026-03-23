@@ -11,6 +11,9 @@ export interface ProjectResponse {
   franchiseId?: string;
   franchiseName?: string;
 
+  organisationId?: string;
+  organisationName?: string;
+
   managerId?: string;
   managerName?: string;
   managerEmail?: string;
@@ -39,12 +42,28 @@ export interface ProjectResponse {
   specTemplate?: { fields: Array<{ key: string; label: string; type: string; required?: boolean; options?: string[] }> };
 
   createdAt?: string;
+  assignments?: ProjectAssignmentInfo[];
+}
+
+export interface ProjectAssignmentInput {
+  userId: string;
+  roleId: number;
+}
+
+export interface ProjectAssignmentInfo {
+  userId: string;
+  userName?: string;
+  email?: string;
+  roleId: number;
+  roleName?: string;
 }
 
 export interface ProjectRequest {
   name: string;
   clientId: string;
   managerId?: string;
+  organisationId?: string;
+  assignments?: ProjectAssignmentInput[];
   description?: string;
   projectStatus?: string;
 
