@@ -100,7 +100,7 @@ const Clients = () => {
   const [ownership, setOwnership] = useState<Ownership>('own');
   // Super admin lists
   const [allOrgs, setAllOrgs] = useState<OrganisationResponse[]>([]);
-  const [allFranchises, setAllFranchises] = useState<OrganisationResponse[]>([]);
+  const [_allFranchises, setAllFranchises] = useState<OrganisationResponse[]>([]);
   // For super admin "Franchise" two-step
   const [selectedParentOrgId, setSelectedParentOrgId] = useState<string>('');
   const [filteredFranchises, setFilteredFranchises] = useState<OrganisationResponse[]>([]);
@@ -479,8 +479,8 @@ const Clients = () => {
                       <button key={key} type="button"
                         onClick={() => { setOwnership(key); setSelectedTargetId(''); setSelectedParentOrgId(''); }}
                         className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${ownership === key
-                            ? 'bg-[#33AE95] text-white border-[#33AE95]'
-                            : 'bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#33AE95] hover:text-[#33AE95]'
+                          ? 'bg-[#33AE95] text-white border-[#33AE95]'
+                          : 'bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#33AE95] hover:text-[#33AE95]'
                           }`}>
                         {label}
                       </button>
