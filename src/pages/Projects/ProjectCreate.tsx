@@ -521,51 +521,51 @@ const ProjectCreate = () => {
                   {/* All fields + Add Custom button in one grid so button fills empty cell */}
                   <div className={styles.grid2}>
                     {specFields.map(f => {
-                        const opts = f.type === 'boolean' ? ['Yes', 'No'] : (f.options ?? []);
-                        const isSelect = f.type === 'dropdown' || f.type === 'boolean';
-                        return (
-                          <Fld key={f.label} label={f.label} required={f.required}>
-                            {isSelect ? (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none data-[state=open]:border-[#3B82F6] data-[state=open]:ring-1 data-[state=open]:ring-[#3B82F6]/20 ${inputCls(false)}`}
-                                  >
-                                    <span className={specValues[f.label] ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
-                                      {specValues[f.label] || 'Select…'}
-                                    </span>
-                                    <ChevronDown size={14} className="text-[#9CA3AF] shrink-0" />
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="start"
-                                  style={{ minWidth: 'var(--radix-dropdown-menu-trigger-width)' }}
-                                  className="bg-white border border-[#E5E7EB] shadow-lg z-[200]"
+                      const opts = f.type === 'boolean' ? ['Yes', 'No'] : (f.options ?? []);
+                      const isSelect = f.type === 'dropdown' || f.type === 'boolean';
+                      return (
+                        <Fld key={f.label} label={f.label} required={f.required}>
+                          {isSelect ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none data-[state=open]:border-[#3B82F6] data-[state=open]:ring-1 data-[state=open]:ring-[#3B82F6]/20 ${inputCls(false)}`}
                                 >
-                                  {opts.map(o => (
-                                    <DropdownMenuItem
-                                      key={o}
-                                      onSelect={() => setSpecValues(prev => ({ ...prev, [f.label]: o }))}
-                                      className={specValues[f.label] === o ? 'bg-[#EFF6FF] text-[#3B82F6] font-medium' : ''}
-                                    >
-                                      {o}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            ) : (
-                              <Input
-                                type={f.type === 'number' ? 'number' : 'text'}
-                                placeholder={`Enter ${f.label.toLowerCase()}…`}
-                                value={specValues[f.label] ?? ''}
-                                onChange={e => setSpecValues(prev => ({ ...prev, [f.label]: e.target.value }))}
-                                className={inputCls(false)}
-                              />
-                            )}
-                          </Fld>
-                        );
-                      })}
+                                  <span className={specValues[f.label] ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+                                    {specValues[f.label] || 'Select…'}
+                                  </span>
+                                  <ChevronDown size={14} className="text-[#9CA3AF] shrink-0" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="start"
+                                style={{ minWidth: 'var(--radix-dropdown-menu-trigger-width)' }}
+                                className="bg-white border border-[#E5E7EB] shadow-lg z-[200]"
+                              >
+                                {opts.map(o => (
+                                  <DropdownMenuItem
+                                    key={o}
+                                    onSelect={() => setSpecValues(prev => ({ ...prev, [f.label]: o }))}
+                                    className={specValues[f.label] === o ? 'bg-[#EFF6FF] text-[#3B82F6] font-medium' : ''}
+                                  >
+                                    {o}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <Input
+                              type={f.type === 'number' ? 'number' : 'text'}
+                              placeholder={`Enter ${f.label.toLowerCase()}…`}
+                              value={specValues[f.label] ?? ''}
+                              onChange={e => setSpecValues(prev => ({ ...prev, [f.label]: e.target.value }))}
+                              className={inputCls(false)}
+                            />
+                          )}
+                        </Fld>
+                      );
+                    })}
 
                     {/* Custom fields — in the same grid */}
                     {customFields.map((cf, idx) => (

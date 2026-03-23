@@ -27,6 +27,7 @@ import { Input } from '@/components/shared-ui/Input/input';
 import { Label } from '@/components/shared-ui/Label/label';
 import styles from './Users.module.css';
 import { inputCls } from '@/components/shared-ui/form-helpers';
+import { DeleteIcon } from 'lucide-react';
 
 const PAGE_SIZE = 10;
 
