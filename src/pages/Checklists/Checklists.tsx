@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 
 import { checklistService } from '@/services/checklistService';
 import { projectService } from '@/services/projectService';
-import type { TemplateResponse, InspectionResponse, FieldInfo } from '@/services/models/checklist';
+import type { TemplateResponse } from '@/services/models/checklist';
 import type { ProjectResponse } from '@/services/models/project';
 import {
   Dialog,
