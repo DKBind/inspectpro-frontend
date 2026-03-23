@@ -4,6 +4,8 @@ export const ROUTES = {
   UPDATE_PASSWORD: '/update-password',
   DASHBOARD: '/dashboard',
   PROJECTS: '/projects',
+  PROJECT_CREATE: '/projects/create',
+  PROJECT_DETAIL: '/projects/:id',
   INSPECTIONS: '/inspections',
   CHECKLISTS: '/checklists',
   DEFECTS: '/defects',

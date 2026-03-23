@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,9 +14,11 @@ import {
 import { projectService } from '@/services/projectService';
 import { customerService } from '@/services/customerService';
 import { userService } from '@/services/userService';
+import { organisationService } from '@/services/organisationService';
+import type { OrganisationResponse } from '@/services/models/organisation';
 import { propertyTypeService, parseSpecFields } from '@/services/propertyTypeService';
 import type { PropertyTypeResponse, SpecField } from '@/services/propertyTypeService';
-import type { ProjectResponse } from '@/services/models/project';
+import type { ProjectResponse, ProjectAssignmentInput } from '@/services/models/project';
 import type { CustomerResponse } from '@/services/models/customer';
 import type { UserResponse } from '@/services/models/user';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -30,6 +33,7 @@ import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from '@/components/shared-ui/DropdownMenu/dropdown-menu';
+import { ROUTES } from '@/components/Constant/Route';
 import styles from './Projects.module.css';
 
 const PAGE_SIZE = 12;
@@ -48,7 +52,11 @@ const STATUS_META: Record<ProjectStatus, { label: string; color: string; bg: str
 const schema = z.object({
   name: z.string().min(1, 'Project name is required'),
   clientId: z.string().min(1, 'Client is required'),
-  managerId: z.string().optional(),
+  organisationId: z.string().optional(),
+  managerId: z.string().min(1, 'Manager is required'),
+  qaId: z.string().min(1, 'QA is required'),
+  inspectorId: z.string().min(1, 'Inspector is required'),
+  contractorId: z.string().min(1, 'Contractor is required'),
   propertyTypeId: z.string().min(1, 'Property type is required'),
   projectStatus: z.enum(PROJECT_STATUSES),
   description: z.string().optional(),
@@ -72,7 +80,8 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const EMPTY: FormValues = {
-  name: '', clientId: '', managerId: '', propertyTypeId: '', projectStatus: 'PLANNING',
+  name: '', clientId: '', organisationId: '', managerId: '', qaId: '', inspectorId: '', contractorId: '',
+  propertyTypeId: '', projectStatus: 'PLANNING',
   description: '', addressLine1: '', addressLine2: '', street: '',
   city: '', state: '', country: '', pincode: '', latitude: '', longitude: '',
   startDatePlanned: '', startDateActual: '',
@@ -100,11 +109,19 @@ const fmtMoney = (v?: number) =>
 
 const Projects = () => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
 
   const [projects, setProjects] = useState<ProjectResponse[]>([]);
   const [clients, setClients] = useState<CustomerResponse[]>([]);
-  const [managers, setManagers] = useState<UserResponse[]>([]);
+  const [organisations, setOrganisations] = useState<OrganisationResponse[]>([]);
   const [propertyTypes, setPropertyTypes] = useState<PropertyTypeResponse[]>([]);
+  // role-id map: lowercase name → roleId
+  const [roleMap, setRoleMap] = useState<Record<string, number>>({});
+  const [managerUsers, setManagerUsers] = useState<UserResponse[]>([]);
+  const [qaUsers, setQaUsers] = useState<UserResponse[]>([]);
+  const [inspectorUsers, setInspectorUsers] = useState<UserResponse[]>([]);
+  const [contractorUsers, setContractorUsers] = useState<UserResponse[]>([]);
   const [specValues, setSpecValues] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<Array<{ label: string; value: string }>>([]);
   const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
@@ -128,6 +145,7 @@ const Projects = () => {
 
   const selectedStatus = watch('projectStatus');
   const selectedPropertyTypeId = watch('propertyTypeId');
+  const selectedOrgId = watch('organisationId');
   const selectedPropertyType = propertyTypes.find(pt => String(pt.id) === selectedPropertyTypeId);
   const specFields: SpecField[] = parseSpecFields(selectedPropertyType?.specTemplate);
 
@@ -150,10 +168,54 @@ const Projects = () => {
   useEffect(() => { fetchProjects(currentPage); }, [currentPage, user?.id]);
 
   useEffect(() => {
-    customerService.listClients(0, 200).then(d => setClients(d.content ?? [])).catch(() => setClients([]));
-    userService.listUsers(0, 200).then(d => setManagers(d.users ?? [])).catch(() => setManagers([]));
     propertyTypeService.listPropertyTypes().then(setPropertyTypes).catch(() => setPropertyTypes([]));
+
+    if (isSuperAdmin) {
+      // Super admin: load orgs list; clients/users loaded after org selection
+      organisationService.getOrganisations(0, 200).then(d => setOrganisations(d.content ?? [])).catch(() => {});
+    } else {
+      // Regular user: load clients + users for their own org
+      customerService.listClients(0, 200).then(d => setClients(d.content ?? [])).catch(() => setClients([]));
+    }
+
+    // Fetch roles → build name→id map
+    userService.listRoles().then(roles => {
+      const map: Record<string, number> = {};
+      roles.forEach(r => { map[r.name.toLowerCase()] = r.roleId; });
+      setRoleMap(map);
+
+      if (!isSuperAdmin) {
+        const load = (name: string, setter: (u: UserResponse[]) => void) => {
+          const id = map[name.toLowerCase()];
+          if (id) userService.listUsersByRole(id).then(setter).catch(() => setter([]));
+        };
+        load('manager', setManagerUsers);
+        load('qa', setQaUsers);
+        load('inspector', setInspectorUsers);
+        load('contractor', setContractorUsers);
+      }
+    }).catch(() => {});
   }, [user?.id]);
+
+  // When super admin picks an org → reload clients and team dropdowns for that org
+  useEffect(() => {
+    if (!isSuperAdmin || !selectedOrgId) return;
+    customerService.listCustomers(selectedOrgId, 0, 200).then(d => setClients(d.content ?? [])).catch(() => setClients([]));
+    const load = (name: string, setter: (u: UserResponse[]) => void) => {
+      const id = roleMap[name.toLowerCase()];
+      if (id) userService.listUsersByRole(id, selectedOrgId).then(setter).catch(() => setter([]));
+    };
+    load('manager', setManagerUsers);
+    load('qa', setQaUsers);
+    load('inspector', setInspectorUsers);
+    load('contractor', setContractorUsers);
+    // Reset dependent fields when org changes
+    setValue('clientId', '');
+    setValue('managerId', '');
+    setValue('qaId', '');
+    setValue('inspectorId', '');
+    setValue('contractorId', '');
+  }, [selectedOrgId]);
 
   // ─── Dropdown options ─────────────────────────────────────────────────────
 
@@ -168,22 +230,19 @@ const Projects = () => {
     label: pt.name,
   }));
 
-  const managerOptions = managers.map(m => ({
-    value: m.id,
-    label: `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim(),
-    meta: m.email || undefined,
+  const toUserOptions = (users: UserResponse[]) => users.map(u => ({
+    value: u.id,
+    label: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+    meta: u.email || undefined,
   }));
+  const managerOptions  = toUserOptions(managerUsers);
+  const qaOptions       = toUserOptions(qaUsers);
+  const inspectorOptions = toUserOptions(inspectorUsers);
+  const contractorOptions = toUserOptions(contractorUsers);
 
   // ─── Form helpers ─────────────────────────────────────────────────────────
 
-  const openCreate = () => {
-    setEditTarget(null);
-    reset(EMPTY);
-    setSpecValues({});
-    setCustomFields([]);
-    setEditingLabelIdx(null);
-    setFormOpen(true);
-  };;
+  const openCreate = () => navigate(ROUTES.PROJECT_CREATE);
 
   const openEdit = (p: ProjectResponse) => {
     setEditTarget(p);
@@ -208,10 +267,17 @@ const Projects = () => {
       setEditingLabelIdx(null);
     }
 
+    const findAssignee = (roleName: string) =>
+      p.assignments?.find(a => a.roleName?.toLowerCase() === roleName.toLowerCase())?.userId ?? '';
+
     reset({
       name: p.name ?? '',
       clientId: p.clientId ?? '',
+      organisationId: p.organisationId ?? '',
       managerId: p.managerId ?? '',
+      qaId: findAssignee('qa'),
+      inspectorId: findAssignee('inspector'),
+      contractorId: findAssignee('contractor'),
       propertyTypeId: p.propertyTypeId != null ? String(p.propertyTypeId) : '',
       projectStatus: (p.projectStatus as ProjectStatus) ?? 'PLANNING',
       description: p.description ?? '',
@@ -252,10 +318,18 @@ const Projects = () => {
     Object.entries(specValues).forEach(([k, v]) => { if (v?.trim()) specs[k] = v.trim(); });
     customFields.forEach(cf => { if (cf.label.trim() && cf.value.trim()) specs[cf.label.trim()] = cf.value.trim(); });
 
+    // Build role-based assignments for QA / Inspector / Contractor
+    const assignments: ProjectAssignmentInput[] = [];
+    if (data.qaId && roleMap['qa'])         assignments.push({ userId: data.qaId, roleId: roleMap['qa'] });
+    if (data.inspectorId && roleMap['inspector']) assignments.push({ userId: data.inspectorId, roleId: roleMap['inspector'] });
+    if (data.contractorId && roleMap['contractor']) assignments.push({ userId: data.contractorId, roleId: roleMap['contractor'] });
+
     const payload = {
       name: data.name.trim(),
       clientId: data.clientId,
       managerId: data.managerId || undefined,
+      organisationId: isSuperAdmin && data.organisationId ? data.organisationId : undefined,
+      assignments: assignments.length > 0 ? assignments : undefined,
       propertyTypeId: data.propertyTypeId ? Number(data.propertyTypeId) : undefined,
       projectSpecs: Object.keys(specs).length > 0 ? specs : undefined,
       projectStatus: data.projectStatus,
@@ -355,80 +429,65 @@ const Projects = () => {
                 <div key={p.id} className={styles.card}>
                   <div className={styles.cardStrip} style={{ background: statusMeta.gradient }} />
                   <div className={styles.cardContent}>
-                    {/* Header */}
-                    <div className={styles.cardHead}>
-                      <div className={styles.cardIconWrap} style={{ background: statusMeta.gradient }}>
-                        <FolderOpen style={{ width: 16, height: 16 }} />
-                      </div>
-                      <div className={styles.cardHeadText}>
-                        <h3 className={styles.cardTitle}>{p.name}</h3>
-                        {p.clientCompany && (
-                          <p className={styles.cardCompany}>
-                            <Building2 style={{ width: 11, height: 11 }} />
-                            {p.clientCompany}
-                          </p>
-                        )}
-                      </div>
+                    {/* Header: Project Name (left) + Status Badge (right) */}
+                    <div className={styles.cardHeader}>
+                      <h3 className={styles.cardTitle}>{p.name}</h3>
                       <StatusBadge status={p.projectStatus} />
                     </div>
 
-                    {p.description && <p className={styles.cardDesc}>{p.description}</p>}
-
-                    {/* Info rows */}
-                    <div className={styles.cardInfo}>
-                      {p.clientName && (
-                        <div className={styles.infoRow}>
-                          <User style={{ width: 13, height: 13, color: '#33AE95', flexShrink: 0 }} />
-                          <span>{p.clientName}</span>
-                        </div>
-                      )}
-                      <div className={styles.infoRow}>
-                        <Users style={{ width: 13, height: 13, color: '#6B7280', flexShrink: 0 }} />
-                        <span style={{ color: p.managerName ? '#263B4F' : '#9CA3AF' }}>
-                          {p.managerName ?? 'No manager assigned'}
-                        </span>
-                      </div>
-                      {(p.city || p.state) && (
-                        <div className={styles.infoRow}>
-                          <MapPin style={{ width: 13, height: 13, color: '#6B7280', flexShrink: 0 }} />
-                          <span>{[p.city, p.state].filter(Boolean).join(', ')}</span>
-                        </div>
-                      )}
-                      {p.startDatePlanned && (
-                        <div className={styles.infoRow}>
-                          <Calendar style={{ width: 13, height: 13, color: '#6B7280', flexShrink: 0 }} />
-                          <span>{fmt(p.startDatePlanned)}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Budget strip */}
-                    {(p.totalBudget != null || p.contractValue != null) && (
-                      <div className={styles.budgetRow}>
-                        {p.totalBudget != null && (
-                          <div className={styles.budgetItem}>
-                            <span className={styles.budgetLabel}>Budget</span>
-                            <span className={styles.budgetVal}>
-                              <IndianRupee style={{ width: 11, height: 11 }} />
-                              {Number(p.totalBudget).toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                        )}
-                        {p.contractValue != null && (
-                          <div className={styles.budgetItem}>
-                            <span className={styles.budgetLabel}>Contract</span>
-                            <span className={styles.budgetVal}>
-                              <IndianRupee style={{ width: 11, height: 11 }} />
-                              {Number(p.contractValue).toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                    {/* Description — truncate at 100 chars */}
+                    {p.description && (
+                      <p className={styles.cardDesc}>
+                        {p.description.length > 100
+                          ? <>{p.description.slice(0, 100)}<span className={styles.descMore}>…more</span></>
+                          : p.description}
+                      </p>
                     )}
+
+                    {/* Two-column split */}
+                    <div className={styles.cardSplit}>
+                      {/* Left: Client Name + Property Type */}
+                      <div className={styles.cardLeft}>
+                        {p.clientName && (
+                          <div className={styles.infoRow}>
+                            <User style={{ width: 12, height: 12, color: '#33AE95', flexShrink: 0 }} />
+                            <span>{p.clientName}</span>
+                          </div>
+                        )}
+                        {p.propertyTypeName && (
+                          <div className={styles.infoRow}>
+                            <Building2 style={{ width: 12, height: 12, color: '#6B7280', flexShrink: 0 }} />
+                            <span className={styles.infoMeta}>{p.propertyTypeName}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right: Team (Manager, QA, Inspector) */}
+                      <div className={styles.cardRight}>
+                        <p className={styles.cardTeamLabel}>Team</p>
+                        {p.managerName && (
+                          <div className={styles.teamRow}>
+                            <Users style={{ width: 11, height: 11, color: '#3B82F6', flexShrink: 0 }} />
+                            <span className={styles.teamRoleTag}>Mgr</span>
+                            <span>{p.managerName}</span>
+                          </div>
+                        )}
+                        {p.assignments?.filter(a => ['qa', 'inspector'].includes(a.roleName?.toLowerCase() ?? '')).map(a => (
+                          <div key={a.userId} className={styles.teamRow}>
+                            <User style={{ width: 11, height: 11, color: '#6B7280', flexShrink: 0 }} />
+                            <span className={styles.teamRoleTag}>{a.roleName?.slice(0, 3)}</span>
+                            <span>{a.userName}</span>
+                          </div>
+                        ))}
+                        {!p.managerName && (!p.assignments || p.assignments.filter(a => ['qa','inspector'].includes(a.roleName?.toLowerCase() ?? '')).length === 0) && (
+                          <span className={styles.teamEmpty}>No team assigned</span>
+                        )}
+                      </div>
+                    </div>
 
                     {/* Footer */}
                     <div className={styles.cardFooter}>
-                      <button className={styles.viewBtn} onClick={() => setViewTarget(p)}>
+                      <button className={styles.viewBtn} onClick={() => navigate(`/projects/${p.id}`)}>
                         <Eye style={{ width: 13, height: 13 }} /> View Details
                       </button>
                       <div className={styles.cardActions}>
@@ -503,6 +562,27 @@ const Projects = () => {
                       <Input placeholder="e.g. Site Inspection Phase 1" {...register('name')} className={inputCls(!!errors.name)} />
                     </Fld>
 
+                    {/* Organisation selector — super admin only */}
+                    {isSuperAdmin && (
+                      <Fld label="Organisation" required error={errors.organisationId?.message}>
+                        <Controller
+                          name="organisationId"
+                          control={control}
+                          render={({ field }) => (
+                            <DropdownSelect
+                              options={organisations.map(o => ({ value: o.uuid, label: o.name, meta: o.parentOrgId ? 'Franchise' : 'Organisation' }))}
+                              value={field.value || null}
+                              onChange={val => field.onChange(val ?? '')}
+                              placeholder="Select organisation…"
+                              searchable
+                              searchPlaceholder="Search organisations…"
+                              error={errors.organisationId?.message}
+                            />
+                          )}
+                        />
+                      </Fld>
+                    )}
+
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Fld label="Client" required error={errors.clientId?.message}>
                         <Controller
@@ -524,7 +604,7 @@ const Projects = () => {
                           <p className="text-xs text-amber-500 mt-1">No clients yet.</p>
                         )}
                       </Fld>
-                      <Fld label="Manager" hint="Optional">
+                      <Fld label="Manager" required error={errors.managerId?.message}>
                         <Controller
                           name="managerId"
                           control={control}
@@ -533,9 +613,57 @@ const Projects = () => {
                               options={managerOptions}
                               value={field.value || null}
                               onChange={val => field.onChange(val ?? '')}
-                              placeholder="Unassigned"
+                              placeholder={managerUsers.length === 0 ? 'No managers in org' : 'Select manager…'}
                               searchable
                               searchPlaceholder="Search managers…"
+                            />
+                          )}
+                        />
+                      </Fld>
+                      <Fld label="QA" required error={errors.qaId?.message}>
+                        <Controller
+                          name="qaId"
+                          control={control}
+                          render={({ field }) => (
+                            <DropdownSelect
+                              options={qaOptions}
+                              value={field.value || null}
+                              onChange={val => field.onChange(val ?? '')}
+                              placeholder={qaUsers.length === 0 ? 'No QA users in org' : 'Select QA…'}
+                              searchable
+                              searchPlaceholder="Search QA…"
+                            />
+                          )}
+                        />
+                      </Fld>
+                      <Fld label="Inspector" required error={errors.inspectorId?.message}>
+                        <Controller
+                          name="inspectorId"
+                          control={control}
+                          render={({ field }) => (
+                            <DropdownSelect
+                              options={inspectorOptions}
+                              value={field.value || null}
+                              onChange={val => field.onChange(val ?? '')}
+                              placeholder={inspectorUsers.length === 0 ? 'No inspectors in org' : 'Select inspector…'}
+                              searchable
+                              searchPlaceholder="Search inspectors…"
+                            />
+                          )}
+                        />
+                      </Fld>
+                      <Fld label="Contractor" required error={errors.contractorId?.message}>
+                        <Controller
+                          name="contractorId"
+                          control={control}
+                          render={({ field }) => (
+                            <DropdownSelect
+                              options={contractorOptions}
+                              value={field.value || null}
+                              onChange={val => field.onChange(val ?? '')}
+                              placeholder={contractorUsers.length === 0 ? 'No contractors in org' : 'Select contractor…'}
+                              searchable
+                              searchPlaceholder="Search contractors…"
                             />
                           )}
                         />
