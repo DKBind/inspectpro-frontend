@@ -7,7 +7,7 @@ import {
   FolderOpen, Plus, RefreshCw, Eye, Pencil, Trash2,
   User, Calendar, IndianRupee, MapPin, Loader2,
   ChevronLeft, ChevronRight, AlertTriangle, Users, Building2,
-  Banknote, Navigation, ClipboardList, PlusCircle, X,
+  Banknote, Navigation, ClipboardList, PlusCircle, ChevronDown,
 } from 'lucide-react';
 
 import { projectService } from '@/services/projectService';
@@ -25,8 +25,11 @@ import {
 } from '@/components/shared-ui/Dialog/dialog';
 import { Button } from '@/components/shared-ui/Button/button';
 import { Input } from '@/components/shared-ui/Input/input';
-import { Fld, ViewRow, inputCls } from '@/components/shared-ui/form-helpers';
+import { Fld, inputCls } from '@/components/shared-ui/form-helpers';
 import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
 import styles from './Projects.module.css';
 
 const PAGE_SIZE = 12;
@@ -104,6 +107,7 @@ const Projects = () => {
   const [propertyTypes, setPropertyTypes] = useState<PropertyTypeResponse[]>([]);
   const [specValues, setSpecValues] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<Array<{ label: string; value: string }>>([]);
+  const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -177,6 +181,7 @@ const Projects = () => {
     reset(EMPTY);
     setSpecValues({});
     setCustomFields([]);
+    setEditingLabelIdx(null);
     setFormOpen(true);
   };;
 
@@ -196,9 +201,11 @@ const Projects = () => {
       });
       setSpecValues(sv);
       setCustomFields(cf);
+      setEditingLabelIdx(null);
     } else {
       setSpecValues({});
       setCustomFields([]);
+      setEditingLabelIdx(null);
     }
 
     reset({
@@ -481,94 +488,97 @@ const Projects = () => {
 
           {formOpen && (
             <form onSubmit={handleSubmit(onSubmit, () => toast.error('Please fix the errors.'))}>
-              <div className="px-7 py-6 space-y-6">
+              <div className="px-7 py-6 space-y-4">
 
                 {/* Basic Info */}
-                <div className="space-y-4">
-                  <p className={styles.sectionLabel}>Basic Information</p>
-
-                  <Fld label="Project Name" required error={errors.name?.message}>
-                    <Input placeholder="e.g. Site Inspection Phase 1" {...register('name')} className={inputCls(!!errors.name)} />
-                  </Fld>
-
-                  {/* Client */}
-                  <Fld label="Client" required error={errors.clientId?.message}>
-                    <Controller
-                      name="clientId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={clientOptions}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder="Select a client…"
-                          searchable
-                          searchPlaceholder="Search clients…"
-                          error={errors.clientId?.message}
-                        />
-                      )}
-                    />
-                    {clients.length === 0 && (
-                      <p className="text-xs text-amber-500 mt-1">No clients yet. Add clients first.</p>
-                    )}
-                  </Fld>
-
-                  {/* Manager */}
-                  <Fld label="Manager" hint="Optional">
-                    <Controller
-                      name="managerId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={managerOptions}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder="Unassigned"
-                          searchable
-                          searchPlaceholder="Search managers…"
-                        />
-                      )}
-                    />
-                  </Fld>
-
-                  {/* Status */}
-                  <Fld label="Status">
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {PROJECT_STATUSES.map(s => {
-                        const meta = STATUS_META[s];
-                        const active = selectedStatus === s;
-                        return (
-                          <button key={s} type="button" onClick={() => setValue('projectStatus', s)} style={{
-                            padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                            border: `1px solid ${active ? meta.color : '#E5E7EB'}`,
-                            background: active ? meta.bg : 'white',
-                            color: active ? meta.color : '#6B7280',
-                            transition: 'all 0.15s',
-                          }}>
-                            {meta.label}
-                          </button>
-                        );
-                      })}
+                <div className={styles.formSection}>
+                  <div className={styles.formSectionHead}>
+                    <div className={styles.formSectionIcon} style={{ background: '#F0FDF9' }}>
+                      <FolderOpen size={13} color="#33AE95" />
                     </div>
-                  </Fld>
+                    <span className={styles.formSectionTitle}>Basic Information</span>
+                  </div>
+                  <div className="space-y-4">
+                    <Fld label="Project Name" required error={errors.name?.message}>
+                      <Input placeholder="e.g. Site Inspection Phase 1" {...register('name')} className={inputCls(!!errors.name)} />
+                    </Fld>
 
-                  <Fld label="Description" hint="Optional">
-                    <textarea rows={2} placeholder="Brief description…" {...register('description')}
-                      className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 text-sm px-3 py-2 resize-none outline-none" />
-                  </Fld>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Fld label="Client" required error={errors.clientId?.message}>
+                        <Controller
+                          name="clientId"
+                          control={control}
+                          render={({ field }) => (
+                            <DropdownSelect
+                              options={clientOptions}
+                              value={field.value || null}
+                              onChange={val => field.onChange(val ?? '')}
+                              placeholder="Select a client…"
+                              searchable
+                              searchPlaceholder="Search clients…"
+                              error={errors.clientId?.message}
+                            />
+                          )}
+                        />
+                        {clients.length === 0 && (
+                          <p className="text-xs text-amber-500 mt-1">No clients yet.</p>
+                        )}
+                      </Fld>
+                      <Fld label="Manager" hint="Optional">
+                        <Controller
+                          name="managerId"
+                          control={control}
+                          render={({ field }) => (
+                            <DropdownSelect
+                              options={managerOptions}
+                              value={field.value || null}
+                              onChange={val => field.onChange(val ?? '')}
+                              placeholder="Unassigned"
+                              searchable
+                              searchPlaceholder="Search managers…"
+                            />
+                          )}
+                        />
+                      </Fld>
+                    </div>
+
+                    <Fld label="Status">
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {PROJECT_STATUSES.map(s => {
+                          const meta = STATUS_META[s];
+                          const active = selectedStatus === s;
+                          return (
+                            <button key={s} type="button" onClick={() => setValue('projectStatus', s)} style={{
+                              padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                              border: `1px solid ${active ? meta.color : '#E5E7EB'}`,
+                              background: active ? meta.bg : 'white',
+                              color: active ? meta.color : '#6B7280',
+                              transition: 'all 0.15s',
+                            }}>
+                              {meta.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </Fld>
+
+                    <Fld label="Description" hint="Optional">
+                      <textarea rows={2} placeholder="Brief description…" {...register('description')}
+                        className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 text-sm px-3 py-2 resize-none outline-none transition-all" />
+                    </Fld>
+                  </div>
                 </div>
 
                 {/* Property Details */}
-                <div className="space-y-4">
-                  <p className={styles.sectionLabel}>
-                    <span className="flex items-center gap-2">
-                      <ClipboardList size={13} className="text-[#33AE95]" />
-                      Property Details
-                    </span>
-                  </p>
-
-                  {/* Property Type selector */}
-                  <Fld label="Property Type" hint="Required">
+                <div className={styles.formSection}>
+                  <div className={styles.formSectionHead}>
+                    <div className={styles.formSectionIcon} style={{ background: '#F0FDF9' }}>
+                      <ClipboardList size={13} color="#33AE95" />
+                    </div>
+                    <span className={styles.formSectionTitle}>Property Details</span>
+                  </div>
+                  <div className="space-y-4">
+                  <Fld label="Property Type" required error={errors.propertyTypeId?.message}>
                     <Controller
                       name="propertyTypeId"
                       control={control}
@@ -583,93 +593,159 @@ const Projects = () => {
                           placeholder="Select property type…"
                           searchable
                           searchPlaceholder="Search types…"
+                          error={errors.propertyTypeId?.message}
                         />
                       )}
                     />
                   </Fld>
 
-                  {/* Dynamic spec fields from template */}
-                  {specFields.length > 0 && (
-                    <div className="space-y-3 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
-                        {selectedPropertyType?.name} Details
-                      </p>
-                      {specFields.map(f => (
-                        <Fld key={f.label} label={f.label}>
-                          {f.type === 'dropdown' ? (
-                            <select
-                              value={specValues[f.label] ?? ''}
-                              onChange={e => setSpecValues(prev => ({ ...prev, [f.label]: e.target.value }))}
-                              className="w-full rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#263B4F] focus:border-[#33AE95] focus:outline-none focus:ring-1 focus:ring-[#33AE95]/20"
-                            >
-                              <option value="">Select…</option>
-                              {f.options?.map(o => (
-                                <option key={o} value={o}>{o}</option>
-                              ))}
-                            </select>
-                          ) : f.type === 'boolean' ? (
-                            <select
-                              value={specValues[f.label] ?? ''}
-                              onChange={e => setSpecValues(prev => ({ ...prev, [f.label]: e.target.value }))}
-                              className="w-full rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#263B4F] focus:border-[#33AE95] focus:outline-none focus:ring-1 focus:ring-[#33AE95]/20"
-                            >
-                              <option value="">Select…</option>
-                              <option value="Yes">Yes</option>
-                              <option value="No">No</option>
-                            </select>
-                          ) : (
-                            <input
-                              type={f.type === 'number' ? 'number' : 'text'}
-                              placeholder={`Enter ${f.label.toLowerCase()}…`}
-                              value={specValues[f.label] ?? ''}
-                              onChange={e => setSpecValues(prev => ({ ...prev, [f.label]: e.target.value }))}
-                              className="w-full rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:outline-none focus:ring-1 focus:ring-[#33AE95]/20"
-                            />
-                          )}
-                        </Fld>
-                      ))}
-                    </div>
-                  )}
+                  {/* Unified spec + custom fields block */}
+                  {selectedPropertyTypeId && (
+                    <div className={styles.specsBlock}>
+                      {/* Gradient header */}
+                      <div className={styles.specsHeader}>
+                        <div className={styles.specsHeaderIcon}>
+                          <ClipboardList size={14} />
+                        </div>
+                        <div className={styles.specsHeaderText}>
+                          <p className={styles.specsHeaderTitle}>{selectedPropertyType?.name} Details</p>
+                          <p className={styles.specsHeaderSub}>
+                            {specFields.length + customFields.length} question{specFields.length + customFields.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
 
-                  {/* Custom fields */}
-                  <div className="space-y-2">
-                    {customFields.map((cf, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <input
-                          placeholder="Label…"
-                          value={cf.label}
-                          onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, label: e.target.value } : f))}
-                          className="flex-1 rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:outline-none focus:ring-1 focus:ring-[#33AE95]/20"
-                        />
-                        <input
-                          placeholder="Value…"
-                          value={cf.value}
-                          onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, value: e.target.value } : f))}
-                          className="flex-1 rounded-md border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:outline-none focus:ring-1 focus:ring-[#33AE95]/20"
-                        />
+                      <div className={styles.specsBody}>
+                        {/* Standard template fields */}
+                        {specFields.map(f => {
+                          const opts = f.type === 'boolean' ? ['Yes', 'No'] : (f.options ?? []);
+                          const isSelect = f.type === 'dropdown' || f.type === 'boolean';
+                          return (
+                            <Fld key={f.label} label={f.label} required={f.required}>
+                              {isSelect ? (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none data-[state=open]:border-[#33AE95] data-[state=open]:ring-1 data-[state=open]:ring-[#33AE95]/20 ${inputCls(false)}`}
+                                    >
+                                      <span className={specValues[f.label] ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+                                        {specValues[f.label] || 'Select…'}
+                                      </span>
+                                      <ChevronDown size={14} className="text-[#9CA3AF] shrink-0" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent
+                                    align="start"
+                                    style={{ minWidth: 'var(--radix-dropdown-menu-trigger-width)' }}
+                                    className="bg-white border border-[#E5E7EB] shadow-lg z-[200]"
+                                  >
+                                    {opts.map(o => (
+                                      <DropdownMenuItem
+                                        key={o}
+                                        onSelect={() => setSpecValues(prev => ({ ...prev, [f.label]: o }))}
+                                        className={specValues[f.label] === o ? 'bg-[#F0FDF9] text-[#33AE95] font-medium' : ''}
+                                      >
+                                        {o}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              ) : (
+                                <Input
+                                  type={f.type === 'number' ? 'number' : 'text'}
+                                  placeholder={`Enter ${f.label.toLowerCase()}…`}
+                                  value={specValues[f.label] ?? ''}
+                                  onChange={e => setSpecValues(prev => ({ ...prev, [f.label]: e.target.value }))}
+                                  className={inputCls(false)}
+                                />
+                              )}
+                            </Fld>
+                          );
+                        })}
+
+                        {/* Separator before custom fields */}
+                        {customFields.length > 0 && (
+                          <div style={{ borderTop: '1px dashed #D1FAE5', margin: '2px 0' }} />
+                        )}
+
+                        {/* Custom fields */}
+                        {customFields.map((cf, idx) => (
+                          <div key={idx} className={styles.customFieldCard}>
+                            <div className={styles.customFieldHeader}>
+                              {editingLabelIdx === idx ? (
+                                <input
+                                  autoFocus
+                                  placeholder="Type question label…"
+                                  value={cf.label}
+                                  onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, label: e.target.value } : f))}
+                                  onBlur={() => setEditingLabelIdx(null)}
+                                  onKeyDown={e => e.key === 'Enter' && setEditingLabelIdx(null)}
+                                  className={styles.customFieldLabelInput}
+                                />
+                              ) : (
+                                <span className={styles.customFieldLabelText}>
+                                  {cf.label || <span style={{ color: '#9CA3AF' }}>Unnamed question</span>}
+                                </span>
+                              )}
+                              <div className={styles.customFieldActions}>
+                                <button
+                                  type="button"
+                                  title="Edit label"
+                                  onClick={() => setEditingLabelIdx(editingLabelIdx === idx ? null : idx)}
+                                  className={styles.customFieldActionBtn}
+                                >
+                                  <Pencil size={11} />
+                                </button>
+                                <button
+                                  type="button"
+                                  title="Remove"
+                                  onClick={() => {
+                                    setCustomFields(prev => prev.filter((_, i) => i !== idx));
+                                    if (editingLabelIdx === idx) setEditingLabelIdx(null);
+                                  }}
+                                  className={`${styles.customFieldActionBtn} ${styles.danger}`}
+                                >
+                                  <Trash2 size={11} />
+                                </button>
+                              </div>
+                            </div>
+                            <Input
+                              placeholder="Enter value…"
+                              value={cf.value}
+                              onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, value: e.target.value } : f))}
+                              className={inputCls(false)}
+                            />
+                          </div>
+                        ))}
+
+                        {/* Add Custom Detail button */}
                         <button
                           type="button"
-                          onClick={() => setCustomFields(prev => prev.filter((_, i) => i !== idx))}
-                          className="shrink-0 rounded-md p-2 text-[#9CA3AF] transition-colors hover:text-red-500"
+                          className={styles.addCustomBtn}
+                          onClick={() => {
+                            const newIdx = customFields.length;
+                            setCustomFields(prev => [...prev, { label: '', value: '' }]);
+                            setEditingLabelIdx(newIdx);
+                          }}
                         >
-                          <X size={14} />
+                          <PlusCircle size={14} />
+                          Add Custom Detail
                         </button>
                       </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setCustomFields(prev => [...prev, { label: '', value: '' }])}
-                      className="flex items-center gap-2 text-sm font-semibold text-[#33AE95] transition-colors hover:text-[#2a9a84]"
-                    >
-                      <PlusCircle size={14} />
-                      Add Custom Detail
-                    </button>
-                  </div>
-                </div>
+                    </div>
+                  )}
+                  </div>{/* closes space-y-4 */}
+                </div>{/* closes formSection (Property Details) */}
 
                 {/* Address */}
-                <div>
-                  <p className={styles.sectionLabel}>Address</p>
+                <div className={styles.formSection}>
+                  <div className={styles.formSectionHead}>
+                    <div className={styles.formSectionIcon} style={{ background: '#FFF7ED' }}>
+                      <MapPin size={13} color="#F97316" />
+                    </div>
+                    <span className={styles.formSectionTitle}>Address</span>
+                  </div>
                   <div className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Fld label="Address Line 1"><Input placeholder="Flat / Building no." {...register('addressLine1')} className={inputCls(false)} /></Fld>
@@ -702,8 +778,13 @@ const Projects = () => {
                 </div>
 
                 {/* Timeline */}
-                <div>
-                  <p className={styles.sectionLabel}>Timeline</p>
+                <div className={styles.formSection}>
+                  <div className={styles.formSectionHead}>
+                    <div className={styles.formSectionIcon} style={{ background: '#F5F3FF' }}>
+                      <Calendar size={13} color="#7C3AED" />
+                    </div>
+                    <span className={styles.formSectionTitle}>Timeline</span>
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Fld label="Planned Start Date"><Input type="date" {...register('startDatePlanned')} className={inputCls(false)} /></Fld>
                     <Fld label="Actual Start Date"><Input type="date" {...register('startDateActual')} className={inputCls(false)} /></Fld>
@@ -713,16 +794,21 @@ const Projects = () => {
                 </div>
 
                 {/* Financials */}
-                <div>
-                  <p className={styles.sectionLabel}>Financials</p>
+                <div className={styles.formSection}>
+                  <div className={styles.formSectionHead}>
+                    <div className={styles.formSectionIcon} style={{ background: '#F0FDF4' }}>
+                      <IndianRupee size={13} color="#16A34A" />
+                    </div>
+                    <span className={styles.formSectionTitle}>Financials</span>
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Fld label="Total Budget" hint="₹">
+                    <Fld label="Total Budget">
                       <div className="relative">
                         <IndianRupee style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
                         <Input type="number" step="any" placeholder="0.00" {...register('totalBudget')} className={inputCls(false) + ' pl-9'} />
                       </div>
                     </Fld>
-                    <Fld label="Contract Value" hint="₹">
+                    <Fld label="Contract Value">
                       <div className="relative">
                         <Banknote style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
                         <Input type="number" step="any" placeholder="0.00" {...register('contractValue')} className={inputCls(false) + ' pl-9'} />
@@ -750,60 +836,221 @@ const Projects = () => {
 
       {/* ── View Detail Modal ───────────────────────────────────────────────── */}
       <Dialog open={!!viewTarget} onOpenChange={open => { if (!open) setViewTarget(null); }}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto shadow-xl rounded-2xl p-0">
-          <DialogHeader className="px-7 pt-7 pb-4 border-b border-[#E5E7EB]">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/15 border border-[#33AE95]/30 flex items-center justify-center">
-                <FolderOpen size={18} className="text-[#33AE95]" />
-              </div>
-              <DialogTitle className="text-xl font-bold text-[#263B4F]">Project Details</DialogTitle>
-            </div>
-            {viewTarget && <div className="pl-12"><StatusBadge status={viewTarget.projectStatus} /></div>}
-          </DialogHeader>
-
-          {viewTarget && (
-            <div className="px-7 py-5 space-y-0">
-              <ViewRow label="Name" value={viewTarget.name} />
-              <ViewRow label="Description" value={viewTarget.description ?? '—'} />
-              <ViewRow label="Client" value={viewTarget.clientName ?? '—'} />
-              <ViewRow label="Company" value={viewTarget.clientCompany ?? '—'} />
-              <ViewRow label="Organisation" value={viewTarget.franchiseName ?? '—'} />
-              <ViewRow label="Manager" value={viewTarget.managerName ?? 'Unassigned'} />
-              <ViewRow label="Manager Email" value={viewTarget.managerEmail ?? '—'} />
-              <ViewRow label="Property Type" value={viewTarget.propertyTypeName ?? '—'} />
-              {viewTarget.projectSpecs && Object.keys(viewTarget.projectSpecs).length > 0 && (
-                <div className="py-3 border-b border-[#F3F4F6]">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280] mb-2">Property Specs</p>
-                  {Object.entries(viewTarget.projectSpecs as Record<string, string>).map(([k, v]) => (
-                    <div key={k} className="flex justify-between py-1 text-sm">
-                      <span className="text-[#6B7280]">{k}</span>
-                      <span className="font-medium text-[#263B4F]">{v}</span>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
+          {viewTarget && (() => {
+            const hasAddress = [viewTarget.addressLine1, viewTarget.addressLine2, viewTarget.street, viewTarget.city, viewTarget.state, viewTarget.country, viewTarget.pincode].some(Boolean);
+            const hasTimeline = [viewTarget.startDatePlanned, viewTarget.startDateActual, viewTarget.estimatedCompletionDate, viewTarget.actualCompletionDate].some(Boolean);
+            const hasFinancials = viewTarget.totalBudget != null || viewTarget.contractValue != null;
+            const hasSpecs = viewTarget.projectSpecs && Object.keys(viewTarget.projectSpecs).length > 0;
+            return (
+              <>
+                {/* Hero header */}
+                <div className={styles.viewHero}>
+                  <div className={styles.viewHeroBg} />
+                  <div className={styles.viewHeroContent}>
+                    <div className={styles.viewHeroIcon}>
+                      <FolderOpen size={22} color="white" />
                     </div>
-                  ))}
+                    <div className={styles.viewHeroMeta}>
+                      <DialogTitle className={styles.viewHeroName}>{viewTarget.name}</DialogTitle>
+                      <div className={styles.viewHeroRow}>
+                        <StatusBadge status={viewTarget.projectStatus} />
+                        {viewTarget.propertyTypeName && (
+                          <span className={styles.viewHeroPropType}>
+                            <Building2 size={10} /> {viewTarget.propertyTypeName}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
-              <ViewRow label="Location" value={[viewTarget.city, viewTarget.state, viewTarget.country].filter(Boolean).join(', ') || '—'} />
-              <ViewRow label="Pincode" value={viewTarget.pincode ?? '—'} />
-              <ViewRow label="Planned Start" value={fmt(viewTarget.startDatePlanned)} />
-              <ViewRow label="Actual Start" value={fmt(viewTarget.startDateActual)} />
-              <ViewRow label="Est. End Date" value={fmt(viewTarget.estimatedCompletionDate)} />
-              <ViewRow label="Actual End" value={fmt(viewTarget.actualCompletionDate)} />
-              <ViewRow label="Budget" value={fmtMoney(viewTarget.totalBudget)} />
-              <ViewRow label="Contract Value" value={fmtMoney(viewTarget.contractValue)} />
-              <ViewRow label="Created" value={fmt(viewTarget.createdAt)} />
-            </div>
-          )}
 
-          <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">
-            <Button variant="ghost" onClick={() => setViewTarget(null)}
-              className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Close</Button>
-            {viewTarget && (
-              <Button onClick={() => { openEdit(viewTarget); setViewTarget(null); }}
-                className="bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold">
-                <Pencil size={14} className="mr-2" /> Edit
-              </Button>
-            )}
-          </DialogFooter>
+                <div className={styles.viewSections}>
+
+                  {/* People */}
+                  <div className={styles.viewSection}>
+                    <div className={styles.viewSectionHead}>
+                      <div className={styles.viewSectionIcon} style={{ background: '#EFF6FF' }}>
+                        <Users size={13} color="#3B82F6" />
+                      </div>
+                      <span className={styles.viewSectionTitle}>People</span>
+                    </div>
+                    <div className={styles.viewGrid}>
+                      <div className={styles.viewField}>
+                        <span className={styles.viewFieldLabel}>Client</span>
+                        <span className={styles.viewFieldValue}>{viewTarget.clientName ?? '—'}</span>
+                      </div>
+                      <div className={styles.viewField}>
+                        <span className={styles.viewFieldLabel}>Company</span>
+                        <span className={styles.viewFieldValue}>{viewTarget.clientCompany ?? '—'}</span>
+                      </div>
+                      <div className={styles.viewField}>
+                        <span className={styles.viewFieldLabel}>Manager</span>
+                        <span className={viewTarget.managerName ? styles.viewFieldValue : styles.viewFieldValueMuted}>
+                          {viewTarget.managerName ?? 'Unassigned'}
+                        </span>
+                      </div>
+                      <div className={styles.viewField}>
+                        <span className={styles.viewFieldLabel}>Organisation</span>
+                        <span className={styles.viewFieldValue}>{viewTarget.franchiseName ?? '—'}</span>
+                      </div>
+                      {viewTarget.description && (
+                        <div className={`${styles.viewField} ${styles.viewFieldFull}`}>
+                          <span className={styles.viewFieldLabel}>Description</span>
+                          <span className={styles.viewFieldValue}>{viewTarget.description}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Property Specs */}
+                  {hasSpecs && (
+                    <div className={styles.viewSection}>
+                      <div className={styles.viewSectionHead}>
+                        <div className={styles.viewSectionIcon} style={{ background: '#F0FDF9' }}>
+                          <ClipboardList size={13} color="#33AE95" />
+                        </div>
+                        <span className={styles.viewSectionTitle}>Property Details</span>
+                      </div>
+                      <div className={styles.viewSpecsBlock}>
+                        <div className={styles.viewSpecsHead}>{viewTarget.propertyTypeName ?? 'Specs'}</div>
+                        <div className={styles.viewSpecsBody}>
+                          {Object.entries(viewTarget.projectSpecs as Record<string, string>).map(([k, v]) => (
+                            <div key={k} className={styles.viewSpecRow}>
+                              <span className={styles.viewSpecKey}>{k}</span>
+                              <span className={styles.viewSpecVal}>{v || '—'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Address */}
+                  {hasAddress && (
+                    <div className={styles.viewSection}>
+                      <div className={styles.viewSectionHead}>
+                        <div className={styles.viewSectionIcon} style={{ background: '#FFF7ED' }}>
+                          <MapPin size={13} color="#F97316" />
+                        </div>
+                        <span className={styles.viewSectionTitle}>Address</span>
+                      </div>
+                      <div className={styles.viewGrid}>
+                        {viewTarget.addressLine1 && (
+                          <div className={`${styles.viewField} ${styles.viewFieldFull}`}>
+                            <span className={styles.viewFieldLabel}>Line 1</span>
+                            <span className={styles.viewFieldValue}>{viewTarget.addressLine1}</span>
+                          </div>
+                        )}
+                        {viewTarget.addressLine2 && (
+                          <div className={`${styles.viewField} ${styles.viewFieldFull}`}>
+                            <span className={styles.viewFieldLabel}>Line 2</span>
+                            <span className={styles.viewFieldValue}>{viewTarget.addressLine2}</span>
+                          </div>
+                        )}
+                        {viewTarget.city && (
+                          <div className={styles.viewField}>
+                            <span className={styles.viewFieldLabel}>City</span>
+                            <span className={styles.viewFieldValue}>{viewTarget.city}</span>
+                          </div>
+                        )}
+                        {viewTarget.state && (
+                          <div className={styles.viewField}>
+                            <span className={styles.viewFieldLabel}>State</span>
+                            <span className={styles.viewFieldValue}>{viewTarget.state}</span>
+                          </div>
+                        )}
+                        {viewTarget.country && (
+                          <div className={styles.viewField}>
+                            <span className={styles.viewFieldLabel}>Country</span>
+                            <span className={styles.viewFieldValue}>{viewTarget.country}</span>
+                          </div>
+                        )}
+                        {viewTarget.pincode && (
+                          <div className={styles.viewField}>
+                            <span className={styles.viewFieldLabel}>Pincode</span>
+                            <span className={styles.viewFieldValue}>{viewTarget.pincode}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Timeline */}
+                  {hasTimeline && (
+                    <div className={styles.viewSection}>
+                      <div className={styles.viewSectionHead}>
+                        <div className={styles.viewSectionIcon} style={{ background: '#F5F3FF' }}>
+                          <Calendar size={13} color="#7C3AED" />
+                        </div>
+                        <span className={styles.viewSectionTitle}>Timeline</span>
+                      </div>
+                      <div className={styles.viewGrid}>
+                        <div className={styles.viewField}>
+                          <span className={styles.viewFieldLabel}>Planned Start</span>
+                          <span className={styles.viewFieldValue}>{fmt(viewTarget.startDatePlanned)}</span>
+                        </div>
+                        <div className={styles.viewField}>
+                          <span className={styles.viewFieldLabel}>Actual Start</span>
+                          <span className={styles.viewFieldValue}>{fmt(viewTarget.startDateActual)}</span>
+                        </div>
+                        <div className={styles.viewField}>
+                          <span className={styles.viewFieldLabel}>Est. Completion</span>
+                          <span className={styles.viewFieldValue}>{fmt(viewTarget.estimatedCompletionDate)}</span>
+                        </div>
+                        <div className={styles.viewField}>
+                          <span className={styles.viewFieldLabel}>Actual Completion</span>
+                          <span className={styles.viewFieldValue}>{fmt(viewTarget.actualCompletionDate)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Financials */}
+                  {hasFinancials && (
+                    <div className={styles.viewSection}>
+                      <div className={styles.viewSectionHead}>
+                        <div className={styles.viewSectionIcon} style={{ background: '#F0FDF4' }}>
+                          <IndianRupee size={13} color="#16A34A" />
+                        </div>
+                        <span className={styles.viewSectionTitle}>Financials</span>
+                      </div>
+                      <div className={styles.viewGrid}>
+                        {viewTarget.totalBudget != null && (
+                          <div className={`${styles.viewFinCard} ${styles.viewFinCardBudget}`}>
+                            <span className={styles.viewFinLabel}>Total Budget</span>
+                            <span className={`${styles.viewFinAmount} ${styles.viewFinAmountGreen}`}>{fmtMoney(viewTarget.totalBudget)}</span>
+                          </div>
+                        )}
+                        {viewTarget.contractValue != null && (
+                          <div className={`${styles.viewFinCard} ${styles.viewFinCardContract}`}>
+                            <span className={styles.viewFinLabel}>Contract Value</span>
+                            <span className={`${styles.viewFinAmount} ${styles.viewFinAmountBlue}`}>{fmtMoney(viewTarget.contractValue)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Meta */}
+                  <div className={styles.viewSection} style={{ borderBottom: 'none' }}>
+                    <div className={styles.viewFieldLabel} style={{ marginBottom: 4 }}>Created</div>
+                    <div className={styles.viewFieldValue}>{fmt(viewTarget.createdAt)}</div>
+                  </div>
+
+                </div>
+
+                <DialogFooter className="px-7 py-4 border-t border-[#E5E7EB] flex gap-3">
+                  <Button variant="ghost" onClick={() => setViewTarget(null)}
+                    className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Close</Button>
+                  <Button onClick={() => { openEdit(viewTarget); setViewTarget(null); }}
+                    className="bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold">
+                    <Pencil size={14} className="mr-2" /> Edit
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

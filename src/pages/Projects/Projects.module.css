@@ -121,9 +121,21 @@
 /* ── Card Grid ───────────────────────────────────────────────────────────── */
 .cardGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 18px;
   margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .cardGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Project Card ────────────────────────────────────────────────────────── */
@@ -378,6 +390,271 @@
   border-color: #33AE95 !important;
 }
 
+/* ── View Modal ───────────────────────────────────────────────────────────── */
+.viewHero {
+  position: relative;
+  padding: 28px 28px 20px;
+  overflow: hidden;
+}
+
+.viewHeroBg {
+  position: absolute;
+  inset: 0;
+  opacity: 0.08;
+  background: linear-gradient(135deg, #33AE95, #2a9a84);
+}
+
+.viewHeroContent {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.viewHeroIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #33AE95, #2a9a84);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(51,174,149,0.3);
+}
+
+.viewHeroMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.viewHeroName {
+  font-size: 18px;
+  font-weight: 700;
+  color: #263B4F;
+  margin: 0 0 6px;
+  word-break: break-word;
+}
+
+.viewHeroRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.viewHeroPropType {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid #D1FAE5;
+  background: #F0FDF9;
+  font-size: 11px;
+  font-weight: 600;
+  color: #33AE95;
+}
+
+/* Info sections */
+.viewSections {
+  padding: 0 28px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.viewSection {
+  padding: 16px 0;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.viewSection:last-child {
+  border-bottom: none;
+}
+
+.viewSectionHead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.viewSectionIcon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.viewSectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #9CA3AF;
+}
+
+.viewGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+}
+
+.viewField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viewFieldFull {
+  grid-column: 1 / -1;
+}
+
+.viewFieldLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9CA3AF;
+}
+
+.viewFieldValue {
+  font-size: 13px;
+  font-weight: 500;
+  color: #263B4F;
+  word-break: break-word;
+}
+
+.viewFieldValueMuted {
+  font-size: 13px;
+  color: #9CA3AF;
+}
+
+/* Financials highlight */
+.viewFinCard {
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.viewFinCardBudget {
+  background: #F0FDF9;
+  border: 1px solid #D1FAE5;
+}
+
+.viewFinCardContract {
+  background: #EFF6FF;
+  border: 1px solid #DBEAFE;
+}
+
+.viewFinLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6B7280;
+}
+
+.viewFinAmount {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.viewFinAmountGreen { color: #059669; }
+.viewFinAmountBlue  { color: #2563EB; }
+
+/* Specs view block */
+.viewSpecsBlock {
+  border-radius: 12px;
+  border: 1px solid #D1FAE5;
+  background: #F0FDF9;
+  overflow: hidden;
+}
+
+.viewSpecsHead {
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #33AE95, #2a9a84);
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.viewSpecsBody {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.viewSpecRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid #D1FAE5;
+  gap: 12px;
+}
+
+.viewSpecRow:last-child {
+  border-bottom: none;
+}
+
+.viewSpecKey {
+  font-size: 12px;
+  color: #374151;
+  flex: 1;
+}
+
+.viewSpecVal {
+  font-size: 12px;
+  font-weight: 600;
+  color: #263B4F;
+  text-align: right;
+}
+
+/* ── Form Section Cards ───────────────────────────────────────────────────── */
+.formSection {
+  border-radius: 12px;
+  border: 1px solid #F0F0F0;
+  background: #FAFAFA;
+  padding: 16px 18px 18px;
+}
+
+.formSectionHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #EFEFEF;
+}
+
+.formSectionIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.formSectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.65px;
+  color: #6B7280;
+}
+
 /* ── Form Section Label ───────────────────────────────────────────────────── */
 .sectionLabel {
   font-size: 11px;
@@ -388,4 +665,146 @@
   margin: 0 0 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid #F3F4F6;
+}
+
+/* ── Property Specs Block ─────────────────────────────────────────────────── */
+.specsBlock {
+  border-radius: 14px;
+  border: 1px solid #D1FAE5;
+  background: #F0FDF9;
+  overflow: hidden;
+}
+
+.specsHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #33AE95 0%, #2a9a84 100%);
+}
+
+.specsHeaderIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  flex-shrink: 0;
+}
+
+.specsHeaderText {
+  flex: 1;
+}
+
+.specsHeaderTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+}
+
+.specsHeaderSub {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+}
+
+.specsBody {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+
+/* Custom field card */
+.customFieldCard {
+  border-radius: 10px;
+  border: 1.5px dashed #A7F3D0;
+  background: white;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.customFieldHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.customFieldLabelInput {
+  flex: 1;
+  border: none;
+  border-bottom: 1.5px solid #33AE95;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #263B4F;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.customFieldLabelText {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.customFieldActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.customFieldActionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #9CA3AF;
+  transition: background 0.15s, color 0.15s;
+}
+
+.customFieldActionBtn:hover {
+  background: #F3F4F6;
+  color: #374151;
+}
+
+.customFieldActionBtn.danger:hover {
+  background: #FEF2F2;
+  color: #EF4444;
+}
+
+/* Add Custom Detail button */
+.addCustomBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 9px;
+  border-radius: 10px;
+  border: 1.5px dashed #6EE7D0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #33AE95;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.addCustomBtn:hover {
+  background: #F0FDF9;
+  border-color: #33AE95;
 }
