@@ -5,9 +5,10 @@ import * as z from 'zod';
 import { toast } from 'sonner';
 import {
   CreditCard, Plus, RefreshCw, IndianRupee, Clock,
-  FileText, Loader2, Eye, Pencil, Trash2, ChevronLeft, ChevronRight,
+  FileText, Loader2, Eye, Pencil, Trash2,
   CheckCircle, XCircle, Users, Package, LayoutGrid, Sparkles, Building2,
 } from 'lucide-react';
+import Pagination from '@/components/shared-ui/Pagination/Pagination';
 
 import { subscriptionService } from '@/services/subscriptionService';
 import { moduleService } from '@/services/moduleService';
@@ -76,9 +77,10 @@ function PlanTable({
   onToggle: (p: SubscriptionResponse) => void;
   togglingId: string | null;
 }) {
-  const [currentPage, setCurrentPage] = useState(0);
-  const totalPages = Math.max(1, Math.ceil(plans.length / PAGE_SIZE));
-  const paginated = plans.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(plans.length / pageSize));
+  const paginated = plans.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   if (loading) {
     return (
@@ -163,30 +165,16 @@ function PlanTable({
         </tbody>
       </table>
 
-      {totalPages > 1 && (
-        <div className={styles.pagination}>
-          <span className={styles.paginationInfo}>
-            {`Showing ${currentPage * PAGE_SIZE + 1}\u2013${Math.min((currentPage + 1) * PAGE_SIZE, plans.length)} of ${plans.length}`}
-          </span>
-          <div className={styles.paginationControls}>
-            <button className={styles.pageBtn} disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}>
-              <ChevronLeft size={14} />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i}
-                className={`${styles.pageBtn} ${i === currentPage ? styles.pageBtnActive : ''}`}
-                onClick={() => setCurrentPage(i)}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button className={styles.pageBtn} disabled={currentPage === totalPages - 1} onClick={() => setCurrentPage((p) => p + 1)}>
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
+      <div className={styles.pagination}>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={plans.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+        />
+      </div>
     </>
   );
 }

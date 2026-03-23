@@ -30,14 +30,14 @@ import { Fld, IcoInput, inputCls } from '@/components/shared-ui/form-helpers';
 
 // ─── Permission colours ────────────────────────────────────────────────────────
 const PERM_STYLE: Record<string, { bg: string; color: string; border: string }> = {
-  All:    { bg: 'rgba(139,92,246,0.12)',  color: '#7c3aed', border: 'rgba(139,92,246,0.3)'  },
-  Read:   { bg: 'rgba(34,197,94,0.12)',   color: '#16a34a', border: 'rgba(34,197,94,0.3)'   },
-  Write:  { bg: 'rgba(59,130,246,0.12)',  color: '#2563eb', border: 'rgba(59,130,246,0.3)'  },
-  Update: { bg: 'rgba(245,158,11,0.12)',  color: '#d97706', border: 'rgba(245,158,11,0.3)'  },
-  Delete: { bg: 'rgba(239,68,68,0.12)',   color: '#dc2626', border: 'rgba(239,68,68,0.3)'   },
-  Import: { bg: 'rgba(20,184,166,0.12)',  color: '#0d9488', border: 'rgba(20,184,166,0.3)'  },
-  Export: { bg: 'rgba(99,102,241,0.12)',  color: '#4f46e5', border: 'rgba(99,102,241,0.3)'  },
-  Share:  { bg: 'rgba(236,72,153,0.12)',  color: '#db2777', border: 'rgba(236,72,153,0.3)'  },
+  All: { bg: 'rgba(139,92,246,0.12)', color: '#7c3aed', border: 'rgba(139,92,246,0.3)' },
+  Read: { bg: 'rgba(34,197,94,0.12)', color: '#16a34a', border: 'rgba(34,197,94,0.3)' },
+  Write: { bg: 'rgba(59,130,246,0.12)', color: '#2563eb', border: 'rgba(59,130,246,0.3)' },
+  Update: { bg: 'rgba(245,158,11,0.12)', color: '#d97706', border: 'rgba(245,158,11,0.3)' },
+  Delete: { bg: 'rgba(239,68,68,0.12)', color: '#dc2626', border: 'rgba(239,68,68,0.3)' },
+  Import: { bg: 'rgba(20,184,166,0.12)', color: '#0d9488', border: 'rgba(20,184,166,0.3)' },
+  Export: { bg: 'rgba(99,102,241,0.12)', color: '#4f46e5', border: 'rgba(99,102,241,0.3)' },
+  Share: { bg: 'rgba(236,72,153,0.12)', color: '#db2777', border: 'rgba(236,72,153,0.3)' },
 };
 const permStyle = (name?: string) =>
   PERM_STYLE[name ?? ''] ?? { bg: 'rgba(107,114,128,0.10)', color: '#6b7280', border: 'rgba(107,114,128,0.25)' };
@@ -61,23 +61,23 @@ const groupByModule = (mods: RoleModuleAssignment[]) => {
 
 // ─── User form schema ──────────────────────────────────────────────────────────
 const schema = z.object({
-  firstName:    z.string().min(1, 'First name is required'),
-  middleName:   z.string().optional(),
-  lastName:     z.string().min(1, 'Last name is required'),
-  email:        z.string().email('Enter a valid email'),
-  password:     z.string().optional(),
-  phoneNumber:  z.string().optional(),
-  gender:       z.string().optional(),
-  bio:          z.string().optional(),
-  remark:       z.string().optional(),
-  roleId:       z.string().min(1, 'Role is required'),
+  firstName: z.string().min(1, 'First name is required'),
+  middleName: z.string().optional(),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Enter a valid email'),
+  password: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  gender: z.string().optional(),
+  bio: z.string().optional(),
+  remark: z.string().optional(),
+  roleId: z.string().min(1, 'Role is required'),
   addressLine1: z.string().optional(),
   addressLine2: z.string().optional(),
-  street:       z.string().optional(),
-  district:     z.string().optional(),
-  state:        z.string().optional(),
-  country:      z.string().optional(),
-  pincode:      z.string().optional(),
+  street: z.string().optional(),
+  district: z.string().optional(),
+  state: z.string().optional(),
+  country: z.string().optional(),
+  pincode: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -103,51 +103,51 @@ const UsersRoles = () => {
   const [subTab, setSubTab] = useState<SubTab>('users');
 
   // ── Users state ──────────────────────────────────────────────────────────
-  const [users, setUsers]               = useState<UserResponse[]>([]);
-  const [total, setTotal]               = useState(0);
-  const [currentPage, setCurrentPage]   = useState(1);
+  const [users, setUsers] = useState<UserResponse[]>([]);
+  const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [usersLoading, setUsersLoading] = useState(false);
-  const [roles, setRoles]               = useState<RoleResponse[]>([]);
-  const [modalMode, setModalMode]       = useState<'create' | 'edit' | null>(null);
-  const [viewUser, setViewUser]         = useState<UserResponse | null>(null);
-  const [editTarget, setEditTarget]     = useState<UserResponse | null>(null);
+  const [roles, setRoles] = useState<RoleResponse[]>([]);
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
+  const [viewUser, setViewUser] = useState<UserResponse | null>(null);
+  const [editTarget, setEditTarget] = useState<UserResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null);
-  const [submitting, setSubmitting]     = useState(false);
-  const [deleting, setDeleting]         = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [toggleTarget, setToggleTarget] = useState<{ user: UserResponse; newActive: boolean } | null>(null);
-  const [toggling, setToggling]         = useState(false);
+  const [toggling, setToggling] = useState(false);
 
   // ── Roles state ──────────────────────────────────────────────────────────
-  const [roleList, setRoleList]           = useState<RoleResponse[]>([]);
-  const [roleModules, setRoleModules]     = useState<Record<number, RoleModuleAssignment[]>>({});
-  const [rolesLoading, setRolesLoading]   = useState(false);
+  const [roleList, setRoleList] = useState<RoleResponse[]>([]);
+  const [roleModules, setRoleModules] = useState<Record<number, RoleModuleAssignment[]>>({});
+  const [rolesLoading, setRolesLoading] = useState(false);
 
   // Role create/edit modal
-  const [roleModalOpen, setRoleModalOpen]       = useState(false);
-  const [editRole, setEditRole]                 = useState<RoleResponse | null>(null);
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [editRole, setEditRole] = useState<RoleResponse | null>(null);
   const [deleteRoleTarget, setDeleteRoleTarget] = useState<RoleResponse | null>(null);
-  const [roleSubmitting, setRoleSubmitting]     = useState(false);
-  const [roleDeletingId, setRoleDeletingId]     = useState<number | null>(null);
-  const [roleToggling, setRoleToggling]         = useState<number | null>(null);
+  const [roleSubmitting, setRoleSubmitting] = useState(false);
+  const [roleDeletingId, setRoleDeletingId] = useState<number | null>(null);
+  const [roleToggling, setRoleToggling] = useState<number | null>(null);
   const [toggleStatusTarget, setToggleStatusTarget] = useState<RoleResponse | null>(null);
 
   // Role form fields
-  const [roleName, setRoleName]   = useState('');
-  const [roleDesc, setRoleDesc]   = useState('');
+  const [roleName, setRoleName] = useState('');
+  const [roleDesc, setRoleDesc] = useState('');
   // scope is auto-determined by backend based on creator's context
   // moduleId → Set<permissionName>
-  const [modPerms, setModPerms]   = useState<Map<number, Set<string>>>(new Map());
+  const [modPerms, setModPerms] = useState<Map<number, Set<string>>>(new Map());
 
   // Available modules for the create/edit modal
-  const [allModules, setAllModules]       = useState<ModuleResponse[]>([]);
+  const [allModules, setAllModules] = useState<ModuleResponse[]>([]);
   const [modulesLoading, setModulesLoading] = useState(false);
 
   // Modules detail modal (click on module count)
   const [modulesModalRole, setModulesModalRole] = useState<RoleResponse | null>(null);
 
   // Users detail modal (click on user count)
-  const [usersModalRole, setUsersModalRole]       = useState<RoleResponse | null>(null);
-  const [usersModalList, setUsersModalList]       = useState<RoleUserItem[]>([]);
+  const [usersModalRole, setUsersModalRole] = useState<RoleResponse | null>(null);
+  const [usersModalList, setUsersModalList] = useState<RoleUserItem[]>([]);
   const [usersModalLoading, setUsersModalLoading] = useState(false);
 
   // ── User form ─────────────────────────────────────────────────────────────
@@ -156,14 +156,14 @@ const UsersRoles = () => {
 
   const { field: firstNameField } = useController({ name: 'firstName', control });
   const { field: middleNameField } = useController({ name: 'middleName', control });
-  const { field: lastNameField }  = useController({ name: 'lastName', control });
-  const { field: emailField }     = useController({ name: 'email', control });
-  const { field: passwordField }  = useController({ name: 'password', control });
+  const { field: lastNameField } = useController({ name: 'lastName', control });
+  const { field: emailField } = useController({ name: 'email', control });
+  const { field: passwordField } = useController({ name: 'password', control });
 
   const selectedRoleId = watch('roleId');
   const selectedGender = watch('gender');
-  const selectedRole   = roles.find((r) => String(r.roleId) === selectedRoleId);
-  const totalPages     = Math.ceil(total / PAGE_SIZE);
+  const selectedRole = roles.find((r) => String(r.roleId) === selectedRoleId);
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   // ── Fetch users ───────────────────────────────────────────────────────────
   const fetchUsers = async (page = currentPage) => {
@@ -444,11 +444,11 @@ const UsersRoles = () => {
       const addressFields: UserAddressRequest = {
         addressLine1: values.addressLine1?.trim() || undefined,
         addressLine2: values.addressLine2?.trim() || undefined,
-        street:       values.street?.trim() || undefined,
-        district:     values.district?.trim() || undefined,
-        state:        values.state?.trim() || undefined,
-        country:      values.country?.trim() || undefined,
-        pincode:      values.pincode?.trim() || undefined,
+        street: values.street?.trim() || undefined,
+        district: values.district?.trim() || undefined,
+        state: values.state?.trim() || undefined,
+        country: values.country?.trim() || undefined,
+        pincode: values.pincode?.trim() || undefined,
       };
       const hasAddress = Object.values(addressFields).some(Boolean);
       const payload = {
@@ -458,11 +458,11 @@ const UsersRoles = () => {
         email: values.email,
         ...(values.password?.trim() && { password: values.password.trim() }),
         phoneNumber: values.phoneNumber?.trim() || undefined,
-        gender:  values.gender || undefined,
-        bio:     values.bio?.trim() || undefined,
-        remark:  values.remark?.trim() || undefined,
+        gender: values.gender || undefined,
+        bio: values.bio?.trim() || undefined,
+        remark: values.remark?.trim() || undefined,
         address: hasAddress ? addressFields : undefined,
-        roleId:  Number(values.roleId),
+        roleId: Number(values.roleId),
         statusId: 1,
         ...(!isSuperAdmin && authUser?.orgId ? { orgId: authUser.orgId } : {}),
       };
@@ -554,7 +554,7 @@ const UsersRoles = () => {
                     <th>User</th>
                     <th>Phone</th>
                     <th>Email</th>
-                    <th>Gender</th>
+                    {/* <th>Gender</th> */}
                     <th>Role</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'center' }}>Actions</th>
@@ -573,22 +573,22 @@ const UsersRoles = () => {
                         <td className={styles.mutedCell}>
                           {u.phoneNumber
                             ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                <Phone size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
-                                {u.phoneNumber}
-                              </span>
+                              <Phone size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+                              {u.phoneNumber}
+                            </span>
                             : <span style={{ color: '#D1D5DB' }}>—</span>}
                         </td>
                         <td className={styles.mutedCell}>
                           {u.email
                             ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                <Mail size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
-                                {u.email}
-                              </span>
+                              <Mail size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+                              {u.email}
+                            </span>
                             : <span style={{ color: '#D1D5DB' }}>—</span>}
                         </td>
-                        <td className={styles.mutedCell}>
+                        {/* <td className={styles.mutedCell}>
                           {u.gender ?? <span style={{ color: '#D1D5DB' }}>—</span>}
-                        </td>
+                        </td> */}
                         <td>
                           {u.roleName
                             ? <span className={styles.roleBadge}>{u.roleName}</span>
@@ -614,14 +614,12 @@ const UsersRoles = () => {
                   })}
                 </tbody>
               </table>
-              {totalPages > 1 && (
-                <div className={styles.paginationArea}>
-                  <Pagination
-                    currentPage={currentPage} totalPages={totalPages}
-                    totalItems={total} pageSize={PAGE_SIZE} onPageChange={setCurrentPage}
-                  />
-                </div>
-              )}
+              <div className={styles.paginationArea}>
+                <Pagination
+                  currentPage={currentPage} totalPages={totalPages}
+                  totalItems={total} pageSize={PAGE_SIZE} onPageChange={setCurrentPage}
+                />
+              </div>
             </>
           )}
         </div>
@@ -667,8 +665,10 @@ const UsersRoles = () => {
               </thead>
               <tbody>
                 {visibleRoles.map((role) => {
-                  const grouped  = groupByModule(roleModules[role.roleId] ?? []);
+                  const grouped = groupByModule(roleModules[role.roleId] ?? []);
                   const isActive = role.isActive !== false;
+                  // Use the larger of the DB-reported count and the locally derived count
+                  const displayModuleCount = Math.max(role.moduleCount ?? 0, grouped.length);
                   return (
                     <tr key={role.roleId} className={styles.tableRow}>
                       {/* Role name */}
@@ -691,7 +691,7 @@ const UsersRoles = () => {
                       <td>
                         <button className={styles.countBtn} onClick={() => openModulesModal(role)}>
                           <Package size={12} style={{ opacity: 0.6 }} />
-                          {role.moduleCount ?? 0}
+                          {displayModuleCount}
                         </button>
                       </td>
                       {/* Status toggle */}
@@ -748,24 +748,24 @@ const UsersRoles = () => {
               return grouped.length === 0
                 ? <p style={{ fontSize: 13, color: '#9CA3AF', fontStyle: 'italic', textAlign: 'center', padding: '24px 0' }}>No modules assigned.</p>
                 : grouped.map((m) => (
-                    <div key={m.moduleId} style={{ marginBottom: 14 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#33AE95', display: 'inline-block', flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#263B4F' }}>{m.moduleName}</span>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, paddingLeft: 14 }}>
-                        {m.permissions.map((p) => {
-                          const ps = permStyle(p);
-                          return (
-                            <span key={p} className={styles.permChip}
-                              style={{ background: ps.bg, color: ps.color, border: `1px solid ${ps.border}` }}>
-                              {p}
-                            </span>
-                          );
-                        })}
-                      </div>
+                  <div key={m.moduleId} style={{ marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#33AE95', display: 'inline-block', flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#263B4F' }}>{m.moduleName}</span>
                     </div>
-                  ));
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, paddingLeft: 14 }}>
+                      {m.permissions.map((p) => {
+                        const ps = permStyle(p);
+                        return (
+                          <span key={p} className={styles.permChip}
+                            style={{ background: ps.bg, color: ps.color, border: `1px solid ${ps.border}` }}>
+                            {p}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ));
             })()}
           </div>
           <DialogFooter className="px-7 py-4 border-t border-[#E5E7EB] bg-[#F9FAFB] rounded-b-2xl shrink-0">
@@ -1203,7 +1203,7 @@ const UsersRoles = () => {
                     viewUser.address.pincode,
                   ].filter(Boolean).join(', ')] as [string, string],
                 ] : []),
-                ...(viewUser.bio    ? [['Bio', viewUser.bio]       as [string, string]] : []),
+                ...(viewUser.bio ? [['Bio', viewUser.bio] as [string, string]] : []),
                 ...(viewUser.remark ? [['Remark', viewUser.remark] as [string, string]] : []),
               ] as [string, string][]).map(([label, value]) => (
                 <div key={label} className="flex gap-3 py-2.5 border-b border-[#E5E7EB] last:border-0">

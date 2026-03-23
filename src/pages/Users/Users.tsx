@@ -5,9 +5,10 @@ import * as z from 'zod';
 import { toast } from 'sonner';
 import {
   Users as UsersIcon, Plus, RefreshCw, Eye, Pencil, Trash2,
-  ChevronLeft, ChevronRight, UserCircle, Mail, Lock, User,
-  ChevronDown, Building2, Shield, Trash2 as DeleteIcon, Wand2,
+  UserCircle, Mail, Lock, User,
+  ChevronDown, Building2, Shield, Wand2,
 } from 'lucide-react';
+import Pagination from '@/components/shared-ui/Pagination/Pagination';
 
 import { userService } from '@/services/userService';
 import { organisationService } from '@/services/organisationService';
@@ -100,14 +101,15 @@ const Users = () => {
   const [orgs, setOrgs] = useState<OrganisationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [modalMode, setModalMode] = useState<'create' | 'edit' | null>(null);
   const [viewUser, setViewUser] = useState<UserResponse | null>(null);
   const [editTarget, setEditTarget] = useState<UserResponse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const totalPages = Math.ceil(total / pageSize);
 
   const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY });
   const { reset, handleSubmit, control, setValue, watch, formState: { errors } } = methods;
@@ -131,7 +133,7 @@ const Users = () => {
     setLoading(true);
     try {
       const [userData, orgsData, rolesData] = await Promise.all([
-        userService.listUsers(currentPage, PAGE_SIZE),
+        userService.listUsers(currentPage - 1, pageSize),
         organisationService.getOrganisations(0, 1000),
         userService.listRoles(),
       ]);
@@ -146,7 +148,7 @@ const Users = () => {
     }
   };
 
-  useEffect(() => { fetchAll(); }, [currentPage]);
+  useEffect(() => { fetchAll(); }, [currentPage, pageSize]);
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -297,10 +299,7 @@ const Users = () => {
                     <td>
                       <div className={styles.orgCell}>
                         <div className={styles.orgIcon}><UserCircle size={16} /></div>
-                        <div>
-                          <span className={styles.orgName}>{u.firstName} {u.lastName}</span>
-                          <span className={styles.orgMeta}>{u.gender ?? '—'}</span>
-                        </div>
+                        <span className={styles.orgName}>{u.firstName} {u.lastName}</span>
                       </div>
                     </td>
                     <td className={styles.mutedCell}>{u.email}</td>
@@ -336,13 +335,16 @@ const Users = () => {
             </table>
           )}
 
-          {totalPages > 1 && (
-            <div className={styles.paginationArea} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px' }}>
-              <button className={styles.actionBtn} disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}><ChevronLeft size={14} /></button>
-              <span style={{ fontSize: 13, color: '#6B7280' }}>Page {currentPage + 1} of {totalPages}</span>
-              <button className={styles.actionBtn} disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage((p) => p + 1)}><ChevronRight size={14} /></button>
-            </div>
-          )}
+          <div className={styles.paginationArea}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={total}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            />
+          </div>
         </div>
       </div>
 

@@ -49,10 +49,12 @@
 .actionBtn:hover { background: #F3F4F6; color: #263B4F; border-color: #D1D5DB; }
 .danger:hover { background: rgba(220,38,38,0.06); color: #dc2626; border-color: rgba(220,38,38,0.2); }
 
-.pagination { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-top: 1px solid #F3F4F6; }
-.paginationInfo { font-size: 12px; color: #9CA3AF; }
-.paginationControls { display: flex; gap: 4px; }
-.pageBtn { display: flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 6px; border: 1px solid #E5E7EB; background: white; cursor: pointer; font-size: 12px; color: #6B7280; transition: all 0.15s; }
-.pageBtn:hover:not(:disabled) { background: #F3F4F6; }
-.pageBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-.pageBtnActive { background: #33AE95 !important; color: white !important; border-color: #33AE95 !important; }
+.paginationArea { border-top: 1px solid #F3F4F6; }
+
+/* Status toggle */
+.statusToggle { width: 36px; height: 20px; border-radius: 999px; border: none; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; }
+.statusToggle::after { content: ''; position: absolute; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s; }
+.toggleOn { background: #33AE95; }
+.toggleOn::after { left: unset; right: 2px; transform: translateX(0); }
+.toggleOff { background: #D1D5DB; }
+.toggleOff::after { left: 2px; }
