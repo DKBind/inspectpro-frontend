@@ -291,12 +291,12 @@ const Clients = () => {
     : [{ key: 'own', label: 'My Organisation' }, { key: 'franchise', label: 'Franchise' }];
 
   // For "Organisation" dropdown (super admin only)
-  const selectedOrg = allOrgs.find((o) => o.uuid === selectedTargetId);
-  // For "Franchise" parent org picker (super admin)
-  const selectedParentOrg = allOrgs.find((o) => o.uuid === selectedParentOrgId);
+  // const selectedOrg = allOrgs.find((o) => o.uuid === selectedTargetId);
+  // // For "Franchise" parent org picker (super admin)
+  // const selectedParentOrg = allOrgs.find((o) => o.uuid === selectedParentOrgId);
   // For "Franchise" final selection
-  const franchiseList = isSuperAdmin ? filteredFranchises : orgFranchises;
-  const selectedFranchise = franchiseList.find((o) => o.uuid === selectedTargetId);
+  // const franchiseList = isSuperAdmin ? filteredFranchises : orgFranchises;
+  // const selectedFranchise = franchiseList.find((o) => o.uuid === selectedTargetId);
 
   // ─── OrgDropdown helper ──────────────────────────────────────────────────
 

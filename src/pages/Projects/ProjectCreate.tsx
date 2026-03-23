@@ -82,7 +82,6 @@ const EMPTY: FormValues = {
 };
 
 const DESC_MAX = 300;
-const DESC_PREVIEW = 100;
 
 const ProjectCreate = () => {
   const navigate = useNavigate();
@@ -114,7 +113,6 @@ const ProjectCreate = () => {
   const selectedStatus = watch('projectStatus');
   const selectedPropertyTypeId = watch('propertyTypeId');
   const selectedOrgId = watch('organisationId');
-  const descriptionVal = watch('description') ?? '';
   const selectedPropertyType = propertyTypes.find(pt => String(pt.id) === selectedPropertyTypeId);
   const specFields: SpecField[] = parseSpecFields(selectedPropertyType?.specTemplate);
 

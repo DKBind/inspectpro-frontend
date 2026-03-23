@@ -7,6 +7,7 @@ import {
   Users as UsersIcon, Plus, RefreshCw, Eye, Pencil, Trash2,
   UserCircle, Mail, Lock, User,
   ChevronDown, Building2, Shield, Wand2,
+  DeleteIcon,
 } from 'lucide-react';
 import Pagination from '@/components/shared-ui/Pagination/Pagination';
 
