@@ -41,6 +41,8 @@ export interface OrganisationCreateRequest {
   subscriptionEndDate?: string;    // ISO datetime string e.g. "2025-01-01T00:00:00"
   phoneNumber?: string;
   contactedPersonName?: string;
+  contactedPersonEmail?: string;
+  contactedPersonPhoneNumber?: string;
   gstin?: string;
   pan?: string;
   tan?: string;
@@ -55,6 +57,8 @@ export interface OrganisationUpdateRequest {
   planType?: string;
   phoneNumber?: string;
   contactedPersonName?: string;
+  contactedPersonEmail?: string;
+  contactedPersonPhoneNumber?: string;
   gstin?: string;
   pan?: string;
   tan?: string;
@@ -73,6 +77,8 @@ export interface OrganisationResponse {
   isActive: boolean;
   phoneNumber?: string;
   contactedPersonName?: string;
+  contactedPersonEmail?: string;
+  contactedPersonPhoneNumber?: string;
   gstin?: string;
   pan?: string;
   tan?: string;

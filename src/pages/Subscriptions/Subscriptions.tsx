@@ -246,8 +246,8 @@ const Subscriptions = () => {
   // ─── Load modules for picker ─────────────────────────────────────────────
 
   const loadModules = async (forTab: Tab) => {
-    if (!isSuperAdmin && forTab === 'franchise') {
-      // Org admin creating franchise plan: only show their accessible modules
+    // Franchise plan: org admin can only assign modules they themselves have access to
+    if (forTab === 'franchise' && !isSuperAdmin) {
       setAllDbModules(
         accessModules.map((m) => ({
           id: m.moduleId,
@@ -260,10 +260,12 @@ const Subscriptions = () => {
       );
       return;
     }
+    // Load modules filtered by subscription type at the DB level
     setModulesLoading(true);
     try {
-      const mods = await moduleService.listModules();
-      setAllDbModules(mods.filter((m) => m.active !== false));
+      const type = forTab === 'org' ? 'ORGANISATION' : 'FRANCHISE';
+      const mods = await moduleService.listModules(type);
+      setAllDbModules(mods);
     } catch {
       toast.error('Failed to load modules');
     } finally {
@@ -396,13 +398,13 @@ const Subscriptions = () => {
     <div className={styles.page}>
       {/* Header */}
       <div className={styles.pageHeader}>
-        <div>
+        {/* <div>
           <h1 className={styles.pageTitle}>Subscriptions</h1>
-        </div>
-        <button className={styles.createBtn} onClick={() => openCreate(activeTab)}>
+        </div> */}
+        {/* <button className={styles.createBtn} onClick={() => openCreate(activeTab)}>
           <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
           Create Plan
-        </button>
+        </button> */}
       </div>
 
       {/* Tabs — super admin sees both; org admin sees only Franchise tab */}
@@ -454,7 +456,10 @@ const Subscriptions = () => {
               {franchisePlans.length}
             </span>
           </button>
+
         </div>
+
+
       )}
 
       {/* Panel */}
@@ -466,8 +471,23 @@ const Subscriptions = () => {
               : <><Sparkles style={{ display: 'inline', width: 16, height: 16, marginRight: 8, verticalAlign: 'middle' }} />Franchise Plans</>
             }
           </h3>
-          <button className={styles.refreshBtn} onClick={fetchData} title="Refresh">
+          {/* <button className={styles.refreshBtn} onClick={fetchData} title="Refresh">
             <RefreshCw style={{ width: 14, height: 14 }} />
+          </button> */}
+          <button
+            className={styles.createBtn}
+            onClick={() => openCreate(activeTab)}
+          >
+            <Plus
+              style={{
+                display: 'inline',
+                width: 16,
+                height: 16,
+                marginRight: 6,
+                verticalAlign: 'middle'
+              }}
+            />
+            Create Plan
           </button>
         </div>
 
@@ -590,48 +610,57 @@ const Subscriptions = () => {
                 ) : allDbModules.length === 0 ? (
                   <p className="text-xs text-[#6B7280] py-2">No modules available.</p>
                 ) : (
-                  <div className="grid gap-2 sm:grid-cols-2 mt-1">
-                    {allDbModules.map((m) => {
-                      const checked = selectedModuleIds.includes(m.id);
-                      return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => toggleModule(m.id)}
-                          style={{
-                            display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
-                            borderRadius: 8, border: `1px solid ${checked ? 'rgba(59,130,246,0.4)' : '#E5E7EB'}`,
-                            background: checked ? 'rgba(59,130,246,0.06)' : '#F9FAFB',
-                            textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s',
-                          }}
-                        >
-                          <span style={{
-                            marginTop: 2, flexShrink: 0, width: 16, height: 16,
-                            borderRadius: 4, border: `1px solid ${checked ? '#3b82f6' : '#D1D5DB'}`,
-                            background: checked ? '#3b82f6' : 'transparent',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}>
-                            {checked && <CheckCircle size={10} color="white" />}
-                          </span>
-                          <div style={{ minWidth: 0 }}>
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, padding: '8px 12px', borderRadius: 8, background: '#F1F5F9', border: '1px solid #E2E8F0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 28, height: 22, padding: '0 7px', borderRadius: 11, background: selectedModuleIds.length > 0 ? '#3b82f6' : '#E2E8F0', color: selectedModuleIds.length > 0 ? 'white' : '#94A3B8', fontSize: 11, fontWeight: 700, transition: 'all 0.15s' }}>
+                          {selectedModuleIds.length}
+                        </span>
+                        <span style={{ fontSize: 12, color: '#64748B' }}>
+                          of <strong style={{ color: '#1E293B' }}>{allDbModules.length}</strong> modules selected
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => selectedModuleIds.length === allDbModules.length
+                          ? setSelectedModuleIds([])
+                          : setSelectedModuleIds(allDbModules.map((m) => m.id))}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: selectedModuleIds.length === allDbModules.length ? '#64748B' : '#3b82f6', background: selectedModuleIds.length === allDbModules.length ? '#E2E8F0' : 'rgba(59,130,246,0.1)', border: `1px solid ${selectedModuleIds.length === allDbModules.length ? '#CBD5E1' : 'rgba(59,130,246,0.3)'}`, borderRadius: 6, cursor: 'pointer', padding: '4px 10px', transition: 'all 0.15s' }}
+                      >
+                        {selectedModuleIds.length === allDbModules.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {allDbModules.map((m) => {
+                        const checked = selectedModuleIds.includes(m.id);
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => toggleModule(m.id)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                              borderRadius: 8, border: `1px solid ${checked ? 'rgba(59,130,246,0.4)' : '#E5E7EB'}`,
+                              background: checked ? 'rgba(59,130,246,0.06)' : '#F9FAFB',
+                              textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s',
+                            }}
+                          >
+                            <span style={{
+                              flexShrink: 0, width: 16, height: 16,
+                              borderRadius: 4, border: `1px solid ${checked ? '#3b82f6' : '#D1D5DB'}`,
+                              background: checked ? '#3b82f6' : 'transparent',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              {checked && <CheckCircle size={10} color="white" />}
+                            </span>
                             <p style={{ fontSize: 12, fontWeight: 600, color: checked ? '#2563eb' : '#374151', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {m.name}
                             </p>
-                            {m.category && (
-                              <p style={{ fontSize: 11, color: '#9CA3AF', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {m.category}
-                              </p>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {selectedModuleIds.length > 0 && (
-                  <p style={{ fontSize: 12, color: '#60a5fa', marginTop: 8 }}>
-                    {selectedModuleIds.length} module{selectedModuleIds.length !== 1 ? 's' : ''} selected
-                  </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </Fld>
 

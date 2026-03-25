@@ -34,42 +34,83 @@
   border-color: #D1D5DB;
 }
 
-/* ── Page Header ─────────────────────────────────────────────────────────── */
+/* ── Page Header (hero card — matches ProjectDetail style) ───────────────── */
 .pageHeader {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 20px 28px 0;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 24px;
+  margin: 16px 28px 0;
+  border-radius: 14px;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-top: 4px solid #3B82F6;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
 .pageHeaderIcon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(59, 130, 246, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.pageHeaderText {
+  flex: 1;
+  min-width: 0;
 }
 
 .pageHeaderText h1 {
   font-size: 20px;
   font-weight: 700;
-  color: #263B4F;
-  margin: 0 0 2px;
+  color: #1E293B;
+  margin: 0 0 10px;
+}
+
+.pageHeaderMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.planningBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: rgba(59, 130, 246, 0.08);
+  color: #2563EB;
+  border: 1.5px solid rgba(59, 130, 246, 0.25);
+}
+
+.planningDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3B82F6;
+  flex-shrink: 0;
 }
 
 .pageHeaderText p {
   font-size: 13px;
-  color: #9CA3AF;
+  color: #64748B;
   margin: 0;
+  line-height: 1.6;
 }
 
 /* ── Body ────────────────────────────────────────────────────────────────── */
 .body {
-  padding: 20px 28px;
+  padding: 16px 28px 20px;
   flex: 1;
 }
 
@@ -373,6 +414,43 @@
   .grid3 {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Create For toggle ───────────────────────────────────────────────────── */
+.forToggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #F9FAFB;
+}
+
+.forToggleBtn {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6B7280;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.forToggleBtn:first-child {
+  border-right: 1px solid #E5E7EB;
+}
+
+.forToggleBtnActive {
+  background: white;
+  color: #2563EB;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
 }
 
 /* ── Footer bar ──────────────────────────────────────────────────────────── */

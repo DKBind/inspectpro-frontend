@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
 import {
-  GitBranch, Globe, Mail, Phone, User, MapPin,
-  Building2, Sparkles, Calendar, Crown,
+  GitBranch, Globe, Mail, Sparkles, User, FileText, MapPin,
+  ChevronDown, Calendar, Crown, Building2,
 } from 'lucide-react';
 
 import { organisationService } from '@/services/organisationService';
@@ -17,17 +17,17 @@ import { useAuthStore } from '@/store/useAuthStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/shared-ui/Dialog/dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/shared-ui/DropdownMenu/dropdown-menu';
 import { Button } from '@/components/shared-ui/Button/button';
 import { Input } from '@/components/shared-ui/Input/input';
-import { Sec, Fld, IcoInput } from '@/components/shared-ui/form-helpers';
+import { Label } from '@/components/shared-ui/Label/label';
 import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function formatEndDate(d: Date): string {
-  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
 
 function formatDisplayDate(iso?: string | null): string {
   if (!iso) return '—';
@@ -38,15 +38,15 @@ function formatDisplayDate(iso?: string | null): string {
 
 function planBadgeStyle(planName?: string): string {
   const p = (planName ?? '').toUpperCase();
-  if (p.includes('FREE')) return 'text-slate-400 bg-slate-800/60 border-slate-700';
-  if (p.includes('STARTER') || p.includes('BASIC')) return 'text-emerald-400 bg-emerald-900/20 border-emerald-800/40';
-  if (p.includes('PRO') || p.includes('PROFESSIONAL')) return 'text-blue-400 bg-blue-900/20 border-blue-800/40';
-  if (p.includes('ENTERPRISE') || p.includes('PREMIUM')) return 'text-purple-400 bg-purple-900/20 border-purple-800/40';
+  if (p.includes('FREE')) return 'text-[#6B7280] bg-[#F3F4F6] border-[#E5E7EB]';
+  if (p.includes('STARTER') || p.includes('BASIC')) return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+  if (p.includes('PRO') || p.includes('PROFESSIONAL')) return 'text-blue-600 bg-blue-50 border-blue-200';
+  if (p.includes('ENTERPRISE') || p.includes('PREMIUM')) return 'text-purple-600 bg-purple-50 border-purple-200';
   const palettes = [
-    'text-amber-400 bg-amber-900/20 border-amber-800/40',
-    'text-cyan-400 bg-cyan-900/20 border-cyan-800/40',
-    'text-rose-400 bg-rose-900/20 border-rose-800/40',
-    'text-indigo-400 bg-indigo-900/20 border-indigo-800/40',
+    'text-amber-600 bg-amber-50 border-amber-200',
+    'text-cyan-600 bg-cyan-50 border-cyan-200',
+    'text-rose-600 bg-rose-50 border-rose-200',
+    'text-indigo-600 bg-indigo-50 border-indigo-200',
   ];
   const hash = (planName ?? '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   return palettes[hash % palettes.length];
@@ -56,33 +56,58 @@ function planBadgeStyle(planName?: string): string {
 
 const schema = z.object({
   name: z.string().min(2, 'Franchise name must be at least 2 characters'),
-  email: z.string().min(1, 'Contact email is required').email('Please enter a valid email'),
+  email: z.string().min(1, 'Contact email is required').email({ error: 'Please enter a valid email' }),
   parentOrgId: z.string().min(1, 'Parent organisation is required'),
-  subscriptionId: z.string().optional(),
+  subscriptionId: z.string().min(1, 'Subscription plan is required'),
   subscriptionStartDate: z.string().optional(),
   domain: z.string().optional(),
-  phoneNumber: z.string().optional(),
+  phoneNumber: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[0-9]{10}$/.test(v), 'Phone number must be exactly 10 digits'),
   contactedPersonName: z.string().optional(),
-  gstin: z.string().optional(),
-  pan: z.string().optional(),
+  contactedPersonEmail: z
+    .string()
+    .min(1, 'Contact person email is required')
+    .email({ error: 'Enter a valid email address' }),
+  contactedPersonPhoneNumber: z
+    .string()
+    .min(1, 'Contact person phone is required')
+    .refine((v) => /^[0-9]{10}$/.test(v), 'Phone number must be exactly 10 digits'),
+  gstin: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/i.test(v), 'Invalid GSTIN format (e.g. 22AAAAA0000A1Z5)'),
+  pan: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[A-Z]{5}[0-9]{4}[A-Z]$/i.test(v), 'Invalid PAN format (e.g. ABCDE1234F)'),
+  tan: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[A-Z]{4}[0-9]{5}[A-Z]$/i.test(v), 'Invalid TAN format (e.g. ABCD12345E)'),
   address: z.object({
-    addressLine1: z.string().optional(),
-    addressLine2: z.string().optional(),
-    street: z.string().optional(),
-    district: z.string().optional(),
-    state: z.string().optional(),
-    country: z.string().optional(),
+    addressLine1: z.string().min(1, 'Address Line 1 is required').max(250, 'Max 250 characters'),
+    addressLine2: z.string().max(250, 'Max 250 characters').optional(),
+    street: z.string().max(250, 'Max 250 characters').optional(),
+    district: z.string().max(100, 'Max 100 characters').optional(),
+    state: z.string().min(1, 'State is required').max(100, 'Max 100 characters'),
+    country: z.string().min(1, 'Country is required').max(100, 'Max 100 characters'),
     pincode: z.string().optional().refine((v) => !v || /^[0-9]{6}$/.test(v), 'Pincode must be 6 digits'),
-  }).optional(),
+  }),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 const EMPTY: FormValues = {
   name: '', email: '', parentOrgId: '', subscriptionId: '', subscriptionStartDate: '',
-  domain: '', phoneNumber: '', contactedPersonName: '', gstin: '', pan: '',
+  domain: '', phoneNumber: '',
+  contactedPersonName: '', contactedPersonEmail: '', contactedPersonPhoneNumber: '',
+  gstin: '', pan: '', tan: '',
   address: { addressLine1: '', addressLine2: '', street: '', district: '', state: '', country: '', pincode: '' },
 };
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
   open: boolean;
@@ -111,8 +136,11 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
   const { field: domainField } = useController({ name: 'domain', control });
   const { field: phoneField } = useController({ name: 'phoneNumber', control });
   const { field: contactPersonField } = useController({ name: 'contactedPersonName', control });
+  const { field: contactPersonEmailField } = useController({ name: 'contactedPersonEmail', control });
+  const { field: contactPersonPhoneField } = useController({ name: 'contactedPersonPhoneNumber', control });
   const { field: gstinField } = useController({ name: 'gstin', control });
   const { field: panField } = useController({ name: 'pan', control });
+  const { field: tanField } = useController({ name: 'tan', control });
   const { field: addrLine1Field } = useController({ name: 'address.addressLine1', control });
   const { field: streetField } = useController({ name: 'address.street', control });
   const { field: districtField } = useController({ name: 'address.district', control });
@@ -130,7 +158,7 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
     const d = new Date(subscriptionStartDate);
     if (isNaN(d.getTime())) return '';
     d.setMonth(d.getMonth() + selectedPlan.durationMonths);
-    return formatEndDate(d);
+    return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
   })();
 
   // Load parent orgs
@@ -141,25 +169,20 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
       .catch(() => setParentOrgs([]));
   }, [open]);
 
-  // Load subscription plans whenever the parent org changes (create mode only).
-  // Plans are always scoped to the parent org — the org that created them for its franchises.
+  // Load subscription plans when parent org changes (create mode only)
   useEffect(() => {
     if (!open || isEditMode) return;
-    // For super_admin: use whichever parent org is selected in the dropdown.
-    // For org users: always use their own orgId (they are the parent).
     const targetOrgId = isSuperAdmin ? selectedParentId : authUser?.orgId;
-    if (!targetOrgId) {
-      setPlans([]);
-      return;
-    }
+    if (!targetOrgId) { setPlans([]); return; }
     setPlansLoading(true);
-    setValue('subscriptionId', ''); // reset plan selection when parent changes
+    setValue('subscriptionId', '');
     subscriptionService.listActiveSubscriptionsByOrgId(targetOrgId)
       .then(setPlans)
       .catch(() => setPlans([]))
       .finally(() => setPlansLoading(false));
   }, [open, isEditMode, selectedParentId]);
 
+  // Pre-fill when editing
   useEffect(() => {
     if (open && editOrg) {
       reset({
@@ -171,8 +194,11 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
         domain: editOrg.domain ?? '',
         phoneNumber: editOrg.phoneNumber ?? '',
         contactedPersonName: editOrg.contactedPersonName ?? '',
+        contactedPersonEmail: editOrg.contactedPersonEmail ?? '',
+        contactedPersonPhoneNumber: editOrg.contactedPersonPhoneNumber ?? '',
         gstin: editOrg.gstin ?? '',
         pan: editOrg.pan ?? '',
+        tan: editOrg.tan ?? '',
         address: {
           addressLine1: editOrg.address?.addressLine1 ?? '',
           addressLine2: editOrg.address?.addressLine2 ?? '',
@@ -184,25 +210,30 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
         },
       });
     } else if (open && !editOrg) {
-      reset({
-        ...EMPTY,
-        parentOrgId: !isSuperAdmin && authUser?.orgId ? authUser.orgId : '',
-      });
+      reset({ ...EMPTY, parentOrgId: !isSuperAdmin && authUser?.orgId ? authUser.orgId : '' });
     }
   }, [open, editOrg, reset]);
 
   const handleClose = () => { reset(EMPTY); onOpenChange(false); };
 
   const onSubmit = async (data: FormValues) => {
+    if (!isEditMode && data.subscriptionId && !data.subscriptionStartDate) {
+      methods.setError('subscriptionStartDate', { type: 'manual', message: 'Start date is required' });
+      return;
+    }
     setIsSubmitting(true);
     const clean = (v?: string) => (v?.trim() ? v.trim() : undefined);
     const addr = data.address;
-    const cleanAddr = addr ? {
-      addressLine1: clean(addr.addressLine1), addressLine2: clean(addr.addressLine2),
-      street: clean(addr.street), district: clean(addr.district),
-      state: clean(addr.state), country: clean(addr.country), pincode: clean(addr.pincode),
-    } : undefined;
-    const hasAddress = cleanAddr && Object.values(cleanAddr).some(Boolean);
+    const cleanAddr = {
+      addressLine1: clean(addr.addressLine1),
+      addressLine2: clean(addr.addressLine2),
+      street: clean(addr.street),
+      district: clean(addr.district),
+      state: clean(addr.state),
+      country: clean(addr.country),
+      pincode: clean(addr.pincode),
+    };
+    const hasAddress = Object.values(cleanAddr).some(Boolean);
 
     try {
       if (isEditMode && editOrg) {
@@ -210,24 +241,28 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
           name: data.name, email: data.email,
           domain: clean(data.domain), phoneNumber: clean(data.phoneNumber),
           contactedPersonName: clean(data.contactedPersonName),
-          gstin: clean(data.gstin), pan: clean(data.pan),
+          contactedPersonEmail: data.contactedPersonEmail,
+          contactedPersonPhoneNumber: data.contactedPersonPhoneNumber,
+          gstin: clean(data.gstin), pan: clean(data.pan), tan: clean(data.tan),
           address: hasAddress ? cleanAddr : undefined,
         });
-        toast.success('Franchise updated!');
+        toast.success('Franchise updated!', { description: `${data.name} has been updated.` });
       } else {
         await organisationService.createOrganisation({
           name: data.name, email: data.email,
           domain: clean(data.domain), phoneNumber: clean(data.phoneNumber),
           contactedPersonName: clean(data.contactedPersonName),
-          gstin: clean(data.gstin), pan: clean(data.pan),
+          contactedPersonEmail: data.contactedPersonEmail,
+          contactedPersonPhoneNumber: data.contactedPersonPhoneNumber,
+          gstin: clean(data.gstin), pan: clean(data.pan), tan: clean(data.tan),
           parentOrgId: data.parentOrgId,
-          subscriptionId: data.subscriptionId || undefined,
+          subscriptionId: data.subscriptionId,
           subscriptionStartDate: data.subscriptionStartDate
             ? data.subscriptionStartDate + 'T00:00:00'
             : undefined,
           address: hasAddress ? cleanAddr : undefined,
         });
-        toast.success('Franchise created!');
+        toast.success('Franchise created!', { description: `${data.name} has been set up.` });
       }
       handleClose();
       onSuccess();
@@ -243,12 +278,12 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
     }
   };
 
-  const inp = (hasError: boolean) =>
-    `h-10 bg-white border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 transition-all ${hasError ? '!border-[#DF453A]' : ''}`;
+  const inputCls = (hasError: boolean) =>
+    `border border-[#E5E7EB] rounded-lg px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-[#33AE95]/30 focus:border-[#33AE95] text-[#263B4F] bg-white text-sm placeholder:text-[#9CA3AF] ${hasError ? 'border-[#DF453A]' : ''}`;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
         <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
           <div className="flex items-center gap-3 mb-1">
             <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
@@ -267,10 +302,10 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
           <form onSubmit={methods.handleSubmit(onSubmit, () => toast.error('Please fix the errors before submitting.'))}>
             <div className="px-7 py-6 space-y-6">
 
-              {/* Parent Organisation */}
+              {/* Parent Organisation — create mode only */}
               {!isEditMode && (
                 <Sec icon={<Building2 size={13} />} label="Parent Organisation">
-                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4">
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-4">
                     <Fld label="Parent Organisation" required error={(errors as any).parentOrgId?.message}>
                       {isSuperAdmin ? (
                         <DropdownSelect
@@ -295,8 +330,7 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
               {/* Subscription Plan */}
               <Sec icon={<Sparkles size={13} />} label="Subscription Plan">
                 {isEditMode ? (
-                  /* Read-only in edit mode */
-                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-4 grid gap-4 sm:grid-cols-3">
                     <div className="space-y-1.5">
                       <p className="text-xs text-[#6B7280] uppercase tracking-wide">Plan</p>
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${planBadgeStyle(editOrg?.subscriptionPlanName ?? editOrg?.planType)}`}>
@@ -314,44 +348,62 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
                     </div>
                   </div>
                 ) : (
-                  /* Create mode: plan selector + dates */
-                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 space-y-4">
-                    <Fld label="Select Plan" hint="Optional">
-                      <DropdownSelect
-                        options={plans.map((p) => ({
-                          value: p.id,
-                          label: p.planName,
-                          meta: p.maxUsers != null ? `${p.maxUsers} users` : undefined,
-                        }))}
-                        value={selectedPlanId || null}
-                        onChange={(val: string | number | null) => setValue('subscriptionId', String(val ?? ''), { shouldValidate: true })}
-                        placeholder="— Select a subscription plan —"
-                        searchable
-                        loading={plansLoading}
-                      />
-                      {plans.length === 0 && !plansLoading && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          No subscription plans found. Go to Subscriptions to create plans for your franchises.
-                        </p>
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-4 space-y-4">
+                    <Fld label="Select Plan" required error={(errors as any).subscriptionId?.message}>
+                      {plansLoading ? (
+                        <div className="h-10 flex items-center text-[#6B7280] text-sm">Loading plans...</div>
+                      ) : (
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger
+                            className={`w-full inline-flex items-center justify-between h-10 rounded-md border bg-white px-3 text-sm font-normal text-[#263B4F] hover:bg-[#F3F4F6] focus:outline-none ${(errors as any).subscriptionId ? 'border-[#DF453A]' : 'border-[#E5E7EB]'}`}
+                          >
+                            <span className={selectedPlan ? 'text-[#263B4F]' : 'text-[#6B7280]'}>
+                              {selectedPlan ? selectedPlan.planName : '— Select a subscription plan —'}
+                            </span>
+                            <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]"
+                            style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}
+                          >
+                            {plans.length === 0 ? (
+                              <DropdownMenuItem disabled className="text-[#6B7280]">
+                                {isSuperAdmin && !selectedParentId
+                                  ? 'Select a parent organisation first'
+                                  : 'No subscription plans found'}
+                              </DropdownMenuItem>
+                            ) : (
+                              plans.map((p) => (
+                                <DropdownMenuItem
+                                  key={p.id}
+                                  onSelect={() => setValue('subscriptionId', p.id, { shouldValidate: true })}
+                                  className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-3"
+                                >
+                                  <span className="font-medium">{p.planName}</span>
+                                </DropdownMenuItem>
+                              ))
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                     </Fld>
 
                     {selectedPlan && (
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <Fld label="Start Date">
+                        <Fld label="Start Date" required error={(errors as any).subscriptionStartDate?.message}>
                           <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280] pointer-events-none z-10" />
                             <Input
                               type="date"
                               {...register('subscriptionStartDate')}
-                              className="pl-9 h-10 bg-white border-[#E5E7EB] text-[#263B4F] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20"
+                              className={`pl-9 h-10 border-[#E5E7EB] text-[#263B4F] bg-white focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 ${(errors as any).subscriptionStartDate ? 'border-[#DF453A]' : ''}`}
                             />
                           </div>
                         </Fld>
                         <Fld label="End Date">
                           <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280] pointer-events-none z-10" />
-                            <div className={`pl-9 h-10 bg-[#F3F4F6] border border-[#E5E7EB] rounded-md flex items-center text-sm ${computedEndDate ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}`}>
+                            <div className={`pl-9 h-10 bg-[#F3F4F6] border border-[#E5E7EB] rounded-md flex items-center text-sm ${computedEndDate ? 'text-[#263B4F]' : 'text-[#6B7280]'}`}>
                               {computedEndDate || (selectedPlan?.durationMonths ? 'Select a start date' : 'No duration set')}
                             </div>
                           </div>
@@ -365,38 +417,58 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
 
               {/* Franchise Details */}
               <Sec icon={<GitBranch size={13} />} label="Franchise Details">
-                <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-5">
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Fld label="Franchise Name" required error={errors.name?.message}>
                       <IcoInput icon={<GitBranch size={15} />}>
-                        <Input placeholder="Branch Name" {...nameField} className={inp(!!errors.name)} />
+                        <Input placeholder="Branch Name" {...nameField} className={inputCls(!!errors.name)} />
                       </IcoInput>
                     </Fld>
                     <Fld label="Contact Email" required error={errors.email?.message}>
                       <IcoInput icon={<Mail size={15} />}>
-                        <Input type="email" placeholder="branch@acme.com" {...emailField} className={inp(!!errors.email)} />
+                        <Input type="email" placeholder="branch@acme.com" {...emailField} className={inputCls(!!errors.email)} />
                       </IcoInput>
                     </Fld>
                     <Fld label="Phone Number" error={errors.phoneNumber?.message}>
-                      <IcoInput icon={<Phone size={15} />}>
-                        <Input placeholder="+91 98765 43210" {...phoneField} className={inp(!!errors.phoneNumber)} />
-                      </IcoInput>
+                      <PhoneInput field={phoneField} hasError={!!errors.phoneNumber} />
                     </Fld>
-                    <Fld label="Contact Person" error={errors.contactedPersonName?.message}>
-                      <IcoInput icon={<User size={15} />}>
-                        <Input placeholder="John Doe" {...contactPersonField} className={inp(!!errors.contactedPersonName)} />
-                      </IcoInput>
-                    </Fld>
-                    <Fld label="Domain" hint="Optional" error={errors.domain?.message}>
+                    <Fld label="Website" hint="Optional" error={errors.domain?.message}>
                       <IcoInput icon={<Globe size={15} />}>
-                        <Input placeholder="branch.acme.com" {...domainField} className={inp(!!errors.domain)} />
+                        <Input placeholder="https://branch.acme.com" {...domainField} className={inputCls(!!errors.domain)} />
                       </IcoInput>
                     </Fld>
-                    <Fld label="GSTIN" hint="Optional">
-                      <Input placeholder="22AAAAA0000A1Z5" {...gstinField} className={inp(false) + ' uppercase'} maxLength={15} />
+                    <Fld label="Contact Person Name" error={errors.contactedPersonName?.message}>
+                      <IcoInput icon={<User size={15} />}>
+                        <Input placeholder="John Doe" {...contactPersonField} className={inputCls(!!errors.contactedPersonName)} />
+                      </IcoInput>
                     </Fld>
-                    <Fld label="PAN" hint="Optional">
-                      <Input placeholder="ABCDE1234F" {...panField} className={inp(false) + ' uppercase'} maxLength={10} />
+                    <Fld label="Contact Person Email" required error={(errors as any).contactedPersonEmail?.message}>
+                      <IcoInput icon={<Mail size={15} />}>
+                        <Input type="email" placeholder="john@acme.com" {...contactPersonEmailField} className={inputCls(!!(errors as any).contactedPersonEmail)} />
+                      </IcoInput>
+                    </Fld>
+                    <Fld label="Contact Person Phone" required error={(errors as any).contactedPersonPhoneNumber?.message}>
+                      <PhoneInput field={contactPersonPhoneField} hasError={!!(errors as any).contactedPersonPhoneNumber} />
+                    </Fld>
+                  </div>
+                </div>
+              </Sec>
+
+              {/* Business Identifiers */}
+              <Sec icon={<FileText size={13} />} label="Business Identifiers">
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Fld label="GSTIN" hint="Optional" error={errors.gstin?.message}>
+                      <Input placeholder="22AAAAA0000A1Z5" {...gstinField}
+                        className={inputCls(!!errors.gstin) + ' uppercase'} maxLength={15} />
+                    </Fld>
+                    <Fld label="PAN" hint="Optional" error={errors.pan?.message}>
+                      <Input placeholder="ABCDE1234F" {...panField}
+                        className={inputCls(!!errors.pan) + ' uppercase'} maxLength={10} />
+                    </Fld>
+                    <Fld label="TAN" hint="Optional" error={(errors as any).tan?.message}>
+                      <Input placeholder="ABCD12345E" {...tanField}
+                        className={inputCls(!!(errors as any).tan) + ' uppercase'} maxLength={10} />
                     </Fld>
                   </div>
                 </div>
@@ -404,33 +476,36 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
 
               {/* Address */}
               <Sec icon={<MapPin size={13} />} label="Address">
-                <div className="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-5">
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Fld label="Address Line 1">
-                      <Input placeholder="Flat / House no., Building name" {...addrLine1Field} className={inp(false)} />
+                    <Fld label="Address Line 1" required error={errors.address?.addressLine1?.message}>
+                      <Input placeholder="Flat / House no., Building name" maxLength={250}
+                        {...addrLine1Field} className={inputCls(!!errors.address?.addressLine1)} />
                     </Fld>
-                    <Fld label="Address Line 2">
-                      <Input placeholder="Area, Colony, Locality" {...register('address.addressLine2')} className={inp(false)} />
+                    <Fld label="Address Line 2" error={errors.address?.addressLine2?.message}>
+                      <Input placeholder="Area, Colony, Locality" maxLength={250}
+                        {...register('address.addressLine2')} className={inputCls(!!errors.address?.addressLine2)} />
                     </Fld>
-                    <Fld label="Street">
-                      <Input placeholder="Street name" {...streetField} className={inp(false)} />
+                    <Fld label="Street" error={errors.address?.street?.message}>
+                      <Input placeholder="Street name" maxLength={250} {...streetField} className={inputCls(!!errors.address?.street)} />
                     </Fld>
-                    <Fld label="District">
-                      <Input placeholder="District" {...districtField} className={inp(false)} />
+                    <Fld label="District" error={errors.address?.district?.message}>
+                      <Input placeholder="District" maxLength={100} {...districtField} className={inputCls(!!errors.address?.district)} />
                     </Fld>
-                    <Fld label="State">
-                      <Input placeholder="State" {...stateField} className={inp(false)} />
+                    <Fld label="State" required error={errors.address?.state?.message}>
+                      <Input placeholder="State" maxLength={100} {...stateField} className={inputCls(!!errors.address?.state)} />
                     </Fld>
-                    <Fld label="Country">
-                      <Input placeholder="Country" {...countryField} className={inp(false)} />
+                    <Fld label="Country" required error={errors.address?.country?.message}>
+                      <Input placeholder="Country" maxLength={100} {...countryField} className={inputCls(!!errors.address?.country)} />
                     </Fld>
-                    <Fld label="Pincode" error={(errors.address as any)?.pincode?.message}>
-                      <Input placeholder="110001" maxLength={6} {...pincodeField}
-                        className={inp(!!(errors.address as any)?.pincode)} />
+                    <Fld label="Pincode" error={errors.address?.pincode?.message}>
+                      <Input placeholder="110001" maxLength={6}
+                        {...pincodeField} className={inputCls(!!errors.address?.pincode)} />
                     </Fld>
                   </div>
                 </div>
               </Sec>
+
             </div>
 
             <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl flex gap-3">
@@ -451,5 +526,70 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
         </FormProvider>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── Micro helpers ─────────────────────────────────────────────────────────────
+
+function Sec({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-3">
+        {icon && <span className="text-[#33AE95]">{icon}</span>}
+        <span className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">{label}</span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Fld({ label, required, hint, error, children }: {
+  label: string; required?: boolean; hint?: string; error?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <Label className="text-[#263B4F] text-sm font-medium">{label}</Label>
+        {required && <span className="text-[#DF453A] text-xs">*</span>}
+        {hint && <span className="text-[#6B7280] text-xs">({hint})</span>}
+      </div>
+      {children}
+      {error && <p className="text-xs text-[#DF453A]">{error}</p>}
+    </div>
+  );
+}
+
+function IcoInput({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">{icon}</span>
+      <div className="[&_input]:pl-9">{children}</div>
+    </div>
+  );
+}
+
+function PhoneInput({ field, hasError }: { field: React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }; hasError: boolean }) {
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
+    if (!allowed.includes(e.key) && !/^[0-9]$/.test(e.key)) e.preventDefault();
+  };
+  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData('text');
+    if (!/^[0-9]+$/.test(text)) e.preventDefault();
+  };
+  return (
+    <div className={`flex items-center border rounded-lg bg-white h-10 overflow-hidden ${hasError ? 'border-[#DF453A]' : 'border-[#E5E7EB]'} focus-within:ring-2 focus-within:ring-[#33AE95]/30 focus-within:border-[#33AE95]`}>
+      <span className="px-3 text-sm font-medium text-[#6B7280] border-r border-[#E5E7EB] h-full flex items-center select-none bg-[#F9FAFB]">+91</span>
+      <input
+        {...field}
+        type="tel"
+        inputMode="numeric"
+        maxLength={10}
+        placeholder="9876543210"
+        onKeyDown={onKeyDown}
+        onPaste={onPaste}
+        className="flex-1 h-full px-3 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] outline-none bg-transparent"
+      />
+    </div>
   );
 }

@@ -116,13 +116,23 @@ export function OrganisationViewModal({ org, onClose }: Props) {
           <ViewSection title="Contact Information">
             <div className="grid gap-3 sm:grid-cols-2">
               <InfoRow icon={<Mail size={14} />} label="Email" value={org.email} />
-              <InfoRow icon={<Phone size={14} />} label="Phone" value={org.phoneNumber} alwaysShow />
-              <InfoRow icon={<User size={14} />} label="Contact Person" value={org.contactedPersonName} alwaysShow />
+              <InfoRow icon={<Phone size={14} />} label="Phone" value={org.phoneNumber ? `+91 ${org.phoneNumber}` : undefined} alwaysShow />
               {org.domain && (
-                <InfoRow icon={<Globe size={14} />} label="Domain" value={org.domain} />
+                <InfoRow icon={<Globe size={14} />} label="Website" value={org.domain} />
               )}
             </div>
           </ViewSection>
+
+          {/* Contact Person */}
+          {(org.contactedPersonName || org.contactedPersonEmail || org.contactedPersonPhoneNumber) && (
+            <ViewSection title="Contact Person">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <InfoRow icon={<User size={14} />} label="Name" value={org.contactedPersonName} alwaysShow />
+                <InfoRow icon={<Mail size={14} />} label="Email" value={org.contactedPersonEmail} alwaysShow />
+                <InfoRow icon={<Phone size={14} />} label="Phone" value={org.contactedPersonPhoneNumber ? `+91 ${org.contactedPersonPhoneNumber}` : undefined} alwaysShow />
+              </div>
+            </ViewSection>
+          )}
 
           {/* Business Identifiers */}
           {hasBusinessIds && (

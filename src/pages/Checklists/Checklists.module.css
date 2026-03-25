@@ -1,0 +1,255 @@
+/* ─── Page ──────────────────────────────────────────────────────────────────── */
+.page { display: flex; flex-direction: column; gap: 0; }
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  gap: 16px;
+}
+.title  { font-size: 22px; font-weight: 700; color: #263B4F; margin: 0 0 2px; }
+.subtitle { font-size: 13px; color: #9CA3AF; margin: 0; }
+.headerActions { display: flex; align-items: center; gap: 10px; }
+
+.createBtn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; border-radius: 10px; border: none; cursor: pointer;
+  background: #33AE95; color: white; font-size: 13px; font-weight: 600;
+  box-shadow: 0 2px 8px rgba(51,174,149,0.3); transition: all 0.15s;
+}
+.createBtn:hover { background: #2a9a84; box-shadow: 0 4px 12px rgba(51,174,149,0.4); }
+
+.refreshBtn {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 8px;
+  border: 1px solid #E5E7EB; background: white; cursor: pointer;
+  color: #6B7280; transition: all 0.15s;
+}
+.refreshBtn:hover { background: #F3F4F6; color: #263B4F; border-color: #D1D5DB; }
+
+/* ─── Tabs ──────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex; gap: 0;
+  border-bottom: 2px solid #F3F4F6;
+  margin-bottom: 20px;
+}
+.tab {
+  padding: 9px 18px; font-size: 13px; font-weight: 600;
+  color: #9CA3AF; border: none; background: transparent;
+  cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab:hover { color: #374151; }
+.tabActive { color: #33AE95; border-bottom-color: #33AE95; }
+
+/* ─── Panel ──────────────────────────────────────────────────────────────────── */
+.panel {
+  border-radius: 14px; background: white;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+.panelHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px; border-bottom: 1px solid #F3F4F6;
+}
+.panelTitle { font-size: 14px; font-weight: 600; color: #263B4F; }
+.panelCount {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 7px;
+  border-radius: 20px; background: #F3F4F6;
+  font-size: 11px; font-weight: 700; color: #6B7280; margin-left: 7px;
+}
+
+/* ─── Table ──────────────────────────────────────────────────────────────────── */
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  padding: 11px 20px; font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.55px;
+  color: #9CA3AF; background: #FAFAFA; text-align: left;
+  border-bottom: 1px solid #F3F4F6;
+}
+.table td { padding: 14px 20px; font-size: 13px; border-bottom: 1px solid #F3F4F6; }
+.tableRow { transition: background 0.12s; }
+.tableRow:hover td { background: #F9FAFB; }
+.tableRow:last-child td { border-bottom: none; }
+
+/* ─── Template Cell ──────────────────────────────────────────────────────────── */
+.tplCell { display: flex; align-items: center; gap: 11px; }
+.tplIcon {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.tplIconGlobal { background: rgba(59,130,246,0.10); color: #2563EB; }
+.tplIconOrg    { background: rgba(51,174,149,0.10); color: #33AE95; }
+.tplIconProject{ background: rgba(99,102,241,0.10); color: #6366f1; }
+.tplName { font-size: 13.5px; font-weight: 600; color: #263B4F; }
+.tplMeta { font-size: 11.5px; color: #9CA3AF; margin-top: 1px; }
+
+/* ─── Scope Badge ────────────────────────────────────────────────────────────── */
+.scopeBadge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; white-space: nowrap;
+}
+.scopeGlobal   { background: rgba(59,130,246,0.10); color: #2563EB; border: 1px solid rgba(59,130,246,0.22); }
+.scopeOrg      { background: rgba(51,174,149,0.10); color: #33AE95; border: 1px solid rgba(51,174,149,0.22); }
+.scopeProject  { background: rgba(99,102,241,0.10); color: #6366f1; border: 1px solid rgba(99,102,241,0.22); }
+
+/* ─── Lock Badge ─────────────────────────────────────────────────────────────── */
+.lockBadge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 20px;
+  font-size: 10.5px; font-weight: 700;
+  background: rgba(245,158,11,0.10); color: #b45309;
+  border: 1px solid rgba(245,158,11,0.25);
+}
+.unlocked {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 20px;
+  font-size: 10.5px; font-weight: 700;
+  background: #F3F4F6; color: #9CA3AF;
+  border: 1px solid #E5E7EB;
+}
+
+/* ─── Section Counter ────────────────────────────────────────────────────────── */
+.sectionCount {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; color: #374151;
+  background: #F9FAFB; border: 1px solid #F3F4F6;
+}
+
+/* ─── Action Buttons ─────────────────────────────────────────────────────────── */
+.actions { display: flex; gap: 5px; }
+.actionBtn {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 7px;
+  border: 1px solid #E5E7EB; background: white;
+  cursor: pointer; color: #6B7280; transition: all 0.15s;
+}
+.actionBtn:hover { background: #F3F4F6; color: #263B4F; border-color: #D1D5DB; }
+.danger:hover    { background: rgba(220,38,38,0.06); color: #dc2626; border-color: rgba(220,38,38,0.2); }
+
+/* ─── Empty / Loading ────────────────────────────────────────────────────────── */
+.empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 70px 24px; color: #9CA3AF;
+}
+.emptyIcon {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: #F3F4F6; display: flex; align-items: center;
+  justify-content: center; margin-bottom: 14px; color: #D1D5DB;
+}
+.emptyTitle { font-size: 15px; font-weight: 600; color: #6B7280; margin: 0 0 6px; }
+.emptyText  { font-size: 13px; color: #9CA3AF; margin: 0; }
+.spinner { width: 26px; height: 26px; color: #33AE95; margin-bottom: 12px; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Pagination ─────────────────────────────────────────────────────────────── */
+.paginationArea { padding: 4px 20px 8px; border-top: 1px solid #F3F4F6; }
+
+/* ─── Builder Modal ──────────────────────────────────────────────────────────── */
+.builderSection {
+  border: 1px solid #E5E7EB; border-radius: 12px; overflow: hidden;
+  margin-bottom: 10px;
+}
+.builderSectionHead {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; background: #F9FAFB; border-bottom: 1px solid #E5E7EB;
+  gap: 8px;
+}
+.sectionNameInput {
+  flex: 1; border: none; background: transparent; font-size: 13px;
+  font-weight: 600; color: #263B4F; outline: none;
+}
+.sectionNameInput::placeholder { color: #9CA3AF; font-weight: 400; }
+.builderSectionBody { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+.itemRow {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 12px; background: #FAFAFA;
+  border: 1px solid #F0F0F0; border-radius: 9px;
+}
+.itemBody { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.itemLabelInput {
+  width: 100%; border: none; border-bottom: 1.5px solid #E5E7EB;
+  background: transparent; font-size: 12.5px; color: #263B4F;
+  padding: 2px 0; outline: none; transition: border-color 0.15s;
+}
+.itemLabelInput:focus { border-bottom-color: #33AE95; }
+.itemLabelInput::placeholder { color: #9CA3AF; }
+
+.responseTypeRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.responseTypeLabel { font-size: 10.5px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; }
+.responseTypeBtn {
+  padding: 2px 9px; border-radius: 12px; font-size: 10.5px; font-weight: 600;
+  border: 1px solid #E5E7EB; background: white; color: #6B7280;
+  cursor: pointer; transition: all 0.12s;
+}
+.responseTypeBtnActive {
+  background: rgba(51,174,149,0.10); border-color: rgba(51,174,149,0.35); color: #33AE95;
+}
+
+.commentsRow { display: flex; flex-direction: column; gap: 4px; }
+.commentsLabel { font-size: 10.5px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; }
+.commentChips { display: flex; flex-wrap: wrap; gap: 4px; }
+.commentChip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 12px;
+  background: #EEF2FF; color: #4338ca; font-size: 11px; font-weight: 500;
+  border: 1px solid rgba(67,56,202,0.2);
+}
+.commentChipRemove { cursor: pointer; opacity: 0.6; transition: opacity 0.1s; }
+.commentChipRemove:hover { opacity: 1; }
+
+.addCommentInput {
+  width: 160px; height: 26px; border-radius: 8px;
+  border: 1px dashed #D1D5DB; background: white;
+  padding: 0 8px; font-size: 11px; color: #263B4F; outline: none;
+  transition: border-color 0.15s;
+}
+.addCommentInput:focus { border-color: #33AE95; border-style: solid; }
+.addCommentInput::placeholder { color: #C4C9D4; }
+
+.addItemBtn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 8px; border-radius: 9px;
+  border: 1.5px dashed #D1FAE5; background: transparent;
+  font-size: 12px; font-weight: 600; color: #33AE95;
+  cursor: pointer; transition: all 0.15s;
+}
+.addItemBtn:hover { background: #F0FDF9; border-color: #33AE95; }
+
+.addSectionBtn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; padding: 10px; border-radius: 10px;
+  border: 2px dashed #D1FAE5; background: transparent;
+  font-size: 13px; font-weight: 600; color: #33AE95;
+  cursor: pointer; transition: all 0.15s; margin-top: 4px;
+}
+.addSectionBtn:hover { background: #F0FDF9; border-color: #33AE95; }
+
+/* ─── Scope Selector ─────────────────────────────────────────────────────────── */
+.scopeSelector {
+  display: flex; gap: 0; border: 1px solid #E5E7EB;
+  border-radius: 10px; overflow: hidden; background: #F9FAFB;
+}
+.scopeOption {
+  flex: 1; padding: 8px 0; font-size: 12.5px; font-weight: 600;
+  text-align: center; cursor: pointer; border: none; background: transparent;
+  color: #6B7280; transition: all 0.15s;
+}
+.scopeOptionActive { background: #33AE95; color: white; }
+
+/* ─── Delete Confirm ─────────────────────────────────────────────────────────── */
+.deleteBody { padding: 8px 0; display: flex; align-items: flex-start; gap: 12px; }
+.deleteIcon {
+  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+  background: rgba(220,38,38,0.08); display: flex;
+  align-items: center; justify-content: center; color: #dc2626;
+}
+.deleteTitle { font-size: 15px; font-weight: 600; color: #263B4F; margin: 0 0 4px; }
+.deleteText  { font-size: 13px; color: #6B7280; margin: 0; }
