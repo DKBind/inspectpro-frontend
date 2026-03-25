@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, useController, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -37,7 +37,7 @@ const schema = z.object({
   email: z.string().email('Enter a valid email'),
   password: z.string().optional(),
   gender: z.string().optional(),
-  orgId: z.string().min(1, 'Organisation is required'),
+  orgId: z.string().optional(),
   roleId: z.string().min(1, 'Role is required'),
   statusId: z.string().optional(),
 });
@@ -110,6 +110,12 @@ const Users = () => {
   const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Account type for create modal (super admin only) — default: 'internal'
+  const [accountType, setAccountType] = useState<'internal' | 'organisation' | 'franchise'>('internal');
+  const [parentOrgIdForUser, setParentOrgIdForUser] = useState('');
+  const [franchisesForUser, setFranchisesForUser] = useState<OrganisationResponse[]>([]);
+  const [orgAdminFranchises, setOrgAdminFranchises] = useState<OrganisationResponse[]>([]);
+
   const totalPages = Math.ceil(total / pageSize);
 
   const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY });
@@ -127,6 +133,10 @@ const Users = () => {
 
   const selectedOrg = orgs.find((o) => o.uuid === selectedOrgId);
   const selectedRole = roles.find((r) => String(r.roleId) === selectedRoleId);
+
+  // Computed: is the logged-in user an Org Admin (top-level org, not a franchise)?
+  const authOrg = orgs.find(o => o.uuid === authUser?.orgId);
+  const isOrgAdmin = !isSuperAdmin && !!authOrg && !authOrg.parentOrgId;
 
   // ─── Fetch ─────────────────────────────────────────────────────────────────
 
@@ -151,6 +161,25 @@ const Users = () => {
 
   useEffect(() => { fetchAll(); }, [currentPage, pageSize]);
 
+  // Load org admin's own franchises (for create modal)
+  useEffect(() => {
+    if (orgs.length === 0) return;
+    const authOrgData = orgs.find(o => o.uuid === authUser?.orgId);
+    if (!isSuperAdmin && authOrgData && !authOrgData.parentOrgId && authUser?.orgId) {
+      organisationService.getFranchises(0, 500, authUser.orgId)
+        .then(d => setOrgAdminFranchises(d.content ?? []))
+        .catch(() => setOrgAdminFranchises([]));
+    }
+  }, [orgs]);
+
+  // Load franchises when parent org is selected (franchise flow)
+  useEffect(() => {
+    if (!isSuperAdmin || !parentOrgIdForUser) { setFranchisesForUser([]); return; }
+    organisationService.getFranchises(0, 500, parentOrgIdForUser)
+      .then(d => setFranchisesForUser(d.content ?? []))
+      .catch(() => setFranchisesForUser([]));
+  }, [parentOrgIdForUser]);
+
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
   const generatePassword = () => {
@@ -159,17 +188,53 @@ const Users = () => {
     setValue('password', pwd);
   };
 
-  const emptyForm = (): FormValues => ({
-    ...EMPTY,
-    // Auto-set org for non-super-admin users
-    orgId: !isSuperAdmin && authUser?.orgId ? authUser.orgId : '',
-  });
+  const badgeParentStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: 20, fontSize: 9.5, fontWeight: 700, background: 'rgba(59,130,246,0.10)', color: '#2563EB', border: '1px solid rgba(59,130,246,0.22)', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 };
+  const badgeSubOrgStyle: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', padding: '2px 7px', borderRadius: 20, fontSize: 9.5, fontWeight: 700, background: 'rgba(34,197,94,0.10)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.22)', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 };
+
+  // Returns hierarchical org display badge for a user row
+  const renderOrgBadge = (u: UserResponse) => {
+    if (!u.orgId) return <span style={{ color: '#9CA3AF', fontSize: 13 }}>InspectPro Internal</span>;
+    const org = orgs.find(o => o.uuid === u.orgId);
+    if (!org) return <span style={{ fontSize: 13 }}>{u.orgName ?? '—'}</span>;
+    if (org.parentOrgId) {
+      const parent = orgs.find(o => o.uuid === org.parentOrgId);
+      const parentName = parent?.name ?? org.parentOrgName ?? '?';
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, fontWeight: 500, color: '#6B7280' }}>{parentName}</span>
+          <span style={badgeParentStyle}>Parent</span>
+          <span style={{ color: '#9CA3AF', fontSize: 12 }}>›</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#1F2937' }}>{org.name}</span>
+          <span style={badgeSubOrgStyle}>Sub-Org</span>
+        </div>
+      );
+    }
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#1F2937' }}>{org.name}</span>
+        <span style={badgeParentStyle}>Parent</span>
+      </div>
+    );
+  };
+
+  const emptyForm = (): FormValues => {
+    // Org admin must pick a franchise in create mode — start with empty orgId
+    const authOrgData = orgs.find(o => o.uuid === authUser?.orgId);
+    const isOrgAdm = !isSuperAdmin && !!authOrgData && !authOrgData.parentOrgId;
+    return {
+      ...EMPTY,
+      orgId: (!isSuperAdmin && !isOrgAdm && authUser?.orgId) ? authUser.orgId : '',
+    };
+  };
 
   // ─── Open Modals ───────────────────────────────────────────────────────────
 
   const openCreate = () => {
     reset(emptyForm());
     setEditTarget(null);
+    setAccountType('internal');
+    setParentOrgIdForUser('');
+    setFranchisesForUser([]);
     setModalMode('create');
   };
 
@@ -191,12 +256,27 @@ const Users = () => {
   const closeModal = () => {
     setModalMode(null);
     setEditTarget(null);
+    setAccountType('internal');
+    setParentOrgIdForUser('');
+    setFranchisesForUser([]);
     reset(emptyForm());
   };
 
   // ─── Submit ────────────────────────────────────────────────────────────────
 
   const onSubmit = async (values: FormValues) => {
+    // Determine final orgId based on account type
+    let finalOrgId = values.orgId;
+    if (modalMode === 'create' && isSuperAdmin) {
+      if (accountType === 'internal') {
+        finalOrgId = authUser?.orgId || '';
+      }
+    }
+    if (!finalOrgId) {
+      toast.error('Organisation is required');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
@@ -205,7 +285,7 @@ const Users = () => {
         email: values.email,
         ...(values.password?.trim() && { password: values.password.trim() }),
         gender: values.gender || undefined,
-        orgId: values.orgId,
+        orgId: finalOrgId,
         roleId: Number(values.roleId),
         statusId: values.statusId ? Number(values.statusId) : 1,
       };
@@ -295,7 +375,7 @@ const Users = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
+                {users.filter(u => u.roleName?.toLowerCase() !== 'client').map((u) => (
                   <tr key={u.id} className={styles.tableRow}>
                     <td>
                       <div className={styles.orgCell}>
@@ -309,7 +389,7 @@ const Users = () => {
                         ? <span className={`${styles.planBadge} ${styles.planPro}`}>{u.roleName}</span>
                         : <span className={styles.mutedCell}>—</span>}
                     </td>
-                    <td className={styles.mutedCell}>{u.orgName ?? '—'}</td>
+                    <td>{renderOrgBadge(u)}</td>
                     <td>
                       {u.statusName ? (
                         <span
@@ -369,6 +449,46 @@ const Users = () => {
           <FormProvider {...methods}>
             <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
               <div className="px-7 py-6 space-y-6">
+
+                {/* Account Type selector — top of modal, super admin create only */}
+                {isSuperAdmin && modalMode === 'create' && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280] mb-2">Creating user for</p>
+                    <div style={{ display: 'flex', gap: 0, border: '1px solid #E5E7EB', borderRadius: 10, overflow: 'hidden', background: '#F9FAFB' }}>
+                      {([
+                        { value: 'internal', label: 'Super Admin', desc: 'InspectPro internal' },
+                        { value: 'organisation', label: 'Organisation', desc: 'Top-level org user' },
+                        { value: 'franchise', label: 'Franchise', desc: 'Sub-org user' },
+                      ] as const).map((opt, i) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            setAccountType(opt.value);
+                            setParentOrgIdForUser('');
+                            setFranchisesForUser([]);
+                            setValue('orgId', '');
+                          }}
+                          style={{
+                            flex: 1, padding: '10px 8px', fontSize: 12.5,
+                            fontWeight: accountType === opt.value ? 700 : 500,
+                            color: accountType === opt.value ? '#2563EB' : '#6B7280',
+                            background: accountType === opt.value ? 'white' : 'transparent',
+                            border: 'none',
+                            borderRight: i < 2 ? '1px solid #E5E7EB' : 'none',
+                            cursor: 'pointer',
+                            boxShadow: accountType === opt.value ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                            transition: 'all 0.15s',
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          <div>{opt.label}</div>
+                          <div style={{ fontSize: 10, fontWeight: 400, color: accountType === opt.value ? '#93C5FD' : '#9CA3AF', marginTop: 2 }}>{opt.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Personal Info */}
                 <Sec icon={<User size={13} />} label="Personal Information">
@@ -446,13 +566,117 @@ const Users = () => {
                   </div>
                 </Sec>
 
-                {/* Organisation & Role */}
+                {/* Account Type + Organisation & Role — super admin create only */}
                 <Sec icon={<Shield size={13} />} label="Organisation & Role">
-                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
+                  <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5 space-y-4">
+
                     <div className="grid gap-4 sm:grid-cols-2">
-                      {/* Org — show picker only for super_admin; others see their own org */}
-                      <Fld label="Organisation" required error={errors.orgId?.message}>
-                        {isSuperAdmin ? (
+                      {/* Org/Franchise pickers — conditional on accountType */}
+                      {isSuperAdmin && modalMode === 'create' ? (
+                        <>
+                          {accountType === 'organisation' && (
+                            <Fld label="Organisation" required>
+                              <DropdownMenu modal={false}>
+                                <DropdownMenuTrigger className={selectCls(!selectedOrgId && submitting)}>
+                                  <span className={selectedOrg ? 'text-[#263B4F]' : 'text-[#6B7280]'}>
+                                    {selectedOrg ? selectedOrg.name : '— Select organisation —'}
+                                  </span>
+                                  <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                                  {orgs.filter(o => !o.parentOrgId).map((o) => (
+                                    <DropdownMenuItem key={o.uuid} onSelect={() => setValue('orgId', o.uuid, { shouldValidate: true })} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">
+                                      {o.name}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </Fld>
+                          )}
+
+                          {accountType === 'franchise' && (
+                            <>
+                              <Fld label="Parent Organisation" required>
+                                <DropdownMenu modal={false}>
+                                  <DropdownMenuTrigger className={selectCls(false)}>
+                                    <span className={parentOrgIdForUser ? 'text-[#263B4F]' : 'text-[#6B7280]'}>
+                                      {orgs.find(o => o.uuid === parentOrgIdForUser)?.name ?? '— Select organisation —'}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                                    {orgs.filter(o => !o.parentOrgId).map((o) => (
+                                      <DropdownMenuItem key={o.uuid} onSelect={() => { setParentOrgIdForUser(o.uuid); setValue('orgId', ''); }} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">
+                                        {o.name}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </Fld>
+
+                              <Fld label="Franchise" required>
+                                <DropdownMenu modal={false}>
+                                  <DropdownMenuTrigger className={selectCls(false)} disabled={!parentOrgIdForUser}>
+                                    <span className={selectedOrg ? 'text-[#263B4F]' : 'text-[#6B7280]'}>
+                                      {selectedOrg ? selectedOrg.name : parentOrgIdForUser ? '— Select franchise —' : '— Select organisation first —'}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                                    {franchisesForUser.length === 0
+                                      ? <DropdownMenuItem disabled>No franchises found</DropdownMenuItem>
+                                      : franchisesForUser.map((f) => (
+                                        <DropdownMenuItem key={f.uuid} onSelect={() => setValue('orgId', f.uuid, { shouldValidate: true })} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">
+                                          {f.name}
+                                        </DropdownMenuItem>
+                                      ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </Fld>
+                            </>
+                          )}
+
+                          {accountType === 'internal' && (
+                            <div className="sm:col-span-2">
+                              <div className="h-10 rounded-md border border-[#E5E7EB] bg-white px-3 flex items-center gap-2 text-sm text-[#6B7280]">
+                                <Building2 size={14} />
+                                Internal / Super Admin — no organisation selection required
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : isOrgAdmin && modalMode === 'create' ? (
+                        /* Org Admin create: pick a franchise */
+                        <Fld label="Franchise" required>
+                          <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger className={selectCls(!selectedOrgId && submitting)}>
+                              <span className={selectedOrg ? 'text-[#263B4F]' : 'text-[#6B7280]'}>
+                                {selectedOrg ? selectedOrg.name : '— Select franchise —'}
+                              </span>
+                              <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                              {orgAdminFranchises.length === 0
+                                ? <DropdownMenuItem disabled>No franchises found</DropdownMenuItem>
+                                : orgAdminFranchises.map(f => (
+                                  <DropdownMenuItem key={f.uuid} onSelect={() => setValue('orgId', f.uuid, { shouldValidate: true })} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">
+                                    {f.name}
+                                  </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </Fld>
+                      ) : !isSuperAdmin ? (
+                        /* Non-org-admin, non-super-admin: show org read-only */
+                        <Fld label="Organisation" required>
+                          <div className="h-10 rounded-md border border-[#E5E7EB] bg-[#F3F4F6] px-3 flex items-center gap-2 text-sm text-[#263B4F]">
+                            <Building2 size={14} className="text-[#6B7280]" />
+                            {orgs.find((o) => o.uuid === authUser?.orgId)?.name ?? authUser?.orgId ?? '—'}
+                          </div>
+                        </Fld>
+                      ) : (
+                        /* Super admin in edit mode */
+                        <Fld label="Organisation" required error={errors.orgId?.message}>
                           <DropdownMenu modal={false}>
                             <DropdownMenuTrigger className={selectCls(!!errors.orgId)}>
                               <span className={selectedOrg ? 'text-[#263B4F]' : 'text-[#6B7280]'}>
@@ -468,14 +692,8 @@ const Users = () => {
                               ))}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        ) : (
-                          /* Non-super-admin: show their org read-only */
-                          <div className="h-10 rounded-md border border-[#E5E7EB] bg-[#F3F4F6] px-3 flex items-center gap-2 text-sm text-[#263B4F]">
-                            <Building2 size={14} className="text-[#6B7280]" />
-                            {orgs.find((o) => o.uuid === authUser?.orgId)?.name ?? authUser?.orgId ?? '—'}
-                          </div>
-                        )}
-                      </Fld>
+                        </Fld>
+                      )}
 
                       <Fld label="Role" required error={errors.roleId?.message}>
                         <DropdownMenu modal={false}>
@@ -504,7 +722,12 @@ const Users = () => {
                 <Button type="button" variant="outline" onClick={closeModal} disabled={submitting}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={submitting}
+                <Button type="submit" disabled={submitting || (
+                  isSuperAdmin && modalMode === 'create' && (
+                    (accountType === 'organisation' && !selectedOrgId) ||
+                    (accountType === 'franchise' && (!parentOrgIdForUser || !selectedOrgId))
+                  )
+                ) || (isOrgAdmin && modalMode === 'create' && !selectedOrgId)}
                   className="flex-1 sm:flex-none sm:min-w-44 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95">
                   {submitting ? (
                     <span className="flex items-center gap-2">

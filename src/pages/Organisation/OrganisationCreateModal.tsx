@@ -3,7 +3,7 @@ import { useForm, FormProvider, useController } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
-import { Building2, Globe, Mail, Sparkles, Phone, User, FileText, MapPin, ChevronDown, Calendar, Crown } from 'lucide-react';
+import { Building2, Globe, Mail, Sparkles, User, FileText, MapPin, ChevronDown, Calendar, Crown } from 'lucide-react';
 
 import { organisationService } from '@/services/organisationService';
 import { subscriptionService } from '@/services/subscriptionService';
@@ -72,8 +72,16 @@ const schema = z.object({
   phoneNumber: z
     .string()
     .optional()
-    .refine((val) => !val || /^[0-9+\-\s()]{7,15}$/.test(val), 'Please enter a valid phone number'),
+    .refine((val) => !val || /^[0-9]{10}$/.test(val), 'Phone number must be exactly 10 digits'),
   contactedPersonName: z.string().optional(),
+  contactedPersonEmail: z
+    .string()
+    .min(1, 'Contact person email is required')
+    .refine((val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), 'Enter a valid email address'),
+  contactedPersonPhoneNumber: z
+    .string()
+    .min(1, 'Contact person phone is required')
+    .refine((val) => /^[0-9]{10}$/.test(val), 'Phone number must be exactly 10 digits'),
   gstin: z
     .string()
     .optional()
@@ -96,12 +104,12 @@ const schema = z.object({
       'Invalid TAN format (e.g. ABCD12345E)'
     ),
   address: z.object({
-    addressLine1: z.string().min(1, 'Address Line 1 is required'),
-    addressLine2: z.string().optional(),
-    street: z.string().optional(),
-    district: z.string().optional(),
-    state: z.string().min(1, 'State is required'),
-    country: z.string().min(1, 'Country is required'),
+    addressLine1: z.string().min(1, 'Address Line 1 is required').max(250, 'Max 250 characters'),
+    addressLine2: z.string().max(250, 'Max 250 characters').optional(),
+    street: z.string().max(250, 'Max 250 characters').optional(),
+    district: z.string().max(100, 'Max 100 characters').optional(),
+    state: z.string().min(1, 'State is required').max(100, 'Max 100 characters'),
+    country: z.string().min(1, 'Country is required').max(100, 'Max 100 characters'),
     pincode: z
       .string()
       .optional()
@@ -120,6 +128,8 @@ const EMPTY_DEFAULTS: FormValues = {
   subscriptionEndDate: '',
   phoneNumber: '',
   contactedPersonName: '',
+  contactedPersonEmail: '',
+  contactedPersonPhoneNumber: '',
   gstin: '',
   pan: '',
   tan: '',
@@ -153,6 +163,8 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
   const { field: domainField } = useController({ name: 'domain', control });
   const { field: phoneField } = useController({ name: 'phoneNumber', control });
   const { field: contactPersonField } = useController({ name: 'contactedPersonName', control });
+  const { field: contactPersonEmailField } = useController({ name: 'contactedPersonEmail', control });
+  const { field: contactPersonPhoneField } = useController({ name: 'contactedPersonPhoneNumber', control });
   const { field: gstinField } = useController({ name: 'gstin', control });
   const { field: panField } = useController({ name: 'pan', control });
   const { field: tanField } = useController({ name: 'tan', control });
@@ -184,7 +196,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
       ? subscriptionService.listActiveSubscriptions()
       : subscriptionService.listActiveSubscriptionsByOrgId(user!.orgId!);
     fetch
-      .then(setPlans)
+      .then((data) => setPlans(data.filter((p) => p.global !== false && p.createdByOrgId == null)))
       .catch(() => setPlans([]))
       .finally(() => setPlansLoading(false));
   }, [open, isEditMode]);
@@ -201,6 +213,8 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
         subscriptionEndDate: '',
         phoneNumber: editOrg.phoneNumber ?? '',
         contactedPersonName: editOrg.contactedPersonName ?? '',
+        contactedPersonEmail: editOrg.contactedPersonEmail ?? '',
+        contactedPersonPhoneNumber: editOrg.contactedPersonPhoneNumber ?? '',
         gstin: editOrg.gstin ?? '',
         pan: editOrg.pan ?? '',
         tan: editOrg.tan ?? '',
@@ -255,6 +269,8 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
           domain: clean(data.domain),
           phoneNumber: clean(data.phoneNumber),
           contactedPersonName: clean(data.contactedPersonName),
+          contactedPersonEmail: clean(data.contactedPersonEmail),
+          contactedPersonPhoneNumber: clean(data.contactedPersonPhoneNumber),
           gstin: clean(data.gstin),
           pan: clean(data.pan),
           tan: clean(data.tan),
@@ -277,6 +293,8 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
             : undefined,
           phoneNumber: clean(data.phoneNumber),
           contactedPersonName: clean(data.contactedPersonName),
+          contactedPersonEmail: clean(data.contactedPersonEmail),
+          contactedPersonPhoneNumber: clean(data.contactedPersonPhoneNumber),
           gstin: clean(data.gstin),
           pan: clean(data.pan),
           tan: clean(data.tan),
@@ -425,8 +443,11 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
                       </IcoInput>
                     </Fld>
                     <Fld label="Phone Number" error={errors.phoneNumber?.message}>
-                      <IcoInput icon={<Phone size={15} />}>
-                        <Input placeholder="+91 98765 43210" {...phoneField} className={inputCls(!!errors.phoneNumber)} />
+                      <PhoneInput field={phoneField} hasError={!!errors.phoneNumber} />
+                    </Fld>
+                    <Fld label="Website" hint="Optional" error={errors.domain?.message}>
+                      <IcoInput icon={<Globe size={15} />}>
+                        <Input placeholder="https://acme.com" {...domainField} className={inputCls(!!errors.domain)} />
                       </IcoInput>
                     </Fld>
                     <Fld label="Contact Person" error={errors.contactedPersonName?.message}>
@@ -434,10 +455,13 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
                         <Input placeholder="John Doe" {...contactPersonField} className={inputCls(!!errors.contactedPersonName)} />
                       </IcoInput>
                     </Fld>
-                    <Fld label="Domain" hint="Optional" error={errors.domain?.message}>
-                      <IcoInput icon={<Globe size={15} />}>
-                        <Input placeholder="acme.com" {...domainField} className={inputCls(!!errors.domain)} />
+                    <Fld label="Contact Person Email" required error={(errors as any).contactedPersonEmail?.message}>
+                      <IcoInput icon={<Mail size={15} />}>
+                        <Input type="email" placeholder="john@acme.com" {...contactPersonEmailField} className={inputCls(!!(errors as any).contactedPersonEmail)} />
                       </IcoInput>
+                    </Fld>
+                    <Fld label="Contact Person Phone" required error={(errors as any).contactedPersonPhoneNumber?.message}>
+                      <PhoneInput field={contactPersonPhoneField} hasError={!!(errors as any).contactedPersonPhoneNumber} />
                     </Fld>
                   </div>
                 </div>
@@ -468,24 +492,24 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
                 <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Fld label="Address Line 1" required error={errors.address?.addressLine1?.message}>
-                      <Input placeholder="Flat / House no., Building name"
+                      <Input placeholder="Flat / House no., Building name" maxLength={250}
                         {...addrLine1Field} className={inputCls(!!errors.address?.addressLine1)} />
                     </Fld>
-                    <Fld label="Address Line 2">
-                      <Input placeholder="Area, Colony, Locality"
-                        {...register('address.addressLine2')} className={inputCls(false)} />
+                    <Fld label="Address Line 2" error={errors.address?.addressLine2?.message}>
+                      <Input placeholder="Area, Colony, Locality" maxLength={250}
+                        {...register('address.addressLine2')} className={inputCls(!!errors.address?.addressLine2)} />
                     </Fld>
-                    <Fld label="Street">
-                      <Input placeholder="Street name" {...streetField} className={inputCls(false)} />
+                    <Fld label="Street" error={errors.address?.street?.message}>
+                      <Input placeholder="Street name" maxLength={250} {...streetField} className={inputCls(!!errors.address?.street)} />
                     </Fld>
-                    <Fld label="District">
-                      <Input placeholder="District" {...districtField} className={inputCls(false)} />
+                    <Fld label="District" error={errors.address?.district?.message}>
+                      <Input placeholder="District" maxLength={100} {...districtField} className={inputCls(!!errors.address?.district)} />
                     </Fld>
                     <Fld label="State" required error={errors.address?.state?.message}>
-                      <Input placeholder="State" {...stateField} className={inputCls(!!errors.address?.state)} />
+                      <Input placeholder="State" maxLength={100} {...stateField} className={inputCls(!!errors.address?.state)} />
                     </Fld>
                     <Fld label="Country" required error={errors.address?.country?.message}>
-                      <Input placeholder="Country" {...countryField} className={inputCls(!!errors.address?.country)} />
+                      <Input placeholder="Country" maxLength={100} {...countryField} className={inputCls(!!errors.address?.country)} />
                     </Fld>
                     <Fld label="Pincode" error={errors.address?.pincode?.message}>
                       <Input placeholder="110001" maxLength={6}
@@ -556,6 +580,34 @@ function IcoInput({ icon, children }: { icon: React.ReactNode; children: React.R
     <div className="relative">
       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7280] pointer-events-none z-10">{icon}</span>
       <div className="[&_input]:pl-9">{children}</div>
+    </div>
+  );
+}
+
+function PhoneInput({ field, hasError }: { field: React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }; hasError: boolean }) {
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
+    if (!allowed.includes(e.key) && !/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
+  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData('text');
+    if (!/^[0-9]+$/.test(text)) e.preventDefault();
+  };
+  return (
+    <div className={`flex items-center border rounded-lg bg-white h-10 overflow-hidden ${hasError ? 'border-[#DF453A]' : 'border-[#E5E7EB]'} focus-within:ring-2 focus-within:ring-[#33AE95]/30 focus-within:border-[#33AE95]`}>
+      <span className="px-3 text-sm font-medium text-[#6B7280] border-r border-[#E5E7EB] h-full flex items-center select-none bg-[#F9FAFB]">+91</span>
+      <input
+        {...field}
+        type="tel"
+        inputMode="numeric"
+        maxLength={10}
+        placeholder="9876543210"
+        onKeyDown={onKeyDown}
+        onPaste={onPaste}
+        className="flex-1 h-full px-3 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] outline-none bg-transparent"
+      />
     </div>
   );
 }

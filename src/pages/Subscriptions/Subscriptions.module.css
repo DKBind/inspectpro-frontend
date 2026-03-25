@@ -47,7 +47,19 @@
   flex-shrink: 0;
   box-shadow: 0 2px 8px var(--ip-brand-light);
 }
-.createBtn:hover { background: var(--ip-brand-hover); }
+
+.createBtn:hover {
+  background: var(--ip-brand-hover);
+}
+
+.header {
+  display: flex;
+  width: 100%;
+}
+
+.createBtn {
+  margin-left: auto;
+}
 
 /* ─── Panel ────────────────────────────────────────────────────────────────── */
 
@@ -87,9 +99,16 @@
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-.refreshBtn:hover { color: var(--ip-brand); border-color: var(--ip-brand); background: var(--ip-brand-light); }
 
-.panelBody { padding: 0; }
+.refreshBtn:hover {
+  color: var(--ip-brand);
+  border-color: var(--ip-brand);
+  background: var(--ip-brand-light);
+}
+
+.panelBody {
+  padding: 0;
+}
 
 /* ─── Empty / Loading ──────────────────────────────────────────────────────── */
 
@@ -104,7 +123,11 @@
   text-align: center;
 }
 
-.emptySubtext { font-size: 0.8rem; color: var(--ip-text-disabled); margin-top: 6px; }
+.emptySubtext {
+  font-size: 0.8rem;
+  color: var(--ip-text-disabled);
+  margin-top: 6px;
+}
 
 .spinner {
   width: 28px;
@@ -114,7 +137,12 @@
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* ─── Table ────────────────────────────────────────────────────────────────── */
 
@@ -144,17 +172,28 @@
   border-bottom: 1px solid var(--ip-border);
   transition: background 0.12s;
 }
-.tableRow:last-child { border-bottom: none; }
-.tableRow:hover { background: var(--ip-surface-hover); }
 
-.table td { padding: 13px 16px; vertical-align: middle; }
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.tableRow:hover {
+  background: var(--ip-surface-hover);
+}
+
+.table td {
+  padding: 13px 16px;
+  vertical-align: middle;
+}
 
 .planName {
   font-weight: 600;
   color: var(--ip-text-primary);
 }
 
-.mutedCell { color: var(--ip-text-muted); }
+.mutedCell {
+  color: var(--ip-text-muted);
+}
 
 /* ─── Status Badge ─────────────────────────────────────────────────────────── */
 
@@ -193,9 +232,18 @@
   cursor: pointer;
   transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
-.actionBtn:hover { color: var(--ip-text-primary); background: var(--ip-page-bg); border-color: var(--ip-border-strong); }
 
-.actionBtnDanger:hover { color: var(--ip-red); background: var(--ip-red-light); border-color: var(--ip-red-border); }
+.actionBtn:hover {
+  color: var(--ip-text-primary);
+  background: var(--ip-page-bg);
+  border-color: var(--ip-border-strong);
+}
+
+.actionBtnDanger:hover {
+  color: var(--ip-red);
+  background: var(--ip-red-light);
+  border-color: var(--ip-red-border);
+}
 
 /* ─── Pagination ───────────────────────────────────────────────────────────── */
 
@@ -233,10 +281,29 @@
   cursor: pointer;
   transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
-.pageBtn:hover:not(:disabled) { color: var(--ip-text-primary); background: var(--ip-page-bg); border-color: var(--ip-border-strong); }
-.pageBtn:disabled { opacity: 0.35; cursor: not-allowed; }
-.pageBtnActive { background: var(--ip-brand); border-color: var(--ip-brand); color: #fff; }
-.pageBtnActive:hover { background: var(--ip-brand-hover); border-color: var(--ip-brand-hover); color: #fff; }
+
+.pageBtn:hover:not(:disabled) {
+  color: var(--ip-text-primary);
+  background: var(--ip-page-bg);
+  border-color: var(--ip-border-strong);
+}
+
+.pageBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pageBtnActive {
+  background: var(--ip-brand);
+  border-color: var(--ip-brand);
+  color: #fff;
+}
+
+.pageBtnActive:hover {
+  background: var(--ip-brand-hover);
+  border-color: var(--ip-brand-hover);
+  color: #fff;
+}
 
 /* ─── Status Toggle (pill style — matches Notifications toggle) ─────────────── */
 .statusToggle {

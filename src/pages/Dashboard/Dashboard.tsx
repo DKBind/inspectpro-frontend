@@ -5,7 +5,6 @@ import {
   Bug,
   TrendingUp,
   TrendingDown,
-  Calendar,
   Plus,
   FileText,
   UserPlus,
@@ -90,14 +89,14 @@ const getStatusClass = (status: string) => {
   }
 };
 
-const formatDate = () => {
-  return new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-};
+// const formatDate = () => {
+//   return new Date().toLocaleDateString('en-IN', {
+//     weekday: 'long',
+//     year: 'numeric',
+//     month: 'long',
+//     day: 'numeric',
+//   });
+// };
 
 // ─── Component ─────────────────────────────────────────────────────────
 const Dashboard = () => {
@@ -113,17 +112,6 @@ const Dashboard = () => {
 
   return (
     <div className={styles.dashboardPage}>
-      {/* Welcome Banner */}
-      <div className={styles.welcomeBanner}>
-        <div className={styles.welcomeText}>
-          <h2>Welcome back, Admin! 👋</h2>
-          <p>Here's what's happening with your projects today.</p>
-        </div>
-        <div className={styles.welcomeDate}>
-          <Calendar />
-          {formatDate()}
-        </div>
-      </div>
 
       {/* Stats Cards */}
       <div className={styles.statsGrid}>
@@ -141,9 +129,8 @@ const Dashboard = () => {
             <div className={styles.statBody}>
               <span className={styles.statValue}>{stat.value}</span>
               <span
-                className={`${styles.statTrend} ${
-                  stat.trendUp ? styles.trendUp : styles.trendDown
-                }`}
+                className={`${styles.statTrend} ${stat.trendUp ? styles.trendUp : styles.trendDown
+                  }`}
               >
                 {stat.trendUp ? <TrendingUp /> : <TrendingDown />}
                 {stat.trend} from last month
@@ -193,7 +180,7 @@ const Dashboard = () => {
             totalPages={totalPages}
             totalItems={inspectionsData.length}
             pageSize={pageSize}
-            onPageChange={setCurrentPage}/>
+            onPageChange={setCurrentPage} />
         </div>
 
         {/* Right Column */}
@@ -209,9 +196,8 @@ const Dashboard = () => {
                 {activityFeed.map((item, idx) => (
                   <li key={idx} className={styles.activityItem}>
                     <div
-                      className={`${styles.activityDot} ${
-                        styles[`dot${item.dot}`]
-                      }`}
+                      className={`${styles.activityDot} ${styles[`dot${item.dot}`]
+                        }`}
                     />
                     <div className={styles.activityContent}>
                       <div

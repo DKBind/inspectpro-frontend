@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, FolderOpen, Users, Building2, MapPin,
-  Calendar, IndianRupee, ClipboardList, Loader2, AlertTriangle,
+  Calendar, IndianRupee, ClipboardList, Loader2, AlertTriangle, Pencil,
 } from 'lucide-react';
 import { projectService } from '@/services/projectService';
 import type { ProjectResponse } from '@/services/models/project';
@@ -102,9 +102,16 @@ const ProjectDetail = () => {
     <div className={styles.page}>
 
       {/* Back button */}
-      <div className={styles.topBar}>
+      <div className={styles.topBar} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button className={styles.backBtn} onClick={() => navigate(-1)}>
           <ArrowLeft size={15} /> Back to Projects
+        </button>
+        <button
+          className={styles.backBtn}
+          onClick={() => navigate(`/projects/edit/${project.id}`)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', borderColor: '#3B82F6', color: '#2563EB', fontWeight: 600 }}
+        >
+          <Pencil size={13} /> Edit Project
         </button>
       </div>
 

@@ -245,59 +245,7 @@ const Projects = () => {
   const openCreate = () => navigate(ROUTES.PROJECT_CREATE);
 
   const openEdit = (p: ProjectResponse) => {
-    setEditTarget(p);
-
-    // Populate spec values from saved projectSpecs
-    if (p.projectSpecs && typeof p.projectSpecs === 'object') {
-      const templateKeys = new Set<string>(
-        parseSpecFields(p.specTemplate as SpecField[] | string | undefined).map(f => f.label)
-      );
-      const sv: Record<string, string> = {};
-      const cf: Array<{ label: string; value: string }> = [];
-      Object.entries(p.projectSpecs as Record<string, string>).forEach(([k, v]) => {
-        if (templateKeys.has(k)) sv[k] = v;
-        else cf.push({ label: k, value: v });
-      });
-      setSpecValues(sv);
-      setCustomFields(cf);
-      setEditingLabelIdx(null);
-    } else {
-      setSpecValues({});
-      setCustomFields([]);
-      setEditingLabelIdx(null);
-    }
-
-    const findAssignee = (roleName: string) =>
-      p.assignments?.find(a => a.roleName?.toLowerCase() === roleName.toLowerCase())?.userId ?? '';
-
-    reset({
-      name: p.name ?? '',
-      clientId: p.clientId ?? '',
-      organisationId: p.organisationId ?? '',
-      managerId: p.managerId ?? '',
-      qaId: findAssignee('qa'),
-      inspectorId: findAssignee('inspector'),
-      contractorId: findAssignee('contractor'),
-      propertyTypeId: p.propertyTypeId != null ? String(p.propertyTypeId) : '',
-      projectStatus: (p.projectStatus as ProjectStatus) ?? 'PLANNING',
-      description: p.description ?? '',
-      addressLine1: p.addressLine1 ?? '',
-      addressLine2: p.addressLine2 ?? '',
-      street: p.street ?? '',
-      city: p.city ?? '',
-      state: p.state ?? '',
-      country: p.country ?? '',
-      pincode: p.pincode ?? '',
-      latitude: p.latitude != null ? String(p.latitude) : '',
-      longitude: p.longitude != null ? String(p.longitude) : '',
-      startDatePlanned: p.startDatePlanned ? p.startDatePlanned.slice(0, 10) : '',
-      startDateActual: p.startDateActual ? p.startDateActual.slice(0, 10) : '',
-      estimatedCompletionDate: p.estimatedCompletionDate ? p.estimatedCompletionDate.slice(0, 10) : '',
-      actualCompletionDate: p.actualCompletionDate ? p.actualCompletionDate.slice(0, 10) : '',
-      totalBudget: p.totalBudget != null ? String(p.totalBudget) : '',
-      contractValue: p.contractValue != null ? String(p.contractValue) : '',
-    });
-    setFormOpen(true);
+    navigate(`/projects/edit/${p.id}`);
   };
 
   const closeForm = () => {
@@ -528,8 +476,10 @@ const Projects = () => {
         </>
       )}
 
-      {/* ── Create / Edit Modal ─────────────────────────────────────────────── */}
-      <Dialog open={formOpen} onOpenChange={open => { if (!open) closeForm(); }}>
+      {/* ── Create / Edit Modal removed — edit navigates to /projects/edit/:id full page ── */}
+
+      {/* ── View Detail Modal ───────────────────────────────────────────────── */}
+      {false && <Dialog open={formOpen} onOpenChange={open => { if (!open) closeForm(); }}>
         <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
@@ -960,7 +910,7 @@ const Projects = () => {
             </form>
           )}
         </DialogContent>
-      </Dialog>
+      </Dialog>}
 
       {/* ── View Detail Modal ───────────────────────────────────────────────── */}
       <Dialog open={!!viewTarget} onOpenChange={open => { if (!open) setViewTarget(null); }}>

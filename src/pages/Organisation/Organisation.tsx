@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Plus, Globe, Crown, RefreshCw, Eye, Pencil, Trash2, AlertTriangle, Phone, Hash } from 'lucide-react';
+import { Building2, Plus, Globe, Crown, RefreshCw, Eye, Pencil, Trash2, AlertTriangle, Phone, Hash, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { organisationService } from '@/services/organisationService';
@@ -189,6 +189,7 @@ const Organisation = () => {
                 <thead>
                   <tr>
                     <th>Organisation</th>
+                    <th>Email</th>
                     <th>Contact Person</th>
                     <th>Phone</th>
                     <th>GSTIN</th>
@@ -217,9 +218,17 @@ const Organisation = () => {
                         </div>
                       </td>
                       <td className={styles.mutedCell}>
+                        {org.email
+                          ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <Mail size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+                              {org.email}
+                            </span>
+                          : <span style={{ color: '#D1D5DB' }}>—</span>}
+                      </td>
+                      <td className={styles.mutedCell}>
                         <div>{org.contactedPersonName ?? '—'}</div>
-                        {org.email && (
-                          <div className={styles.orgMeta} style={{ marginTop: 2 }}>{org.email}</div>
+                        {org.contactedPersonEmail && (
+                          <div className={styles.orgMeta} style={{ marginTop: 2 }}>{org.contactedPersonEmail}</div>
                         )}
                       </td>
                       <td className={styles.mutedCell}>

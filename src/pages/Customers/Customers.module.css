@@ -36,7 +36,7 @@
 
 .clientCell { display: flex; align-items: center; gap: 10px; }
 .avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #33AE95, #2a9a84); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.clientName { font-size: 13px; font-weight: 600; color: #263B4F; margin: 0; }
+.clientName { font-size: 13px; color: #6B7280; margin: 0; }
 .clientEmail { font-size: 11px; color: #9CA3AF; margin: 2px 0 0; }
 .muted { color: #6B7280; font-size: 13px; }
 .company { display: inline-flex; align-items: center; gap: 5px; }

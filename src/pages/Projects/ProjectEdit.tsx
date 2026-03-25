@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -7,52 +7,56 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, FolderOpen, ClipboardList, MapPin, Calendar,
   IndianRupee, Loader2, Users, Building2, Navigation,
-  Banknote, PlusCircle, Pencil, Trash2, ChevronDown,
+  Banknote, PlusCircle, Pencil, Trash2, ChevronDown, AlertTriangle,
 } from 'lucide-react';
 
 import { projectService } from '@/services/projectService';
 import { customerService } from '@/services/customerService';
 import { userService } from '@/services/userService';
-import { organisationService } from '@/services/organisationService';
-import type { OrganisationResponse } from '@/services/models/organisation';
-import { propertyTypeService, parseSpecFields } from '@/services/propertyTypeService';
-import type { PropertyTypeResponse, SpecField } from '@/services/propertyTypeService';
-import type { ProjectAssignmentInput } from '@/services/models/project';
+import type { ProjectResponse, ProjectAssignmentInput } from '@/services/models/project';
 import type { CustomerResponse } from '@/services/models/customer';
 import type { UserResponse } from '@/services/models/user';
-import { useAuthStore } from '@/store/useAuthStore';
+import { propertyTypeService, parseSpecFields } from '@/services/propertyTypeService';
+import type { PropertyTypeResponse, SpecField } from '@/services/propertyTypeService';
 import { Input } from '@/components/shared-ui/Input/input';
 import { Fld, inputCls } from '@/components/shared-ui/form-helpers';
 import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from '@/components/shared-ui/DropdownMenu/dropdown-menu';
-import { ROUTES } from '@/components/Constant/Route';
 import styles from './ProjectCreate.module.css';
-
 
 const positiveNumber = z
   .string()
   .optional()
   .refine((v) => !v || (/^\d+(\.\d{1,2})?$/.test(v) && parseFloat(v) >= 0), 'Enter a valid positive number');
 
+const PROJECT_STATUSES = ['PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'] as const;
+const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
+  PLANNING:    { label: 'Planning',    color: '#3b82f6', bg: 'rgba(59,130,246,0.1)'  },
+  IN_PROGRESS: { label: 'In Progress', color: '#10b981', bg: 'rgba(16,185,129,0.1)'  },
+  ON_HOLD:     { label: 'On Hold',     color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
+  COMPLETED:   { label: 'Completed',   color: '#22c55e', bg: 'rgba(34,197,94,0.1)'   },
+  CANCELLED:   { label: 'Cancelled',   color: '#ef4444', bg: 'rgba(239,68,68,0.1)'   },
+};
+
 const schema = z.object({
   name: z.string().min(1, 'Project name is required').max(250, 'Max 250 characters'),
   clientId: z.string().min(1, 'Client is required'),
-  organisationId: z.string().optional(),
   managerId: z.string().min(1, 'Manager is required'),
   qaId: z.string().min(1, 'QA is required'),
   inspectorId: z.string().min(1, 'Inspector is required'),
   contractorId: z.string().min(1, 'Contractor is required'),
   propertyTypeId: z.string().min(1, 'Property type is required'),
+  projectStatus: z.string().min(1, 'Status is required'),
   description: z.string().max(250, 'Max 250 characters').optional(),
-  addressLine1: z.string().max(250, 'Max 250 characters').optional(),
-  addressLine2: z.string().max(250, 'Max 250 characters').optional(),
-  street: z.string().max(250, 'Max 250 characters').optional(),
-  city: z.string().max(250, 'Max 250 characters').optional(),
-  state: z.string().max(250, 'Max 250 characters').optional(),
-  country: z.string().max(250, 'Max 250 characters').optional(),
-  pincode: z.string().max(10, 'Max 10 characters').optional(),
+  addressLine1: z.string().max(250).optional(),
+  addressLine2: z.string().max(250).optional(),
+  street: z.string().max(250).optional(),
+  city: z.string().max(250).optional(),
+  state: z.string().max(250).optional(),
+  country: z.string().max(250).optional(),
+  pincode: z.string().max(10).optional(),
   latitude: positiveNumber,
   longitude: positiveNumber,
   startDatePlanned: z.string().optional(),
@@ -66,8 +70,9 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const EMPTY: FormValues = {
-  name: '', clientId: '', organisationId: '', managerId: '', qaId: '',
+  name: '', clientId: '', managerId: '', qaId: '',
   inspectorId: '', contractorId: '', propertyTypeId: '',
+  projectStatus: 'PLANNING',
   description: '', addressLine1: '', addressLine2: '', street: '',
   city: '', state: '', country: '', pincode: '', latitude: '', longitude: '',
   startDatePlanned: '', startDateActual: '',
@@ -75,20 +80,15 @@ const EMPTY: FormValues = {
   totalBudget: '', contractValue: '',
 };
 
-const DESC_MAX = 300;
-
-const ProjectCreate = () => {
+const ProjectEdit = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const isSuperAdmin = user?.isSuperAdmin === true || user?.role === 'super_admin';
+  // const { user } = useAuthStore();
 
-  // 'organisation' = project belongs to an org, 'franchise' = project belongs to a franchise
-  const [projectFor, setProjectFor] = useState<'organisation' | 'franchise'>('organisation');
-  // Super-admin franchise flow: pick the parent org first, then pick the franchise
-  const [franchiseOrgId, setFranchiseOrgId] = useState('');
+  const [project, setProject] = useState<ProjectResponse | null>(null);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [topLevelOrgs, setTopLevelOrgs] = useState<OrganisationResponse[]>([]);
-  const [franchises, setFranchises] = useState<OrganisationResponse[]>([]);
   const [clients, setClients] = useState<CustomerResponse[]>([]);
   const [propertyTypes, setPropertyTypes] = useState<PropertyTypeResponse[]>([]);
   const [roleMap, setRoleMap] = useState<Record<string, number>>({});
@@ -102,7 +102,7 @@ const ProjectCreate = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const {
-    register, handleSubmit, watch, setValue, control,
+    register, handleSubmit, watch, control, reset,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -111,111 +111,82 @@ const ProjectCreate = () => {
   });
 
   const selectedPropertyTypeId = watch('propertyTypeId');
-  const selectedOrgId = watch('organisationId'); // final target UUID (org or franchise)
+  const selectedStatus = watch('projectStatus');
   // const descriptionVal = watch('description') ?? '';
   const selectedPropertyType = propertyTypes.find(pt => String(pt.id) === selectedPropertyTypeId);
   const specFields: SpecField[] = parseSpecFields(selectedPropertyType?.specTemplate);
+  const statusMeta = STATUS_META[selectedStatus] ?? STATUS_META['PLANNING'];
 
-
-  // ── Fetch on mount ──────────────────────────────────────────────────────
+  // ── Load project data ────────────────────────────────────────────────────
   useEffect(() => {
-    propertyTypeService.listPropertyTypes().then(setPropertyTypes).catch(() => { });
+    if (!id) return;
+    setPageLoading(true);
 
-    // Load top-level orgs for super admin org/franchise picker
-    if (isSuperAdmin) {
-      organisationService.getOrganisations(0, 500)
-        .then(d => setTopLevelOrgs((d.content ?? []).filter(o => !o.parentOrgId)))
-        .catch(() => { });
-    }
+    Promise.all([
+      projectService.getProject(id),
+      propertyTypeService.listPropertyTypes(),
+      customerService.listClients(0, 500),
+      userService.listRoles(),
+    ]).then(([proj, ptypes, clientsData, rolesData]) => {
+      setProject(proj);
+      setPropertyTypes(ptypes);
+      setClients(clientsData.content ?? []);
 
-    // Org admin: load their own franchises up front
-    if (!isSuperAdmin && user?.orgId) {
-      organisationService.getFranchises(0, 500, user.orgId)
-        .then(d => setFranchises(d.content ?? []))
-        .catch(() => { });
-    }
-
-    // Load clients scoped to caller's org
-    customerService.listClients(0, 500)
-      .then(d => setClients(d.content ?? []))
-      .catch(() => setClients([]));
-
-    userService.listRoles().then(roles => {
       const map: Record<string, number> = {};
-      roles.forEach(r => { map[r.name.toLowerCase()] = r.roleId; });
+      rolesData.forEach(r => { map[r.name.toLowerCase()] = r.roleId; });
       setRoleMap(map);
 
-      if (!isSuperAdmin) {
-        const load = (name: string, setter: (u: UserResponse[]) => void) => {
-          const id = map[name.toLowerCase()];
-          if (id) userService.listUsersByRole(id).then(setter).catch(() => setter([]));
-        };
-        load('manager', setManagerUsers);
-        load('qa', setQaUsers);
-        load('inspector', setInspectorUsers);
-        load('contractor', setContractorUsers);
-      }
-    }).catch(() => { });
-  }, [user?.id]);
+      // Load role-based users
+      const loadUsers = (name: string, setter: (u: UserResponse[]) => void) => {
+        const rid = map[name.toLowerCase()];
+        if (rid) userService.listUsersByRole(rid, proj.organisationId).then(setter).catch(() => setter([]));
+      };
+      loadUsers('manager', setManagerUsers);
+      loadUsers('qa', setQaUsers);
+      loadUsers('inspector', setInspectorUsers);
+      loadUsers('contractor', setContractorUsers);
 
-  // Super admin: load franchises when parent org is selected in franchise mode
-  useEffect(() => {
-    if (!isSuperAdmin || !franchiseOrgId) { setFranchises([]); return; }
-    organisationService.getFranchises(0, 500, franchiseOrgId)
-      .then(d => setFranchises(d.content ?? []))
-      .catch(() => setFranchises([]));
-  }, [franchiseOrgId]);
+      // Find assignments
+      const qaUser = proj.assignments?.find(a => a.roleName?.toLowerCase() === 'qa');
+      const inspUser = proj.assignments?.find(a => a.roleName?.toLowerCase() === 'inspector');
+      const conUser = proj.assignments?.find(a => a.roleName?.toLowerCase() === 'contractor');
 
-  // Reload clients + users whenever the target entity (org or franchise UUID) changes.
-  // Fires for super admin always, and for org admin when they pick a franchise.
-  useEffect(() => {
-    if (!selectedOrgId) return;
-    if (!isSuperAdmin && projectFor !== 'franchise') return;
+      // Pre-populate form
+      reset({
+        name: proj.name ?? '',
+        clientId: proj.clientId ?? '',
+        managerId: proj.managerId ?? '',
+        qaId: qaUser?.userId ?? '',
+        inspectorId: inspUser?.userId ?? '',
+        contractorId: conUser?.userId ?? '',
+        propertyTypeId: proj.propertyTypeId ? String(proj.propertyTypeId) : '',
+        projectStatus: proj.projectStatus ?? 'PLANNING',
+        description: proj.description ?? '',
+        addressLine1: proj.addressLine1 ?? '',
+        addressLine2: proj.addressLine2 ?? '',
+        street: proj.street ?? '',
+        city: proj.city ?? '',
+        state: proj.state ?? '',
+        country: proj.country ?? '',
+        pincode: proj.pincode ?? '',
+        latitude: proj.latitude != null ? String(proj.latitude) : '',
+        longitude: proj.longitude != null ? String(proj.longitude) : '',
+        startDatePlanned: proj.startDatePlanned?.split('T')[0] ?? '',
+        startDateActual: proj.startDateActual?.split('T')[0] ?? '',
+        estimatedCompletionDate: proj.estimatedCompletionDate?.split('T')[0] ?? '',
+        actualCompletionDate: proj.actualCompletionDate?.split('T')[0] ?? '',
+        totalBudget: proj.totalBudget != null ? String(proj.totalBudget) : '',
+        contractValue: proj.contractValue != null ? String(proj.contractValue) : '',
+      });
 
-    customerService.listCustomers(selectedOrgId, 0, 500)
-      .then(d => {
-        const items = d.content ?? (Array.isArray(d) ? d as any[] : []);
-        if (items.length > 0) setClients(items);
-      })
-      .catch(() => { });
+      // Pre-populate spec values
+      if (proj.projectSpecs) setSpecValues(proj.projectSpecs);
 
-    const load = (name: string, setter: (u: UserResponse[]) => void) => {
-      const id = roleMap[name.toLowerCase()];
-      if (id) userService.listUsersByRole(id, selectedOrgId).then(setter).catch(() => setter([]));
-    };
-    load('manager', setManagerUsers);
-    load('qa', setQaUsers);
-    load('inspector', setInspectorUsers);
-    load('contractor', setContractorUsers);
+    }).catch(e => {
+      setLoadError(e.message || 'Failed to load project');
+    }).finally(() => setPageLoading(false));
+  }, [id]);
 
-    setValue('clientId', '');
-    setValue('managerId', '');
-    setValue('qaId', '');
-    setValue('inspectorId', '');
-    setValue('contractorId', '');
-  }, [selectedOrgId]);
-
-  // When org admin switches back to 'organisation' mode, reload their own org's data
-  useEffect(() => {
-    if (isSuperAdmin || projectFor !== 'organisation') return;
-    customerService.listClients(0, 500).then(d => setClients(d.content ?? [])).catch(() => { });
-    const load = (name: string, setter: (u: UserResponse[]) => void) => {
-      const id = roleMap[name.toLowerCase()];
-      if (id) userService.listUsersByRole(id).then(setter).catch(() => setter([]));
-    };
-    load('manager', setManagerUsers);
-    load('qa', setQaUsers);
-    load('inspector', setInspectorUsers);
-    load('contractor', setContractorUsers);
-    setValue('organisationId', '');
-    setValue('clientId', '');
-    setValue('managerId', '');
-    setValue('qaId', '');
-    setValue('inspectorId', '');
-    setValue('contractorId', '');
-  }, [projectFor]);
-
-  // ── Options ─────────────────────────────────────────────────────────────
   const clientOptions = clients.map(c => ({
     value: c.id,
     label: c.fullName || c.firstName || '',
@@ -227,11 +198,10 @@ const ProjectCreate = () => {
     label: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
     meta: u.email || undefined,
   }));
-  const topLevelOrgOptions = topLevelOrgs.map(o => ({ value: o.uuid, label: o.name }));
-  const franchiseOptions = franchises.map(o => ({ value: o.uuid, label: o.name }));
 
   // ── Submit ───────────────────────────────────────────────────────────────
   const onSubmit = async (data: FormValues) => {
+    if (!id) return;
     setSubmitting(true);
 
     const specs: Record<string, string> = {};
@@ -247,11 +217,10 @@ const ProjectCreate = () => {
       name: data.name.trim(),
       clientId: data.clientId,
       managerId: data.managerId || undefined,
-      organisationId: isSuperAdmin && data.organisationId ? data.organisationId : undefined,
       assignments: assignments.length > 0 ? assignments : undefined,
       propertyTypeId: data.propertyTypeId ? Number(data.propertyTypeId) : undefined,
       projectSpecs: Object.keys(specs).length > 0 ? specs : undefined,
-      projectStatus: 'PLANNING' as const,
+      projectStatus: data.projectStatus,
       description: data.description?.trim() || undefined,
       addressLine1: data.addressLine1?.trim() || undefined,
       addressLine2: data.addressLine2?.trim() || undefined,
@@ -271,40 +240,75 @@ const ProjectCreate = () => {
     };
 
     try {
-      const created = await projectService.createProject(payload);
-      toast.success('Project created!');
-      navigate(`/projects/${created.id}`);
+      await projectService.updateProject(id, payload);
+      toast.success('Project updated!');
+      navigate(`/projects/${id}`);
     } catch (e: any) {
-      toast.error(e.message || 'Failed to create project');
+      toast.error(e.message || 'Failed to update project');
     } finally {
       setSubmitting(false);
     }
   };
+
+  // ── Loading / Error states ───────────────────────────────────────────────
+  if (pageLoading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 300, gap: 12 }}>
+        <Loader2 size={32} className={styles.spin} color="#3B82F6" />
+        <p style={{ color: '#64748B', fontSize: 14 }}>Loading project…</p>
+      </div>
+    );
+  }
+
+  if (loadError || !project) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 300, gap: 12 }}>
+        <AlertTriangle size={32} color="#EF4444" />
+        <p style={{ color: '#EF4444', fontSize: 14 }}>{loadError ?? 'Project not found'}</p>
+        <button className={styles.backBtn} onClick={() => navigate(-1)} style={{ marginTop: 8 }}>
+          <ArrowLeft size={14} /> Go Back
+        </button>
+      </div>
+    );
+  }
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className={styles.page}>
       {/* Top bar */}
       <div className={styles.topBar}>
-        <button className={styles.backBtn} onClick={() => navigate(ROUTES.PROJECTS)}>
-          <ArrowLeft size={14} /> Back to Projects
+        <button className={styles.backBtn} onClick={() => navigate(`/projects/${id}`)}>
+          <ArrowLeft size={14} /> Back to Project
         </button>
       </div>
 
-      {/* Page header — hero card matching ProjectDetail style */}
-      <div className={styles.pageHeader}>
-        <div className={styles.pageHeaderIcon}>
-          <FolderOpen size={26} color="#3B82F6" />
+      {/* Hero header — matches ProjectDetail style */}
+      <div className={styles.pageHeader} style={{ borderTopColor: statusMeta.color }}>
+        <div className={styles.pageHeaderIcon} style={{ background: statusMeta.bg }}>
+          <FolderOpen size={26} color={statusMeta.color} />
         </div>
         <div className={styles.pageHeaderText}>
-          <h1>New Project</h1>
+          <h1>{project.name}</h1>
           <div className={styles.pageHeaderMeta}>
-            <span className={styles.planningBadge}>
-              <span className={styles.planningDot} />
-              Planning
+            <span className={styles.planningBadge} style={{
+              background: `${statusMeta.color}14`,
+              color: statusMeta.color,
+              borderColor: `${statusMeta.color}40`,
+            }}>
+              <span className={styles.planningDot} style={{ background: statusMeta.color }} />
+              {statusMeta.label}
             </span>
+            {project.propertyTypeName && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '4px 10px', borderRadius: 6, background: '#F1F5F9',
+                border: '1px solid #E2E8F0', fontSize: 11, fontWeight: 500, color: '#64748B',
+              }}>
+                <Building2 size={11} /> {project.propertyTypeName}
+              </span>
+            )}
           </div>
-          <p>Fill in the details below to create a new project.</p>
+          <p>Update the project details below and save your changes.</p>
         </div>
       </div>
 
@@ -325,104 +329,43 @@ const ProjectCreate = () => {
                 </div>
                 <div className={styles.sectionBody}>
 
-                  {/* Create For toggle */}
-                  <Fld label="Create For">
-                    <div className={styles.forToggle}>
-                      {(['organisation', 'franchise'] as const).map(opt => (
-                        <button
-                          key={opt}
-                          type="button"
-                          className={`${styles.forToggleBtn} ${projectFor === opt ? styles.forToggleBtnActive : ''}`}
-                          onClick={() => {
-                            setProjectFor(opt);
-                            setFranchiseOrgId('');
-                            setValue('organisationId', '');
-                          }}
-                        >
-                          {opt === 'organisation' ? <Building2 size={13} /> : <Users size={13} />}
-                          {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                        </button>
-                      ))}
-                    </div>
+                  {/* Status selector */}
+                  <Fld label="Status" required error={errors.projectStatus?.message}>
+                    <Controller
+                      name="projectStatus"
+                      control={control}
+                      render={({ field }) => (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none ${inputCls(!!errors.projectStatus)}`}
+                            >
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_META[field.value]?.color ?? '#64748B', flexShrink: 0 }} />
+                                {STATUS_META[field.value]?.label ?? field.value}
+                              </span>
+                              <ChevronDown size={14} className="text-[#9CA3AF] shrink-0" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" style={{ minWidth: 'var(--radix-dropdown-menu-trigger-width)' }} className="bg-white border border-[#E5E7EB] shadow-lg z-[200]">
+                            {PROJECT_STATUSES.map(s => (
+                              <DropdownMenuItem
+                                key={s}
+                                onSelect={() => field.onChange(s)}
+                                className={field.value === s ? 'bg-[#EFF6FF] font-medium' : ''}
+                              >
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_META[s]?.color, flexShrink: 0 }} />
+                                  {STATUS_META[s]?.label}
+                                </span>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    />
                   </Fld>
-
-                  {/* Super admin: org picker (org mode) or org→franchise pickers (franchise mode) */}
-                  {isSuperAdmin && projectFor === 'organisation' && (
-                    <Fld label="Organisation" required error={errors.organisationId?.message}>
-                      <Controller
-                        name="organisationId"
-                        control={control}
-                        render={({ field }) => (
-                          <DropdownSelect
-                            options={topLevelOrgOptions}
-                            value={field.value || null}
-                            onChange={val => field.onChange(val ?? '')}
-                            placeholder="Select organisation…"
-                            searchable
-                            searchPlaceholder="Search organisations…"
-                            error={errors.organisationId?.message}
-                          />
-                        )}
-                      />
-                    </Fld>
-                  )}
-
-                  {isSuperAdmin && projectFor === 'franchise' && (
-                    <>
-                      <Fld label="Organisation" required>
-                        <DropdownSelect
-                          options={topLevelOrgOptions}
-                          value={franchiseOrgId || null}
-                          onChange={val => {
-                            setFranchiseOrgId(String(val ?? ''));
-                            setValue('organisationId', '');
-                            setValue('clientId', '');
-                          }}
-                          placeholder="Select parent organisation…"
-                          searchable
-                          searchPlaceholder="Search organisations…"
-                        />
-                      </Fld>
-                      <Fld label="Franchise" required error={errors.organisationId?.message}>
-                        <Controller
-                          name="organisationId"
-                          control={control}
-                          render={({ field }) => (
-                            <DropdownSelect
-                              options={franchiseOptions}
-                              value={field.value || null}
-                              onChange={val => field.onChange(val ?? '')}
-                              placeholder={franchiseOrgId ? 'Select franchise…' : 'Select organisation first…'}
-                              searchable
-                              searchPlaceholder="Search franchises…"
-                              error={errors.organisationId?.message}
-                            />
-                          )}
-                        />
-                      </Fld>
-                    </>
-                  )}
-
-                  {/* Org admin: franchise picker (franchise mode only) */}
-                  {!isSuperAdmin && projectFor === 'franchise' && (
-                    <Fld label="Franchise" required error={errors.organisationId?.message}>
-                      <Controller
-                        name="organisationId"
-                        control={control}
-                        render={({ field }) => (
-                          <DropdownSelect
-                            options={franchiseOptions}
-                            value={field.value || null}
-                            onChange={val => field.onChange(val ?? '')}
-                            placeholder={franchises.length === 0 ? 'No franchises found' : 'Select franchise…'}
-                            searchable
-                            searchPlaceholder="Search franchises…"
-                            error={errors.organisationId?.message}
-                          />
-                        )}
-                      />
-                    </Fld>
-                  )}
 
                   <Fld label="Project Name" required error={errors.name?.message}>
                     <Input
@@ -432,28 +375,15 @@ const ProjectCreate = () => {
                     />
                   </Fld>
 
-                  {/* Description with preview */}
                   <Fld label="Description">
                     <div className={styles.descWrap}>
                       <textarea
                         rows={3}
                         placeholder="Brief description of the project…"
                         {...register('description')}
-                        maxLength={DESC_MAX}
+                        maxLength={300}
                         className={styles.descTextarea}
                       />
-                      {/* <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                        {descriptionVal && descriptionVal.length > DESC_PREVIEW ? (
-                          <span className={styles.descPreview}>
-                            Preview: {descriptionVal.slice(0, DESC_PREVIEW)}…
-                          </span>
-                        ) : (
-                          <span />
-                        )}
-                        <span className={`${styles.descCounter} ${descriptionVal.length > DESC_MAX * 0.85 ? styles.descCounterWarn : ''}`}>
-                          {descriptionVal.length}/{DESC_MAX}
-                        </span>
-                      </div> */}
                     </div>
                   </Fld>
                 </div>
@@ -493,14 +423,13 @@ const ProjectCreate = () => {
             {/* ── RIGHT COLUMN ────────────────────────────────────────── */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
 
-              {/* Team card — flex: 1 so it stretches to match left column height */}
+              {/* Team card */}
               <div className={styles.sectionCard} style={{ flex: 1 }}>
                 <div className={styles.sectionHead}>
                   <span className={styles.sectionIcon}><Users size={13} color="#6B7280" /></span>
                   <span className={styles.sectionTitle}>Team & Client</span>
                 </div>
                 <div className={styles.sectionBody}>
-                  {/* Client — full width */}
                   <Fld label="Client" required error={errors.clientId?.message}>
                     <Controller
                       name="clientId"
@@ -510,7 +439,7 @@ const ProjectCreate = () => {
                           options={clientOptions}
                           value={field.value || null}
                           onChange={val => field.onChange(val ?? '')}
-                          placeholder={clients.length === 0 ? 'No clients yet' : 'Select a client…'}
+                          placeholder="Select a client…"
                           searchable
                           searchPlaceholder="Search clients…"
                           error={errors.clientId?.message}
@@ -528,7 +457,7 @@ const ProjectCreate = () => {
                           options={toUserOptions(managerUsers)}
                           value={field.value || null}
                           onChange={val => field.onChange(val ?? '')}
-                          placeholder={managerUsers.length === 0 ? 'No managers in org' : 'Select manager…'}
+                          placeholder="Select manager…"
                           searchable
                           searchPlaceholder="Search managers…"
                           error={errors.managerId?.message}
@@ -546,7 +475,7 @@ const ProjectCreate = () => {
                           options={toUserOptions(qaUsers)}
                           value={field.value || null}
                           onChange={val => field.onChange(val ?? '')}
-                          placeholder={qaUsers.length === 0 ? 'No QA users in org' : 'Select QA…'}
+                          placeholder="Select QA…"
                           searchable
                           searchPlaceholder="Search QA…"
                           error={errors.qaId?.message}
@@ -564,7 +493,7 @@ const ProjectCreate = () => {
                           options={toUserOptions(inspectorUsers)}
                           value={field.value || null}
                           onChange={val => field.onChange(val ?? '')}
-                          placeholder={inspectorUsers.length === 0 ? 'No inspectors in org' : 'Select inspector…'}
+                          placeholder="Select inspector…"
                           searchable
                           searchPlaceholder="Search inspectors…"
                           error={errors.inspectorId?.message}
@@ -582,7 +511,7 @@ const ProjectCreate = () => {
                           options={toUserOptions(contractorUsers)}
                           value={field.value || null}
                           onChange={val => field.onChange(val ?? '')}
-                          placeholder={contractorUsers.length === 0 ? 'No contractors in org' : 'Select contractor…'}
+                          placeholder="Select contractor…"
                           searchable
                           searchPlaceholder="Search contractors…"
                           error={errors.contractorId?.message}
@@ -592,14 +521,13 @@ const ProjectCreate = () => {
                   </Fld>
                 </div>
               </div>
-
             </div>
           </div>
 
           {/* ── Full-width sections ──────────────────────────────────────── */}
           <div className={styles.fullSections}>
 
-            {/* Property Specifications — full-width, 2-column grid */}
+            {/* Property Specifications */}
             {selectedPropertyTypeId && (
               <div className={styles.sectionCard}>
                 <div className={styles.sectionHead}>
@@ -614,8 +542,6 @@ const ProjectCreate = () => {
                   </span>
                 </div>
                 <div className={styles.sectionBody}>
-
-                  {/* All fields + Add Custom button in one grid so button fills empty cell */}
                   <div className={styles.grid2}>
                     {specFields.map(f => {
                       const opts = f.type === 'boolean' ? ['Yes', 'No'] : (f.options ?? []);
@@ -635,17 +561,9 @@ const ProjectCreate = () => {
                                   <ChevronDown size={14} className="text-[#9CA3AF] shrink-0" />
                                 </button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="start"
-                                style={{ minWidth: 'var(--radix-dropdown-menu-trigger-width)' }}
-                                className="bg-white border border-[#E5E7EB] shadow-lg z-[200]"
-                              >
+                              <DropdownMenuContent align="start" style={{ minWidth: 'var(--radix-dropdown-menu-trigger-width)' }} className="bg-white border border-[#E5E7EB] shadow-lg z-[200]">
                                 {opts.map(o => (
-                                  <DropdownMenuItem
-                                    key={o}
-                                    onSelect={() => setSpecValues(prev => ({ ...prev, [f.label]: o }))}
-                                    className={specValues[f.label] === o ? 'bg-[#EFF6FF] text-[#3B82F6] font-medium' : ''}
-                                  >
+                                  <DropdownMenuItem key={o} onSelect={() => setSpecValues(prev => ({ ...prev, [f.label]: o }))} className={specValues[f.label] === o ? 'bg-[#EFF6FF] text-[#3B82F6] font-medium' : ''}>
                                     {o}
                                   </DropdownMenuItem>
                                 ))}
@@ -664,7 +582,6 @@ const ProjectCreate = () => {
                       );
                     })}
 
-                    {/* Custom fields — in the same grid */}
                     {customFields.map((cf, idx) => (
                       <div key={idx} className={styles.customFieldCard}>
                         <div className={styles.customFieldHeader}>
@@ -688,10 +605,7 @@ const ProjectCreate = () => {
                               onClick={() => setEditingLabelIdx(editingLabelIdx === idx ? null : idx)}
                               className={styles.customFieldActionBtn}><Pencil size={11} /></button>
                             <button type="button" title="Remove"
-                              onClick={() => {
-                                setCustomFields(prev => prev.filter((_, i) => i !== idx));
-                                if (editingLabelIdx === idx) setEditingLabelIdx(null);
-                              }}
+                              onClick={() => { setCustomFields(prev => prev.filter((_, i) => i !== idx)); if (editingLabelIdx === idx) setEditingLabelIdx(null); }}
                               className={`${styles.customFieldActionBtn} ${styles.danger}`}><Trash2 size={11} /></button>
                           </div>
                         </div>
@@ -704,7 +618,6 @@ const ProjectCreate = () => {
                       </div>
                     ))}
 
-                    {/* Add Custom Detail — next available grid cell */}
                     <button
                       type="button"
                       className={styles.addCustomBtn}
@@ -824,19 +737,13 @@ const ProjectCreate = () => {
 
         {/* ── Sticky footer ─────────────────────────────────────────────── */}
         <div className={styles.footer}>
-          <button type="button" className={styles.cancelBtn} onClick={() => navigate(ROUTES.PROJECTS)}>
+          <button type="button" className={styles.cancelBtn} onClick={() => navigate(`/projects/${id}`)}>
             Cancel
           </button>
           <button type="submit" className={styles.saveBtn} disabled={submitting}>
-            {submitting ? (
-              <>
-                <Loader2 size={14} className={styles.spin} /> Creating…
-              </>
-            ) : (
-              <>
-                <FolderOpen size={14} /> Create Project
-              </>
-            )}
+            {submitting
+              ? <><Loader2 size={14} className={styles.spin} /> Saving…</>
+              : 'Save Changes'}
           </button>
         </div>
       </form>
@@ -844,4 +751,4 @@ const ProjectCreate = () => {
   );
 };
 
-export default ProjectCreate;
+export default ProjectEdit;

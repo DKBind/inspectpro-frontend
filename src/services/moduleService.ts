@@ -9,8 +9,9 @@ interface ApiResponse<T> {
 
 /** Read-only — modules are maintained directly in the database. */
 export const moduleService = {
-  listModules: async (): Promise<ModuleResponse[]> => {
-    const response = await api.get<ApiResponse<ModuleResponse[]>>('/modules');
+  listModules: async (subscriptionType?: 'ORGANISATION' | 'FRANCHISE'): Promise<ModuleResponse[]> => {
+    const url = subscriptionType ? `/modules?subscriptionType=${subscriptionType}` : '/modules';
+    const response = await api.get<ApiResponse<ModuleResponse[]>>(url);
     if (!response.status) throw new Error(response.message || 'Failed to fetch modules');
     return response.object as ModuleResponse[];
   },

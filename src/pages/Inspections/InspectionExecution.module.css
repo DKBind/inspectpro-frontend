@@ -1,0 +1,165 @@
+/* ─── Page ───────────────────────────────────────────────────────────────────── */
+.page { display: flex; flex-direction: column; gap: 0; }
+
+.header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; margin-bottom: 22px; gap: 16px;
+}
+.headerLeft { flex: 1; min-width: 0; }
+.title { font-size: 20px; font-weight: 700; color: #263B4F; margin: 0 0 4px; }
+.subtitle { font-size: 13px; color: #9CA3AF; margin: 0; }
+.headerActions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+.backBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 9px;
+  border: 1px solid #E5E7EB; background: white;
+  font-size: 13px; font-weight: 600; color: #6B7280;
+  cursor: pointer; transition: all 0.15s;
+}
+.backBtn:hover { background: #F3F4F6; color: #263B4F; }
+
+.submitBtn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 20px; border-radius: 10px; border: none;
+  background: #33AE95; color: white;
+  font-size: 13px; font-weight: 600;
+  box-shadow: 0 2px 8px rgba(51,174,149,0.3);
+  cursor: pointer; transition: all 0.15s;
+}
+.submitBtn:hover { background: #2a9a84; }
+.submitBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ─── Progress Bar ────────────────────────────────────────────────────────────── */
+.progressWrap {
+  background: white; border: 1px solid #E5E7EB; border-radius: 12px;
+  padding: 14px 20px; margin-bottom: 18px;
+  display: flex; align-items: center; gap: 16px;
+}
+.progressLabel { font-size: 12.5px; font-weight: 600; color: #374151; white-space: nowrap; }
+.progressBar {
+  flex: 1; height: 8px; background: #F3F4F6; border-radius: 4px; overflow: hidden;
+}
+.progressFill { height: 100%; background: linear-gradient(90deg, #33AE95, #2a9a84); border-radius: 4px; transition: width 0.4s ease; }
+.progressPct { font-size: 13px; font-weight: 700; color: #33AE95; white-space: nowrap; min-width: 36px; text-align: right; }
+
+/* ─── Status Counters ─────────────────────────────────────────────────────────── */
+.counters { display: flex; gap: 8px; flex-wrap: wrap; }
+.counter {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 11.5px; font-weight: 700;
+}
+.ctrAcceptable { background: rgba(34,197,94,0.10); color: #16a34a; border: 1px solid rgba(34,197,94,0.22); }
+.ctrDefective  { background: rgba(239,68,68,0.10);  color: #dc2626; border: 1px solid rgba(239,68,68,0.22); }
+.ctrMarginal   { background: rgba(245,158,11,0.10); color: #b45309; border: 1px solid rgba(245,158,11,0.22); }
+.ctrNi         { background: #F3F4F6;               color: #6B7280; border: 1px solid #E5E7EB; }
+
+/* ─── Section Card ────────────────────────────────────────────────────────────── */
+.sectionCard {
+  background: white; border: 1px solid #E5E7EB; border-radius: 14px;
+  overflow: hidden; margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.sectionHead {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 20px; background: #FAFAFA;
+  border-bottom: 1px solid #F0F0F0; cursor: pointer;
+  user-select: none;
+}
+.sectionHeadIcon {
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(51,174,149,0.10); color: #33AE95;
+  display: flex; align-items: center; justify-content: center;
+}
+.sectionTitle { font-size: 14px; font-weight: 700; color: #263B4F; flex: 1; }
+.sectionMeta  { font-size: 11.5px; color: #9CA3AF; }
+.sectionChevron { color: #9CA3AF; transition: transform 0.2s; }
+.sectionChevronOpen { transform: rotate(180deg); }
+
+/* ─── Result Row ──────────────────────────────────────────────────────────────── */
+.resultRow {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 20px; border-bottom: 1px solid #F9FAFB;
+  transition: background 0.12s;
+}
+.resultRow:last-child { border-bottom: none; }
+.resultRow:hover { background: #FAFAFA; }
+
+.resultLabel { flex: 1; min-width: 0; }
+.itemLabel { font-size: 13.5px; font-weight: 600; color: #263B4F; margin: 0 0 3px; }
+.itemMeta  { font-size: 11.5px; color: #9CA3AF; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.customChip {
+  display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px;
+  border-radius: 10px; background: #EEF2FF; color: #4338ca;
+  font-size: 10px; font-weight: 700;
+}
+.commentChip {
+  display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px;
+  border-radius: 10px; background: #F3F4F6; color: #6B7280; font-size: 10px;
+}
+
+/* ─── HIP Status Buttons ──────────────────────────────────────────────────────── */
+.hipButtons { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.hipBtn {
+  min-width: 44px; height: 34px; padding: 0 10px;
+  border-radius: 8px; border: 1.5px solid #E5E7EB;
+  font-size: 12px; font-weight: 800; cursor: pointer;
+  background: white; color: #6B7280; transition: all 0.15s;
+  letter-spacing: 0.03em;
+}
+.hipBtn:hover { border-color: #D1D5DB; background: #F9FAFB; }
+
+/* Active states */
+.hipBtnA.active  { background: #22c55e; border-color: #22c55e; color: white; box-shadow: 0 2px 6px rgba(34,197,94,0.35); }
+.hipBtnD.active  { background: #ef4444; border-color: #ef4444; color: white; box-shadow: 0 2px 6px rgba(239,68,68,0.35); }
+.hipBtnM.active  { background: #f59e0b; border-color: #f59e0b; color: white; box-shadow: 0 2px 6px rgba(245,158,11,0.35); }
+.hipBtnNI.active { background: #6B7280; border-color: #6B7280; color: white; }
+
+/* Hover tints */
+.hipBtnA:hover  { border-color: #22c55e; color: #16a34a; background: rgba(34,197,94,0.06); }
+.hipBtnD:hover  { border-color: #ef4444; color: #dc2626; background: rgba(239,68,68,0.06); }
+.hipBtnM:hover  { border-color: #f59e0b; color: #b45309; background: rgba(245,158,11,0.06); }
+.hipBtnNI:hover { border-color: #9CA3AF; color: #374151; background: #F3F4F6; }
+
+/* ─── Comment Textarea ────────────────────────────────────────────────────────── */
+.commentArea {
+  margin-top: 8px; width: 100%;
+  border: 1px solid #E5E7EB; border-radius: 9px;
+  padding: 8px 11px; font-size: 12.5px; color: #263B4F;
+  resize: none; outline: none; font-family: inherit;
+  transition: border-color 0.15s;
+}
+.commentArea:focus { border-color: #33AE95; }
+.commentArea::placeholder { color: #C4C9D4; }
+
+/* ─── Defect Row (inline) ─────────────────────────────────────────────────────── */
+.defectInline {
+  margin-top: 8px; padding: 10px 12px; border-radius: 9px;
+  background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.18);
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.defectBadge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px; font-size: 10.5px; font-weight: 700;
+}
+.sevLow      { background: rgba(34,197,94,0.10); color: #16a34a; border: 1px solid rgba(34,197,94,0.22); }
+.sevMedium   { background: rgba(245,158,11,0.10); color: #b45309; border: 1px solid rgba(245,158,11,0.22); }
+.sevHigh     { background: rgba(239,68,68,0.10);  color: #dc2626; border: 1px solid rgba(239,68,68,0.22); }
+.sevCritical { background: #450a0a; color: #fca5a5; border: 1px solid rgba(239,68,68,0.5); }
+
+.recordDefectBtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 8px; cursor: pointer;
+  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.22);
+  color: #dc2626; font-size: 12px; font-weight: 600; transition: all 0.15s;
+}
+.recordDefectBtn:hover { background: rgba(239,68,68,0.14); }
+
+/* ─── Empty / Loading ─────────────────────────────────────────────────────────── */
+.empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 80px 24px; color: #9CA3AF;
+}
+.spinner { width: 26px; height: 26px; color: #33AE95; margin-bottom: 12px; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -539,6 +539,58 @@
   margin: 3px 0;
 }
 
+/* ─── Hierarchy / Type Badges ─────────────────────────────────────────────── */
+.typeBadgeParent {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(59, 130, 246, 0.10);
+  color: #2563EB;
+  border: 1px solid rgba(59, 130, 246, 0.22);
+  flex-shrink: 0;
+}
+
+.typeBadgeSubOrg {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(34, 197, 94, 0.10);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  flex-shrink: 0;
+}
+
+.breadcrumbRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.breadcrumbSep {
+  color: #9CA3AF;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.parentNameText {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6B7280;
+}
+
 /* ── Responsive: Mobile table scroll ── */
 @media (max-width: 768px) {
   .pageHeader {

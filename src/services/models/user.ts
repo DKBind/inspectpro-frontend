@@ -72,6 +72,7 @@ export interface RoleResponse {
   name: string;
   description?: string;
   scope?: RoleScope;
+  orgName?: string;
   statusName?: string;
   isActive?: boolean;
   createdByName?: string;
@@ -89,6 +90,7 @@ export interface RoleCreateRequest {
   name: string;
   description?: string;
   scope?: RoleScope;
+  orgId?: string;
   modules?: RoleModulePermission[];
 }
 

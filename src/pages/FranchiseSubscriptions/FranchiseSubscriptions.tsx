@@ -19,9 +19,12 @@ import {
 
 import { subscriptionService } from '@/services/subscriptionService';
 import { moduleService } from '@/services/moduleService';
+import { organisationService } from '@/services/organisationService';
 import type { SubscriptionResponse } from '@/services/models/subscription';
 import type { ModuleResponse } from '@/services/models/module';
+import type { OrganisationResponse } from '@/services/models/organisation';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useModuleStore } from '@/store/useModuleStore';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
@@ -29,6 +32,7 @@ import {
 import { Button } from '@/components/shared-ui/Button/button';
 import { Input } from '@/components/shared-ui/Input/input';
 import { Label } from '@/components/shared-ui/Label/label';
+import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
 import styles from '@/pages/Subscriptions/Subscriptions.module.css';
 
 const PAGE_SIZE = 10;
@@ -53,8 +57,12 @@ const isActivePlan = (plan: SubscriptionResponse) =>
 
 const FranchiseSubscriptions = () => {
   const { user } = useAuthStore();
+  const { accessModules } = useModuleStore();
+  const isSuperAdmin = user?.isSuperAdmin === true || (user as any)?.role === 'super_admin';
 
   const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
+  const [organisations, setOrganisations] = useState<OrganisationResponse[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -82,11 +90,11 @@ const FranchiseSubscriptions = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const isSuperAdmin = user.isSuperAdmin === true || (user as any).role === 'super_admin';
       const p = isSuperAdmin
         ? await subscriptionService.listSubscriptions()
         : await subscriptionService.listMySubscriptions();
-      setPlans(p);
+      // Show only franchise plans (non-global or org-owned)
+      setPlans(p.filter((plan) => plan.global === false || plan.createdByOrgId != null));
     } catch {
       toast.error('Failed to load subscription data');
     } finally {
@@ -94,15 +102,37 @@ const FranchiseSubscriptions = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, [user?.id]);
+  useEffect(() => {
+    fetchData();
+    if (isSuperAdmin) {
+      organisationService.getOrganisations(0, 200)
+        .then((d) => setOrganisations(d.content ?? []))
+        .catch(() => { });
+    }
+  }, [user?.id]);
 
   // ─── Load all DB modules for the picker ──────────────────────────────────
 
   const loadModules = async () => {
+    // Org admin: only show modules they themselves have access to (can't grant more than they have)
+    if (!isSuperAdmin) {
+      setAllDbModules(
+        accessModules.map((m) => ({
+          id: m.moduleId,
+          name: m.name,
+          route: m.route,
+          icon: m.icon ?? null,
+          category: m.category ?? null,
+          active: true,
+        } as ModuleResponse))
+      );
+      return;
+    }
+    // Super admin: load franchise-eligible modules from DB
     setModulesLoading(true);
     try {
-      const mods = await moduleService.listModules();
-      setAllDbModules(mods.filter((m) => m.active !== false));
+      const mods = await moduleService.listModules('FRANCHISE');
+      setAllDbModules(mods);
     } catch {
       toast.error('Failed to load modules');
     } finally {
@@ -115,6 +145,7 @@ const FranchiseSubscriptions = () => {
   const openCreate = () => {
     setEditTarget(null);
     setSelectedModuleIds([]);
+    setSelectedOrgId('');
     reset({ planName: '', price: '', durationMonths: '', maxUsers: '', billingCycle: 'MONTHLY', isActive: true, notes: '' });
     setModalMode('create');
     loadModules();
@@ -140,6 +171,10 @@ const FranchiseSubscriptions = () => {
     setSelectedModuleIds((prev) => prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]);
 
   const onSubmit = async (data: FormValues) => {
+    if (isSuperAdmin && modalMode === 'create' && !selectedOrgId) {
+      toast.error('Please select an organisation for this plan');
+      return;
+    }
     setSubmitting(true);
     const payload = {
       planName: data.planName,
@@ -150,7 +185,7 @@ const FranchiseSubscriptions = () => {
       statusId: data.isActive ? 1 : 2,
       notes: data.notes || undefined,
       moduleIds: selectedModuleIds,
-      // createdByOrgId is now derived server-side from JWT claims — no need to send it
+      createdByOrgId: isSuperAdmin && modalMode === 'create' ? selectedOrgId : undefined,
     };
     try {
       if (modalMode === 'edit' && editTarget) {
@@ -355,6 +390,26 @@ const FranchiseSubscriptions = () => {
           <form onSubmit={handleSubmit(onSubmit, () => toast.error('Please fix the errors before submitting.'))}>
             <div className="px-7 py-6 space-y-5">
 
+              {/* Organisation selector — super admin only, create mode only */}
+              {isSuperAdmin && modalMode === 'create' && (
+                <Fld label="Organisation" required>
+                  <DropdownSelect
+                    options={organisations.map((o) => ({
+                      value: o.uuid,
+                      label: o.name,
+                      meta: o.parentOrgId ? 'Franchise' : 'Organisation',
+                    }))}
+                    value={selectedOrgId || null}
+                    onChange={(val) => setSelectedOrgId(String(val ?? ''))}
+                    placeholder="— Select organisation —"
+                    searchable
+                  />
+                  {!selectedOrgId && (
+                    <p className="text-xs text-[#6B7280] mt-1">This plan will be available as a subscription for the selected organisation's franchises.</p>
+                  )}
+                </Fld>
+              )}
+
               <Fld label="Plan Name" required error={errors.planName?.message}>
                 <Input placeholder="e.g. Basic Plan" {...register('planName')} className={inputCls(!!errors.planName)} />
               </Fld>
@@ -421,28 +476,41 @@ const FranchiseSubscriptions = () => {
                 ) : allDbModules.length === 0 ? (
                   <p className="text-xs text-[#6B7280] py-2">No modules available.</p>
                 ) : (
-                  <div className="grid gap-2 sm:grid-cols-2 mt-1">
-                    {allDbModules.map((m) => {
-                      const checked = selectedModuleIds.includes(m.id);
-                      return (
-                        <button key={m.id} type="button" onClick={() => toggleModule(m.id)}
-                          style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${checked ? 'rgba(51,174,149,0.4)' : '#E5E7EB'}`, background: checked ? 'rgba(51,174,149,0.08)' : '#F3F4F6', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
-                          <span style={{ marginTop: 2, flexShrink: 0, width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? '#33AE95' : '#E5E7EB'}`, background: checked ? '#33AE95' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {checked && <CheckCircle size={10} color="white" />}
-                          </span>
-                          <div style={{ minWidth: 0 }}>
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, padding: '8px 12px', borderRadius: 8, background: '#F0FDF9', border: '1px solid #CCFBEF' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 28, height: 22, padding: '0 7px', borderRadius: 11, background: selectedModuleIds.length > 0 ? '#33AE95' : '#D1FAF0', color: selectedModuleIds.length > 0 ? 'white' : '#9CA3AF', fontSize: 11, fontWeight: 700, transition: 'all 0.15s' }}>
+                          {selectedModuleIds.length}
+                        </span>
+                        <span style={{ fontSize: 12, color: '#374151' }}>
+                          of <strong style={{ color: '#1E293B' }}>{allDbModules.length}</strong> modules selected
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => selectedModuleIds.length === allDbModules.length
+                          ? setSelectedModuleIds([])
+                          : setSelectedModuleIds(allDbModules.map((m) => m.id))}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: selectedModuleIds.length === allDbModules.length ? '#6B7280' : '#33AE95', background: selectedModuleIds.length === allDbModules.length ? '#E5E7EB' : 'rgba(51,174,149,0.1)', border: `1px solid ${selectedModuleIds.length === allDbModules.length ? '#D1D5DB' : 'rgba(51,174,149,0.35)'}`, borderRadius: 6, cursor: 'pointer', padding: '4px 10px', transition: 'all 0.15s' }}
+                      >
+                        {selectedModuleIds.length === allDbModules.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {allDbModules.map((m) => {
+                        const checked = selectedModuleIds.includes(m.id);
+                        return (
+                          <button key={m.id} type="button" onClick={() => toggleModule(m.id)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${checked ? 'rgba(51,174,149,0.4)' : '#E5E7EB'}`, background: checked ? 'rgba(51,174,149,0.08)' : '#F3F4F6', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
+                            <span style={{ flexShrink: 0, width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? '#33AE95' : '#E5E7EB'}`, background: checked ? '#33AE95' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {checked && <CheckCircle size={10} color="white" />}
+                            </span>
                             <p style={{ fontSize: 12, fontWeight: 600, color: checked ? '#33AE95' : '#6B7280', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
-                            {m.category && <p style={{ fontSize: 11, color: '#6B7280', margin: 0 }}>{m.category}</p>}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {selectedModuleIds.length > 0 && (
-                  <p style={{ fontSize: 12, color: '#33AE95', marginTop: 8 }}>
-                    {selectedModuleIds.length} module{selectedModuleIds.length !== 1 ? 's' : ''} selected
-                  </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </Fld>
 

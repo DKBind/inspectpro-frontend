@@ -1,116 +1,175 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  ClipboardList,
-  Plus,
-  Pencil,
-  Trash2,
-  Play,
-  Download,
-  AlertTriangle,
-  RefreshCw,
-  ChevronDown,
-  X,
-  CheckSquare,
-  FileText,
+  ClipboardList, Plus, Pencil, Trash2, RefreshCw,
+  Globe, Building2, FolderOpen, Lock, Unlock,
+  ChevronDown, X, Check, BookOpen, AlertTriangle,
+  Layers, MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { checklistService } from '@/services/checklistService';
-import { projectService } from '@/services/projectService';
-import type { TemplateResponse } from '@/services/models/checklist';
-import type { ProjectResponse } from '@/services/models/project';
+import type { TemplateResponse, TemplateScope } from '@/services/models/checklist';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter,
 } from '@/components/shared-ui/Dialog/dialog';
 import { Button } from '@/components/shared-ui/Button/button';
-import styles from '@/pages/Organisation/Organisation.module.css';
+import Pagination from '@/components/shared-ui/Pagination/Pagination';
+import styles from './Checklists.module.css';
 
-// ─── Field row used in template builder ─────────────────────────────────────
+// ─── HIP response types ────────────────────────────────────────────────────────
+const RESPONSE_TYPES = ['HIP', 'PASS_FAIL', 'TEXT', 'PHOTO', 'DROPDOWN'] as const;
+type ResponseType = typeof RESPONSE_TYPES[number];
 
-interface FieldDraft {
-  fieldTitle: string;
-  fieldDescription: string;
-  fieldType: 'INPUT' | 'CHECKBOX';
+// ─── Draft types for the builder ──────────────────────────────────────────────
+interface ItemDraft {
+  label: string;
+  responseType: ResponseType;
+  options: string[];
+  commonComments: string[];
+  commentInput: string;  // temp state for the add-comment input
 }
 
-// ─── TemplateFormModal ───────────────────────────────────────────────────────
+interface SectionDraft {
+  sectionName: string;
+  items: ItemDraft[];
+}
 
-interface TemplateFormModalProps {
+const emptyItem = (): ItemDraft => ({
+  label: '', responseType: 'HIP', options: [], commonComments: [], commentInput: '',
+});
+const emptySection = (): SectionDraft => ({
+  sectionName: '', items: [emptyItem()],
+});
+
+// ─── Scope helpers ─────────────────────────────────────────────────────────────
+const scopeLabel: Record<TemplateScope, string> = {
+  GLOBAL:       'Global',
+  ORGANISATION: 'Organisation',
+  PROJECT:      'Project',
+  SCRATCH:      'Scratch',
+};
+const scopeIcon: Record<TemplateScope, React.ReactNode> = {
+  GLOBAL:       <Globe size={14} />,
+  ORGANISATION: <Building2 size={14} />,
+  PROJECT:      <FolderOpen size={14} />,
+  SCRATCH:      <Plus size={14} />,
+};
+
+// ─── TemplateFormModal ─────────────────────────────────────────────────────────
+interface FormModalProps {
   open: boolean;
   mode: 'create' | 'edit';
-  isGlobal: boolean;
-  projectId?: string;
   template?: TemplateResponse | null;
+  isSuperAdmin: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const TemplateFormModal = ({
-  open,
-  mode,
-  isGlobal,
-  projectId,
-  template,
-  onClose,
-  onSuccess,
-}: TemplateFormModalProps) => {
+const TemplateFormModal: React.FC<FormModalProps> = ({
+  open, mode, template, isSuperAdmin, onClose, onSuccess,
+}) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [fields, setFields] = useState<FieldDraft[]>([]);
+  const [scope, setScope] = useState<'GLOBAL' | 'ORGANISATION'>('ORGANISATION');
+  const [isLocked, setIsLocked] = useState(false);
+  const [sections, setSections] = useState<SectionDraft[]>([emptySection()]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setTitle(template?.title ?? '');
-      setDescription(template?.description ?? '');
-      setFields(
-        template?.fields?.map((f) => ({
-          fieldTitle: f.fieldTitle,
-          fieldDescription: f.fieldDescription ?? '',
-          fieldType: (f.fieldType as 'INPUT' | 'CHECKBOX') ?? 'INPUT',
-        })) ?? []
-      );
-    }
+    if (!open) return;
+    setTitle(template?.title ?? '');
+    setDescription(template?.description ?? '');
+    setScope(
+      (template?.scope === 'GLOBAL' ? 'GLOBAL' : 'ORGANISATION') as 'GLOBAL' | 'ORGANISATION'
+    );
+    setIsLocked(template?.isLocked ?? false);
+    setSections(
+      template?.sections?.length
+        ? template.sections.map((s) => ({
+            sectionName: s.sectionName,
+            items: s.items?.length
+              ? s.items.map((it) => ({
+                  label: it.label,
+                  responseType: (it.responseType as ResponseType) ?? 'HIP',
+                  options: it.options ?? [],
+                  commonComments: it.commonComments ?? [],
+                  commentInput: '',
+                }))
+              : [emptyItem()],
+          }))
+        : [emptySection()]
+    );
   }, [open, template]);
 
-  const addField = () =>
-    setFields((prev) => [...prev, { fieldTitle: '', fieldDescription: '', fieldType: 'INPUT' }]);
+  // ── Section helpers ──────────────────────────────────────────────────────────
+  const addSection = () => setSections((p) => [...p, emptySection()]);
+  const removeSection = (si: number) => setSections((p) => p.filter((_, i) => i !== si));
+  const updateSectionName = (si: number, name: string) =>
+    setSections((p) => p.map((s, i) => i === si ? { ...s, sectionName: name } : s));
 
-  const removeField = (i: number) => setFields((prev) => prev.filter((_, idx) => idx !== i));
+  // ── Item helpers ─────────────────────────────────────────────────────────────
+  const addItem = (si: number) =>
+    setSections((p) => p.map((s, i) => i === si ? { ...s, items: [...s.items, emptyItem()] } : s));
+  const removeItem = (si: number, ii: number) =>
+    setSections((p) => p.map((s, i) =>
+      i === si ? { ...s, items: s.items.filter((_, j) => j !== ii) } : s));
+  const updateItem = (si: number, ii: number, patch: Partial<ItemDraft>) =>
+    setSections((p) => p.map((s, i) =>
+      i === si ? {
+        ...s, items: s.items.map((it, j) => j === ii ? { ...it, ...patch } : it),
+      } : s));
 
-  const updateField = (i: number, key: keyof FieldDraft, value: string) =>
-    setFields((prev) => prev.map((f, idx) => (idx === i ? { ...f, [key]: value } : f)));
+  const addComment = (si: number, ii: number) => {
+    const text = sections[si].items[ii].commentInput.trim();
+    if (!text) return;
+    updateItem(si, ii, {
+      commonComments: [...sections[si].items[ii].commonComments, text],
+      commentInput: '',
+    });
+  };
+  const removeComment = (si: number, ii: number, ci: number) =>
+    updateItem(si, ii, {
+      commonComments: sections[si].items[ii].commonComments.filter((_, k) => k !== ci),
+    });
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      toast.error('Template name is required');
-      return;
-    }
+    if (!title.trim()) { toast.error('Template name is required'); return; }
+    const validSections = sections.filter((s) => s.sectionName.trim());
+    if (validSections.length === 0) { toast.error('Add at least one section with a name'); return; }
+
     setSaving(true);
     try {
       const payload = {
         title: title.trim(),
-        description,
-        isGlobal,
-        projectId: isGlobal ? undefined : projectId,
-        fields: fields.filter((f) => f.fieldTitle.trim()),
+        description: description.trim() || undefined,
+        scope,
+        isLocked,
+        sections: validSections.map((s) => ({
+          sectionName: s.sectionName.trim(),
+          items: s.items
+            .filter((it) => it.label.trim())
+            .map((it) => ({
+              label: it.label.trim(),
+              responseType: it.responseType,
+              options: it.options.length ? it.options : undefined,
+              commonComments: it.commonComments.length ? it.commonComments : undefined,
+            })),
+        })),
       };
+
       if (mode === 'create') {
         await checklistService.createTemplate(payload);
         toast.success('Template created');
       } else {
-        await checklistService.updateTemplate(template!.id, payload);
+        await checklistService.updateTemplate(template!.id!, payload);
         toast.success('Template updated');
       }
       onSuccess();
       onClose();
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to save template');
+    } catch (e: unknown) {
+      toast.error((e as Error).message || 'Failed to save template');
     } finally {
       setSaving(false);
     }
@@ -118,466 +177,188 @@ const TemplateFormModal = ({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {mode === 'create' ? 'Create Template' : 'Edit Template'}
-          </DialogTitle>
-          <DialogDescription>
-            {isGlobal ? 'Common library template' : 'Project-specific template'}
-          </DialogDescription>
+          <DialogTitle>{mode === 'create' ? 'Create Template' : 'Edit Template'}</DialogTitle>
+          <DialogDescription>Build the HIP checklist hierarchy: Sections → Items → Common Comments</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-5 py-2">
+          {/* Scope Selector (Super Admin only) */}
+          {isSuperAdmin && mode === 'create' && (
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.55px', marginBottom: 8 }}>
+                Template Scope
+              </p>
+              <div className={styles.scopeSelector}>
+                {(['GLOBAL', 'ORGANISATION'] as const).map((s) => (
+                  <button
+                    key={s} type="button"
+                    className={`${styles.scopeOption} ${scope === s ? styles.scopeOptionActive : ''}`}
+                    onClick={() => setScope(s)}
+                  >
+                    {s === 'GLOBAL' ? '🌐 Global' : '🏢 Organisation'}
+                  </button>
+                ))}
+              </div>
+              {scope === 'GLOBAL' && (
+                <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 5 }}>
+                  Global templates are visible to all organisations.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-[#263B4F] mb-1">
-              Template Name <span className="text-red-500">*</span>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>
+              Template Name <span style={{ color: '#ef4444' }}>*</span>
             </label>
             <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              value={title} onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Fire Safety Inspection"
-              className="w-full h-10 rounded-lg border border-[#DDE3EC] bg-white px-3 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#3B62C2]/30 focus:border-[#3B62C2]"
+              style={{ width: '100%', height: 40, borderRadius: 9, border: '1px solid #E5E7EB', padding: '0 12px', fontSize: 13, color: '#263B4F', outline: 'none' }}
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-[#263B4F] mb-1">Description</label>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>
+              Description
+            </label>
             <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description for this template"
+              value={description} onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional description"
               rows={2}
-              className="w-full rounded-lg border border-[#DDE3EC] bg-white px-3 py-2 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#3B62C2]/30 focus:border-[#3B62C2] resize-none"
+              style={{ width: '100%', borderRadius: 9, border: '1px solid #E5E7EB', padding: '8px 12px', fontSize: 13, color: '#263B4F', outline: 'none', resize: 'none' }}
             />
           </div>
 
-          {/* Dynamic Fields Builder */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-[#263B4F]">
-                Checklist Fields
-              </label>
-              <button
-                type="button"
-                onClick={addField}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3B62C2] hover:text-[#2a4fa0] transition-colors"
-              >
-                <Plus size={13} /> Add Field
-              </button>
-            </div>
-
-            {fields.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-[#DDE3EC] bg-[#F8FAFC] py-6 text-center text-sm text-[#9CA3AF]">
-                No fields yet — click "Add Field" to begin
-              </div>
-            ) : (
-              <div className="rounded-lg border border-[#DDE3EC] overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-[#F8FAFC] border-b border-[#DDE3EC]">
-                      <th className="text-left px-3 py-2 text-xs font-semibold text-[#64748B] w-[35%]">Field Title</th>
-                      <th className="text-left px-3 py-2 text-xs font-semibold text-[#64748B] w-[35%]">Description</th>
-                      <th className="text-left px-3 py-2 text-xs font-semibold text-[#64748B] w-[20%]">Type</th>
-                      <th className="px-3 py-2 w-[10%]" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fields.map((f, i) => (
-                      <tr key={i} className="border-b border-[#DDE3EC] last:border-0">
-                        <td className="px-2 py-1.5">
-                          <input
-                            type="text"
-                            value={f.fieldTitle}
-                            onChange={(e) => updateField(i, 'fieldTitle', e.target.value)}
-                            placeholder="e.g. Check fire exit"
-                            className="w-full h-8 rounded-md border border-[#DDE3EC] px-2 text-xs text-[#263B4F] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-1 focus:ring-[#3B62C2]/40"
-                          />
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <input
-                            type="text"
-                            value={f.fieldDescription}
-                            onChange={(e) => updateField(i, 'fieldDescription', e.target.value)}
-                            placeholder="Optional"
-                            className="w-full h-8 rounded-md border border-[#DDE3EC] px-2 text-xs text-[#263B4F] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-1 focus:ring-[#3B62C2]/40"
-                          />
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <div className="relative">
-                            <select
-                              value={f.fieldType}
-                              onChange={(e) => updateField(i, 'fieldType', e.target.value as 'INPUT' | 'CHECKBOX')}
-                              className="w-full h-8 rounded-md border border-[#DDE3EC] pl-2 pr-6 text-xs text-[#263B4F] appearance-none bg-white focus:outline-none focus:ring-1 focus:ring-[#3B62C2]/40"
-                            >
-                              <option value="INPUT">Input</option>
-                              <option value="CHECKBOX">Checkbox</option>
-                            </select>
-                            <ChevronDown size={12} className="absolute right-1.5 top-2.5 text-[#64748B] pointer-events-none" />
-                          </div>
-                        </td>
-                        <td className="px-2 py-1.5 text-center">
-                          <button
-                            type="button"
-                            onClick={() => removeField(i)}
-                            className="text-[#DF453A] hover:text-[#c73c32] transition-colors"
-                          >
-                            <X size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+          {/* Lock toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => setIsLocked((p) => !p)}
+              style={{
+                width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
+                background: isLocked ? '#f59e0b' : '#D1D5DB', transition: 'background 0.2s', position: 'relative',
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: 3, left: isLocked ? 20 : 3,
+                width: 16, height: 16, borderRadius: 8, background: 'white', transition: 'left 0.2s',
+              }} />
+            </button>
+            <span style={{ fontSize: 12.5, color: '#374151', fontWeight: 600 }}>
+              {isLocked ? '🔒 Locked — inspectors can use but not edit questions' : '🔓 Unlocked — questions can be edited'}
+            </span>
           </div>
-        </div>
 
-        <DialogFooter className="gap-3 mt-2">
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-[#3B62C2] hover:bg-[#2a4fa0] text-white font-semibold min-w-28"
-          >
-            {saving
-              ? <span className="flex items-center gap-2"><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving…</span>
-              : mode === 'create' ? 'Create Template' : 'Save Changes'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
+          {/* Sections Builder */}
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.55px', marginBottom: 10 }}>
+              Checklist Sections
+            </p>
 
-// ─── ImportModal ─────────────────────────────────────────────────────────────
-
-interface ImportModalProps {
-  open: boolean;
-  projectId: string;
-  globalTemplates: TemplateResponse[];
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-const ImportModal = ({ open, projectId, globalTemplates, onClose, onSuccess }: ImportModalProps) => {
-  const [importingId, setImportingId] = useState<string | null>(null);
-
-  const handleImport = async (templateId: string) => {
-    setImportingId(templateId);
-    try {
-      await checklistService.importTemplate(templateId, projectId);
-      toast.success('Template imported to project');
-      onSuccess();
-      onClose();
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to import template');
-    } finally {
-      setImportingId(null);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Import from Common Library</DialogTitle>
-          <DialogDescription>Select a global template to import into this project.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2 py-2 max-h-80 overflow-y-auto">
-          {globalTemplates.length === 0 ? (
-            <p className="text-sm text-[#9CA3AF] text-center py-6">No global templates available.</p>
-          ) : (
-            globalTemplates.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center justify-between rounded-lg border border-[#DDE3EC] bg-[#F8FAFC] px-4 py-3"
-              >
-                <div>
-                  <p className="text-sm font-semibold text-[#263B4F]">{t.title}</p>
-                  {t.description && (
-                    <p className="text-xs text-[#64748B] mt-0.5">{t.description}</p>
-                  )}
-                  <p className="text-xs text-[#9CA3AF] mt-0.5">{t.fieldCount} field{t.fieldCount !== 1 ? 's' : ''}</p>
+            {sections.map((sec, si) => (
+              <div key={si} className={styles.builderSection}>
+                <div className={styles.builderSectionHead}>
+                  <Layers size={15} style={{ color: '#9CA3AF', flexShrink: 0 }} />
+                  <input
+                    className={styles.sectionNameInput}
+                    value={sec.sectionName}
+                    onChange={(e) => updateSectionName(si, e.target.value)}
+                    placeholder={`Section ${si + 1} name, e.g. "Roofing"`}
+                  />
+                  <button
+                    type="button" onClick={() => removeSection(si)}
+                    style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <X size={13} />
+                  </button>
                 </div>
-                <Button
-                  onClick={() => handleImport(t.id)}
-                  disabled={importingId === t.id}
-                  className="bg-[#3B62C2] hover:bg-[#2a4fa0] text-white text-xs font-semibold h-8 px-3"
-                >
-                  {importingId === t.id
-                    ? <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    : 'Import'}
-                </Button>
-              </div>
-            ))
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Close</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
-// ─── InspectionFormModal ──────────────────────────────────────────────────────
-
-interface InspectionModalProps {
-  open: boolean;
-  template: TemplateResponse | null;
-  preProjectId?: string;
-  projects: ProjectResponse[];
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-interface AnswerDraft {
-  fieldTitle: string;
-  fieldType: string;
-  answer: string;
-  photoUrl: string | null;
-  localPreview: string | null;
-}
-
-const InspectionFormModal = ({
-  open,
-  template,
-  preProjectId,
-  projects,
-  onClose,
-  onSuccess,
-}: InspectionModalProps) => {
-  const [projectId, setProjectId] = useState(preProjectId ?? '');
-  const [notes, setNotes] = useState('');
-  const [answers, setAnswers] = useState<AnswerDraft[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  useEffect(() => {
-    if (open && template) {
-      setProjectId(preProjectId ?? '');
-      setNotes('');
-      setAnswers(
-        (template.fields ?? []).map((f) => ({
-          fieldTitle: f.fieldTitle,
-          fieldType: f.fieldType,
-          answer: f.fieldType === 'CHECKBOX' ? 'false' : '',
-          photoUrl: null,
-          localPreview: null,
-        }))
-      );
-    }
-  }, [open, template, preProjectId]);
-
-  const handleFileChange = (i: number, file: File | null) => {
-    if (!file) return;
-    const preview = URL.createObjectURL(file);
-    setAnswers((prev) =>
-      prev.map((a, idx) =>
-        idx === i
-          ? {
-              ...a,
-              // TODO: Upload file to S3 and store the returned URL in photoUrl
-              photoUrl: file.name,
-              localPreview: preview,
-            }
-          : a
-      )
-    );
-  };
-
-  const removePhoto = (i: number) => {
-    if (fileRefs.current[i]) fileRefs.current[i]!.value = '';
-    setAnswers((prev) =>
-      prev.map((a, idx) => (idx === i ? { ...a, photoUrl: null, localPreview: null } : a))
-    );
-  };
-
-  const handleSubmit = async () => {
-    if (!projectId) {
-      toast.error('Please select a project');
-      return;
-    }
-    if (!template) return;
-    setSubmitting(true);
-    try {
-      const payload = {
-        projectId,
-        templateId: template.id,
-        notes,
-        answers: answers.map(({ fieldTitle, fieldType, answer, photoUrl }) => ({
-          fieldTitle,
-          fieldType,
-          answer,
-          photoUrl,
-        })),
-      };
-
-      // Create draft then immediately submit
-      const draft = await checklistService.startInspection(payload);
-      await checklistService.submitInspection(draft.id, payload);
-
-      toast.success('Inspection submitted successfully');
-      onSuccess();
-      onClose();
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to submit inspection');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Start Inspection</DialogTitle>
-          <DialogDescription>
-            Template: <span className="font-semibold text-[#263B4F]">{template?.title}</span>
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          {/* Project selector (only if not pre-selected) */}
-          {!preProjectId && (
-            <div>
-              <label className="block text-sm font-medium text-[#263B4F] mb-1">
-                Project <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <select
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                  className="w-full h-10 rounded-lg border border-[#DDE3EC] bg-white pl-3 pr-8 text-sm text-[#263B4F] appearance-none focus:outline-none focus:ring-2 focus:ring-[#3B62C2]/30 focus:border-[#3B62C2]"
-                >
-                  <option value="">Select a project…</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3 top-3 text-[#64748B] pointer-events-none" />
-              </div>
-            </div>
-          )}
-
-          {/* Dynamic fields */}
-          {answers.length === 0 ? (
-            <p className="text-sm text-[#9CA3AF] text-center py-4">This template has no fields.</p>
-          ) : (
-            <div className="space-y-4">
-              {answers.map((answer, i) => {
-                const field = template?.fields?.[i];
-                return (
-                  <div key={i} className="rounded-lg border border-[#DDE3EC] bg-[#F8FAFC] p-4">
-                    <div className="mb-2">
-                      <p className="text-sm font-semibold text-[#263B4F]">{answer.fieldTitle}</p>
-                      {field?.fieldDescription && (
-                        <p className="text-xs text-[#64748B] mt-0.5">{field.fieldDescription}</p>
-                      )}
-                    </div>
-
-                    {/* Input or Checkbox */}
-                    {answer.fieldType === 'CHECKBOX' ? (
-                      <label className="flex items-center gap-2 cursor-pointer">
+                <div className={styles.builderSectionBody}>
+                  {sec.items.map((item, ii) => (
+                    <div key={ii} className={styles.itemRow}>
+                      <div className={styles.itemBody}>
                         <input
-                          type="checkbox"
-                          checked={answer.answer === 'true'}
-                          onChange={(e) =>
-                            setAnswers((prev) =>
-                              prev.map((a, idx) =>
-                                idx === i ? { ...a, answer: String(e.target.checked) } : a
-                              )
-                            )
-                          }
-                          className="h-4 w-4 rounded border-[#DDE3EC] text-[#3B62C2] focus:ring-[#3B62C2]/30"
+                          className={styles.itemLabelInput}
+                          value={item.label}
+                          onChange={(e) => updateItem(si, ii, { label: e.target.value })}
+                          placeholder={`Item ${ii + 1}, e.g. "Shingle Condition"`}
                         />
-                        <span className="text-sm text-[#263B4F]">
-                          {answer.answer === 'true' ? 'Yes / Checked' : 'No / Unchecked'}
-                        </span>
-                      </label>
-                    ) : (
-                      <input
-                        type="text"
-                        value={answer.answer}
-                        onChange={(e) =>
-                          setAnswers((prev) =>
-                            prev.map((a, idx) =>
-                              idx === i ? { ...a, answer: e.target.value } : a
-                            )
-                          )
-                        }
-                        placeholder="Enter your answer…"
-                        className="w-full h-9 rounded-lg border border-[#DDE3EC] bg-white px-3 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#3B62C2]/30 focus:border-[#3B62C2]"
-                      />
-                    )}
 
-                    {/* Photo upload */}
-                    <div className="mt-3">
-                      {answer.localPreview ? (
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={answer.localPreview}
-                            alt="preview"
-                            className="h-16 w-16 object-cover rounded-lg border border-[#DDE3EC]"
-                          />
-                          <div>
-                            <p className="text-xs text-[#64748B] truncate max-w-[160px]">{answer.photoUrl}</p>
+                        {/* Response Type */}
+                        <div className={styles.responseTypeRow}>
+                          <span className={styles.responseTypeLabel}>Type:</span>
+                          {RESPONSE_TYPES.map((rt) => (
                             <button
-                              type="button"
-                              onClick={() => removePhoto(i)}
-                              className="text-xs text-[#DF453A] hover:underline mt-0.5"
+                              key={rt} type="button"
+                              className={`${styles.responseTypeBtn} ${item.responseType === rt ? styles.responseTypeBtnActive : ''}`}
+                              onClick={() => updateItem(si, ii, { responseType: rt })}
                             >
-                              Remove photo
+                              {rt}
                             </button>
+                          ))}
+                        </div>
+
+                        {/* Common Comments */}
+                        <div className={styles.commentsRow}>
+                          <span className={styles.commentsLabel}>Common Comments:</span>
+                          <div className={styles.commentChips}>
+                            {item.commonComments.map((c, ci) => (
+                              <span key={ci} className={styles.commentChip}>
+                                <MessageSquare size={10} />
+                                {c}
+                                <button
+                                  type="button" className={styles.commentChipRemove}
+                                  onClick={() => removeComment(si, ii, ci)}
+                                >
+                                  <X size={10} />
+                                </button>
+                              </span>
+                            ))}
+                            <input
+                              className={styles.addCommentInput}
+                              value={item.commentInput}
+                              placeholder="+ Add comment…"
+                              onChange={(e) => updateItem(si, ii, { commentInput: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') { e.preventDefault(); addComment(si, ii); }
+                              }}
+                              onBlur={() => addComment(si, ii)}
+                            />
                           </div>
                         </div>
-                      ) : (
-                        <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[#64748B] cursor-pointer hover:text-[#3B62C2] transition-colors">
-                          <Plus size={12} /> Attach photo
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="sr-only"
-                            ref={(el) => { fileRefs.current[i] = el; }}
-                            onChange={(e) => handleFileChange(i, e.target.files?.[0] ?? null)}
-                          />
-                        </label>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      </div>
 
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-[#263B4F] mb-1">Inspector Notes</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any additional remarks…"
-              rows={3}
-              className="w-full rounded-lg border border-[#DDE3EC] bg-white px-3 py-2 text-sm text-[#263B4F] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#3B62C2]/30 focus:border-[#3B62C2] resize-none"
-            />
+                      <button
+                        type="button" onClick={() => removeItem(si, ii)}
+                        style={{ marginTop: 2, width: 24, height: 24, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', color: '#D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
+
+                  <button type="button" className={styles.addItemBtn} onClick={() => addItem(si)}>
+                    <Plus size={13} /> Add Item
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <button type="button" className={styles.addSectionBtn} onClick={addSection}>
+              <Plus size={15} /> Add Section
+            </button>
           </div>
         </div>
 
-        <DialogFooter className="gap-3 mt-2">
-          <Button variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="bg-[#3B62C2] hover:bg-[#2a4fa0] text-white font-semibold min-w-32"
-          >
-            {submitting
-              ? <span className="flex items-center gap-2"><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Submitting…</span>
-              : 'Submit Inspection'}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : mode === 'create' ? 'Create Template' : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -585,422 +366,318 @@ const InspectionFormModal = ({
   );
 };
 
-// ─── Template Table Row ───────────────────────────────────────────────────────
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 
-const TemplateRow = ({
-  t,
-  onEdit,
-  onDelete,
-  onStart,
-}: {
-  t: TemplateResponse;
-  onEdit: () => void;
-  onDelete: () => void;
-  onStart: () => void;
-}) => (
-  <tr className={styles.tableRow}>
-    <td>
-      <div className={styles.orgCell}>
-        <div className={styles.orgIcon}>
-          <ClipboardList style={{ width: 14, height: 14 }} />
-        </div>
-        <div>
-          <span className={styles.orgName}>{t.title}</span>
-          {t.description && (
-            <p className={styles.orgMeta}>{t.description}</p>
-          )}
-        </div>
-      </div>
-    </td>
-    <td className={styles.mutedCell}>
-      {t.fieldCount} field{t.fieldCount !== 1 ? 's' : ''}
-    </td>
-    <td className={styles.mutedCell}>
-      {t.organisationName ?? <span style={{ opacity: 0.4 }}>—</span>}
-    </td>
-    <td>
-      <div className={styles.actionBtns}>
-        <button
-          className={`${styles.actionBtn}`}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', fontSize: 12, fontWeight: 600, color: '#3B62C2', background: 'rgba(59,98,194,0.08)', border: '1px solid rgba(59,98,194,0.2)', borderRadius: 6 }}
-          onClick={onStart}
-          title="Start Inspection"
-        >
-          <Play size={12} /> Start
-        </button>
-        <button className={styles.actionBtn} onClick={onEdit} title="Edit"><Pencil size={14} /></button>
-        <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} onClick={onDelete} title="Delete"><Trash2 size={14} /></button>
-      </div>
-    </td>
-  </tr>
-);
+const PAGE_SIZE = 15;
+type TabKey = 'all' | 'global' | 'org';
 
-// ─── Main Checklists Page ─────────────────────────────────────────────────────
+export default function Checklists() {
+  const { user: authUser } = useAuthStore();
+  const isSuperAdmin = authUser?.isSuperAdmin === true || authUser?.role === 'super_admin';
 
-const Checklists = () => {
-  const [activeTab, setActiveTab] = useState<'common' | 'project'>('common');
+  const [templates, setTemplates] = useState<TemplateResponse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState<TabKey>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Common templates
-  const [globalTemplates, setGlobalTemplates] = useState<TemplateResponse[]>([]);
-  const [loadingGlobal, setLoadingGlobal] = useState(true);
-
-  // Project templates
-  const [projects, setProjects] = useState<ProjectResponse[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
-  const [projectTemplates, setProjectTemplates] = useState<TemplateResponse[]>([]);
-  const [loadingProject, setLoadingProject] = useState(false);
-
-  // Template modal
-  const [templateModal, setTemplateModal] = useState<{
-    open: boolean;
-    mode: 'create' | 'edit';
-    isGlobal: boolean;
-    projectId?: string;
-    template?: TemplateResponse | null;
-  }>({ open: false, mode: 'create', isGlobal: true });
-
-  // Delete dialog
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<TemplateResponse | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TemplateResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [viewTarget, setViewTarget] = useState<TemplateResponse | null>(null);
 
-  // Import modal
-  const [importOpen, setImportOpen] = useState(false);
-
-  // Inspection modal
-  const [inspectionModal, setInspectionModal] = useState<{
-    open: boolean;
-    template: TemplateResponse | null;
-    preProjectId?: string;
-  }>({ open: false, template: null });
-
-  // ─── Fetch ───────────────────────────────────────────────────────────────
-
-  const fetchGlobalTemplates = async () => {
-    setLoadingGlobal(true);
+  const load = async () => {
+    setLoading(true);
     try {
-      setGlobalTemplates(await checklistService.listGlobalTemplates());
-    } catch {
-      setGlobalTemplates([]);
+      const data = await checklistService.listGlobalTemplates();
+      setTemplates(data.filter((t) => t.scope !== 'SCRATCH'));
+    } catch (e: unknown) {
+      toast.error((e as Error).message || 'Failed to load templates');
     } finally {
-      setLoadingGlobal(false);
+      setLoading(false);
     }
   };
 
-  const fetchProjects = async () => {
-    try {
-      const page = await projectService.listProjects(0, 100);
-      setProjects(page.content);
-    } catch {
-      setProjects([]);
-    }
-  };
+  useEffect(() => { load(); }, []);
 
-  const fetchProjectTemplates = async (pid: string) => {
-    setLoadingProject(true);
-    try {
-      setProjectTemplates(await checklistService.listProjectTemplates(pid));
-    } catch {
-      setProjectTemplates([]);
-    } finally {
-      setLoadingProject(false);
-    }
-  };
+  // ── Filter by tab ────────────────────────────────────────────────────────────
+  const filtered = templates.filter((t) => {
+    if (tab === 'global') return t.scope === 'GLOBAL';
+    if (tab === 'org')    return t.scope === 'ORGANISATION';
+    return t.scope !== 'PROJECT'; // 'all' hides project snapshots
+  });
 
-  useEffect(() => {
-    fetchGlobalTemplates();
-    fetchProjects();
-  }, []);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  useEffect(() => {
-    if (selectedProjectId) fetchProjectTemplates(selectedProjectId);
-    else setProjectTemplates([]);
-  }, [selectedProjectId]);
-
-  // ─── Handlers ────────────────────────────────────────────────────────────
+  const openCreate = () => { setEditTarget(null); setFormOpen(true); };
+  const openEdit = (t: TemplateResponse) => { setEditTarget(t); setFormOpen(true); };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await checklistService.deleteTemplate(deleteTarget.id);
+      await checklistService.deleteTemplate(deleteTarget.id!);
       toast.success('Template deleted');
       setDeleteTarget(null);
-      if (activeTab === 'common') fetchGlobalTemplates();
-      else if (selectedProjectId) fetchProjectTemplates(selectedProjectId);
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to delete');
+      load();
+    } catch (e: unknown) {
+      toast.error((e as Error).message || 'Delete failed');
     } finally {
       setDeleting(false);
     }
   };
 
-  const openCreate = (isGlobal: boolean, pid?: string) =>
-    setTemplateModal({ open: true, mode: 'create', isGlobal, projectId: pid, template: null });
-
-  const openEdit = (t: TemplateResponse) =>
-    setTemplateModal({
-      open: true,
-      mode: 'edit',
-      isGlobal: t.isGlobal,
-      projectId: t.projectId,
-      template: t,
-    });
-
-  const openInspection = (t: TemplateResponse, pid?: string) =>
-    setInspectionModal({ open: true, template: t, preProjectId: pid });
-
-  const onTemplateSuccess = () => {
-    if (activeTab === 'common') fetchGlobalTemplates();
-    else if (selectedProjectId) fetchProjectTemplates(selectedProjectId);
+  // ── Scope badge ──────────────────────────────────────────────────────────────
+  const ScopeBadge = ({ scope }: { scope: TemplateScope }) => {
+    const cls = scope === 'GLOBAL' ? styles.scopeGlobal
+               : scope === 'ORGANISATION' ? styles.scopeOrg
+               : styles.scopeProject;
+    return (
+      <span className={`${styles.scopeBadge} ${cls}`}>
+        {scopeIcon[scope]}{scopeLabel[scope]}
+      </span>
+    );
   };
-
-  // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
     <div className={styles.page}>
       {/* Header */}
-      <div className={styles.pageHeader}>
+      <div className={styles.header}>
         <div>
-          <h1 className={styles.pageTitle}>Inspection Checklists</h1>
+          <h1 className={styles.title}>Template Library</h1>
+          <p className={styles.subtitle}>Manage inspection checklists using the HIP hierarchy</p>
         </div>
-        <button
-          className={styles.createBtn}
-          onClick={() =>
-            activeTab === 'common'
-              ? openCreate(true)
-              : openCreate(false, selectedProjectId || undefined)
-          }
-        >
-          <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
-          Create Template
-        </button>
+        <div className={styles.headerActions}>
+          <button className={styles.refreshBtn} onClick={load} title="Refresh">
+            <RefreshCw size={15} />
+          </button>
+          <button className={styles.createBtn} onClick={openCreate}>
+            <Plus size={15} /> New Template
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-0 border-b border-[#DDE3EC]">
-        {(['common', 'project'] as const).map((tab) => (
+      <div className={styles.tabs}>
+        {([
+          { key: 'all',    label: 'All Templates' },
+          { key: 'global', label: '🌐 Global' },
+          { key: 'org',    label: '🏢 Organisation' },
+        ] as { key: TabKey; label: string }[]).map((t) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${
-              activeTab === tab
-                ? 'border-[#3B62C2] text-[#3B62C2]'
-                : 'border-transparent text-[#64748B] hover:text-[#263B4F]'
-            }`}
+            key={t.key}
+            className={`${styles.tab} ${tab === t.key ? styles.tabActive : ''}`}
+            onClick={() => { setTab(t.key); setCurrentPage(1); }}
           >
-            {tab === 'common' ? (
-              <span className="flex items-center gap-2"><FileText size={14} /> Common Templates</span>
-            ) : (
-              <span className="flex items-center gap-2"><ClipboardList size={14} /> Project Templates</span>
-            )}
+            {t.label}
           </button>
         ))}
       </div>
 
-      {/* ── Tab 1: Common Templates ── */}
-      {activeTab === 'common' && (
-        <div className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h3 className={styles.panelTitle}>
-              <FileText style={{ display: 'inline', width: 16, height: 16, marginRight: 8, verticalAlign: 'middle' }} />
-              Common Template Library
-            </h3>
-            <button className={styles.refreshBtn} onClick={fetchGlobalTemplates} title="Refresh">
-              <RefreshCw style={{ width: 14, height: 14 }} />
-            </button>
-          </div>
-          <div className={styles.panelBody}>
-            {loadingGlobal ? (
-              <div className={styles.emptyState}>
-                <div className={styles.spinner} />
-                <p style={{ marginTop: 12 }}>Loading…</p>
-              </div>
-            ) : globalTemplates.length === 0 ? (
-              <div className={styles.emptyState}>
-                <ClipboardList style={{ width: 40, height: 40, marginBottom: 12, opacity: 0.3 }} />
-                <p>No common templates yet.</p>
-                <p className={styles.emptySubtext}>Click "Create Template" to add one.</p>
-              </div>
-            ) : (
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Template</th>
-                    <th>Fields</th>
-                    <th>Organisation</th>
-                    <th style={{ width: 160, textAlign: 'center' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {globalTemplates.map((t) => (
-                    <TemplateRow
-                      key={t.id}
-                      t={t}
-                      onEdit={() => openEdit(t)}
-                      onDelete={() => setDeleteTarget({ id: t.id, title: t.title })}
-                      onStart={() => openInspection(t)}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+      {/* Panel */}
+      <div className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <span className={styles.panelTitle}>
+            Templates
+            <span className={styles.panelCount}>{filtered.length}</span>
+          </span>
         </div>
-      )}
 
-      {/* ── Tab 2: Project Templates ── */}
-      {activeTab === 'project' && (
-        <div className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h3 className={styles.panelTitle}>
-              <ClipboardList style={{ display: 'inline', width: 16, height: 16, marginRight: 8, verticalAlign: 'middle' }} />
-              Project Templates
-            </h3>
-            <div className="flex items-center gap-2">
-              {selectedProjectId && (
-                <>
-                  <button
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3B62C2] border border-[#3B62C2]/30 bg-[#3B62C2]/08 rounded-lg px-3 h-8 hover:bg-[#3B62C2]/10 transition-colors"
-                    onClick={() => setImportOpen(true)}
-                  >
-                    <Download size={12} /> Import from Common
-                  </button>
-                  <button
-                    className={styles.refreshBtn}
-                    onClick={() => fetchProjectTemplates(selectedProjectId)}
-                    title="Refresh"
-                  >
-                    <RefreshCw style={{ width: 14, height: 14 }} />
-                  </button>
-                </>
-              )}
-            </div>
+        {loading ? (
+          <div className={styles.empty}>
+            <RefreshCw className={styles.spinner} size={26} />
+            <p style={{ color: '#9CA3AF', fontSize: 13 }}>Loading templates…</p>
           </div>
-
-          <div className={styles.panelBody}>
-            {/* Project selector */}
-            <div className="px-6 py-4 border-b border-[#DDE3EC]">
-              <label className="block text-sm font-medium text-[#263B4F] mb-1.5">Select Project</label>
-              <div className="relative max-w-sm">
-                <select
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                  className="w-full h-10 rounded-lg border border-[#DDE3EC] bg-white pl-3 pr-8 text-sm text-[#263B4F] appearance-none focus:outline-none focus:ring-2 focus:ring-[#3B62C2]/30 focus:border-[#3B62C2]"
-                >
-                  <option value="">— Choose a project —</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3 top-3 text-[#64748B] pointer-events-none" />
-              </div>
-            </div>
-
-            {!selectedProjectId ? (
-              <div className={styles.emptyState}>
-                <CheckSquare style={{ width: 40, height: 40, marginBottom: 12, opacity: 0.3 }} />
-                <p>Select a project to view its templates.</p>
-              </div>
-            ) : loadingProject ? (
-              <div className={styles.emptyState}>
-                <div className={styles.spinner} />
-                <p style={{ marginTop: 12 }}>Loading…</p>
-              </div>
-            ) : projectTemplates.length === 0 ? (
-              <div className={styles.emptyState}>
-                <ClipboardList style={{ width: 40, height: 40, marginBottom: 12, opacity: 0.3 }} />
-                <p>No templates for this project.</p>
-                <p className={styles.emptySubtext}>
-                  Create a new one or import from the common library.
-                </p>
-              </div>
-            ) : (
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Template</th>
-                    <th>Fields</th>
-                    <th>Organisation</th>
-                    <th style={{ width: 160, textAlign: 'center' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {projectTemplates.map((t) => (
-                    <TemplateRow
-                      key={t.id}
-                      t={t}
-                      onEdit={() => openEdit(t)}
-                      onDelete={() => setDeleteTarget({ id: t.id, title: t.title })}
-                      onStart={() => openInspection(t, selectedProjectId)}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            )}
+        ) : paged.length === 0 ? (
+          <div className={styles.empty}>
+            <div className={styles.emptyIcon}><ClipboardList size={26} /></div>
+            <p className={styles.emptyTitle}>No templates yet</p>
+            <p className={styles.emptyText}>Click "New Template" to create your first checklist</p>
           </div>
-        </div>
-      )}
+        ) : (
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th style={{ width: '34%' }}>Template</th>
+                <th>Scope</th>
+                <th>Lock</th>
+                <th>Sections</th>
+                <th>Organisation</th>
+                <th>Created</th>
+                <th style={{ width: 110, textAlign: 'center' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paged.map((t) => (
+                <tr key={t.id} className={styles.tableRow}>
+                  <td>
+                    <div className={styles.tplCell}>
+                      <div className={`${styles.tplIcon} ${
+                        t.scope === 'GLOBAL' ? styles.tplIconGlobal
+                        : t.scope === 'PROJECT' ? styles.tplIconProject
+                        : styles.tplIconOrg
+                      }`}>
+                        {t.scope === 'GLOBAL' ? <Globe size={15} />
+                         : t.scope === 'PROJECT' ? <FolderOpen size={15} />
+                         : <BookOpen size={15} />}
+                      </div>
+                      <div>
+                        <p className={styles.tplName}>{t.title}</p>
+                        {t.description && (
+                          <p className={styles.tplMeta} style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {t.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td><ScopeBadge scope={t.scope} /></td>
+                  <td>
+                    {t.isLocked
+                      ? <span className={styles.lockBadge}><Lock size={11} /> Locked</span>
+                      : <span className={styles.unlocked}><Unlock size={11} /> Open</span>}
+                  </td>
+                  <td>
+                    <span className={styles.sectionCount}>
+                      <Layers size={12} />{t.sectionCount ?? t.sections?.length ?? 0}
+                    </span>
+                  </td>
+                  <td style={{ color: '#6B7280', fontSize: 12.5 }}>
+                    {t.organisationName ?? <span style={{ color: '#D1D5DB' }}>—</span>}
+                  </td>
+                  <td style={{ color: '#9CA3AF', fontSize: 12 }}>
+                    {t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '—'}
+                  </td>
+                  <td>
+                    <div className={styles.actions} style={{ justifyContent: 'center' }}>
+                      <button className={styles.actionBtn} title="View" onClick={() => setViewTarget(t)}>
+                        <ChevronDown size={14} />
+                      </button>
+                      <button className={styles.actionBtn} title="Edit" onClick={() => openEdit(t)}>
+                        <Pencil size={14} />
+                      </button>
+                      <button className={`${styles.actionBtn} ${styles.danger}`} title="Delete" onClick={() => setDeleteTarget(t)}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
-      {/* ── Modals ── */}
+        {totalPages > 1 && (
+          <div className={styles.paginationArea}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={() => {}}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Create / Edit Modal */}
       <TemplateFormModal
-        open={templateModal.open}
-        mode={templateModal.mode}
-        isGlobal={templateModal.isGlobal}
-        projectId={templateModal.projectId}
-        template={templateModal.template}
-        onClose={() => setTemplateModal((s) => ({ ...s, open: false }))}
-        onSuccess={onTemplateSuccess}
+        open={formOpen}
+        mode={editTarget ? 'edit' : 'create'}
+        template={editTarget}
+        isSuperAdmin={isSuperAdmin}
+        onClose={() => setFormOpen(false)}
+        onSuccess={load}
       />
 
-      <InspectionFormModal
-        open={inspectionModal.open}
-        template={inspectionModal.template}
-        preProjectId={inspectionModal.preProjectId}
-        projects={projects}
-        onClose={() => setInspectionModal((s) => ({ ...s, open: false }))}
-        onSuccess={() => {}}
-      />
+      {/* View Modal */}
+      <Dialog open={!!viewTarget} onOpenChange={(o) => !o && setViewTarget(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{viewTarget?.title}</DialogTitle>
+            <DialogDescription>{viewTarget?.description || 'No description'}</DialogDescription>
+          </DialogHeader>
+          {viewTarget && (
+            <div className="space-y-3 py-2">
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <ScopeBadge scope={viewTarget.scope} />
+                {viewTarget.isLocked
+                  ? <span className={styles.lockBadge}><Lock size={11} /> Locked</span>
+                  : <span className={styles.unlocked}><Unlock size={11} /> Open</span>}
+                {viewTarget.organisationName && (
+                  <span style={{ fontSize: 12, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Building2 size={12} />{viewTarget.organisationName}
+                  </span>
+                )}
+              </div>
 
-      <ImportModal
-        open={importOpen}
-        projectId={selectedProjectId}
-        globalTemplates={globalTemplates}
-        onClose={() => setImportOpen(false)}
-        onSuccess={() => {
-          if (selectedProjectId) fetchProjectTemplates(selectedProjectId);
-        }}
-      />
+              {viewTarget.sections?.map((sec, si) => (
+                <div key={si} style={{ border: '1px solid #F0F0F0', borderRadius: 10, overflow: 'hidden' }}>
+                  <div style={{ padding: '9px 14px', background: '#F9FAFB', borderBottom: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <Layers size={13} style={{ color: '#9CA3AF' }} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>{sec.sectionName}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9CA3AF' }}>{sec.items?.length ?? 0} items</span>
+                  </div>
+                  <div style={{ padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {sec.items?.map((item, ii) => (
+                      <div key={ii} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <span style={{ width: 18, height: 18, borderRadius: 4, background: 'rgba(51,174,149,0.1)', color: '#33AE95', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                          <Check size={10} />
+                        </span>
+                        <div>
+                          <p style={{ fontSize: 13, color: '#374151', margin: '0 0 2px' }}>{item.label}</p>
+                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <span style={{ fontSize: 10.5, background: '#F3F4F6', color: '#6B7280', padding: '1px 7px', borderRadius: 10, fontWeight: 600 }}>
+                              {item.responseType}
+                            </span>
+                            {item.commonComments?.map((c, ci) => (
+                              <span key={ci} style={{ fontSize: 10.5, background: '#EEF2FF', color: '#4338ca', padding: '1px 7px', borderRadius: 10 }}>
+                                "{c}"
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewTarget(null)}>Close</Button>
+            <Button onClick={() => { openEdit(viewTarget!); setViewTarget(null); }}>
+              <Pencil size={13} style={{ marginRight: 5 }} />Edit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirm */}
       <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="h-10 w-10 rounded-xl bg-[#DF453A]/10 border border-[#DF453A]/25 flex items-center justify-center shrink-0">
-                <AlertTriangle size={18} className="text-[#DF453A]" />
-              </div>
-              <DialogTitle>Delete Template</DialogTitle>
-            </div>
-            <DialogDescription className="pl-[52px]">
-              Delete <span className="font-medium text-[#263B4F]">{deleteTarget?.title}</span>? This cannot be undone.
-            </DialogDescription>
+            <DialogTitle>Delete Template</DialogTitle>
           </DialogHeader>
-          <DialogFooter className="gap-3 mt-2">
+          <div className={styles.deleteBody}>
+            <div className={styles.deleteIcon}><AlertTriangle size={20} /></div>
+            <div>
+              <p className={styles.deleteTitle}>Are you sure?</p>
+              <p className={styles.deleteText}>
+                "<strong>{deleteTarget?.title}</strong>" will be permanently deleted and cannot be recovered.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
-            <Button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="bg-[#DF453A] hover:bg-[#c73c32] text-white font-semibold min-w-28"
-            >
-              {deleting
-                ? <span className="flex items-center gap-2"><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Deleting…</span>
-                : 'Delete'}
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete Template'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-};
-
-export default Checklists;
+}

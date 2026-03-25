@@ -18,7 +18,10 @@ import Customers from './pages/Customers/Customers';
 import Projects from './pages/Projects/Projects';
 import ProjectDetail from './pages/Projects/ProjectDetail';
 import ProjectCreate from './pages/Projects/ProjectCreate';
+import ProjectEdit from './pages/Projects/ProjectEdit';
 import Checklists from './pages/Checklists/Checklists';
+import InspectionExecution from './pages/Inspections/InspectionExecution';
+import DefectSummary from './pages/Inspections/DefectSummary';
 import UsersRolesPage from './pages/UsersRoles/UsersRolesPage';
 import Notifications from './pages/Notifications/Notifications';
 import Users from './pages/Users/Users';
@@ -51,9 +54,12 @@ function App() {
             <Route path={ROUTES.PROJECTS} element={<Projects />} />
             <Route path={ROUTES.PROJECT_CREATE} element={<ProjectCreate />} />
             <Route path={ROUTES.PROJECT_DETAIL} element={<ProjectDetail />} />
+            <Route path={ROUTES.PROJECT_EDIT} element={<ProjectEdit />} />
             <Route path={ROUTES.INSPECTIONS} element={<Dashboard />} />
+            <Route path={ROUTES.INSPECTION_EXECUTE} element={<InspectionExecution />} />
             <Route path={ROUTES.CHECKLISTS} element={<Checklists />} />
             <Route path={ROUTES.DEFECTS} element={<Dashboard />} />
+            <Route path={ROUTES.DEFECT_SUMMARY} element={<DefectSummary />} />
             <Route path={ROUTES.REPORTS} element={<Dashboard />} />
             <Route path={ROUTES.SETTINGS} element={<Settings />} />
             <Route path={ROUTES.ORGANISATION} element={<Organisation />} />

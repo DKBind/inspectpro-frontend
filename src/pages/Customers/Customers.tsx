@@ -298,6 +298,20 @@ const Clients = () => {
   // const franchiseList = isSuperAdmin ? filteredFranchises : orgFranchises;
   // const selectedFranchise = franchiseList.find((o) => o.uuid === selectedTargetId);
 
+  // ─── Org renderer for table ───────────────────────────────────────────────
+  const renderCustomerOrgBadge = (c: CustomerResponse) => {
+    if (!c.franchiseId) return <span className={styles.muted}>—</span>;
+    const allOrgsList = isSuperAdmin ? allOrgs : orgFranchises;
+    const org = allOrgsList.find(o => o.uuid === c.franchiseId);
+    if (!org) return <span className={styles.muted}>{c.franchiseName ?? '—'}</span>;
+    if (org.parentOrgId) {
+      const parent = allOrgs.find(o => o.uuid === org.parentOrgId);
+      const parentName = parent?.name ?? org.parentOrgName ?? '?';
+      return <span className={styles.muted}>{parentName} › {org.name}</span>;
+    }
+    return <span className={styles.muted}>{org.name}</span>;
+  };
+
   // ─── OrgDropdown helper ──────────────────────────────────────────────────
 
   const OrgDropdown = ({ list, value, placeholder, icon, onSelect }: {
@@ -406,11 +420,7 @@ const Clients = () => {
                           ? <span className={styles.company}><Phone style={{ width: 12, height: 12 }} />{c.phoneNumber}</span>
                           : '—'}
                       </td>
-                      <td className={styles.muted}>
-                        {c.franchiseName
-                          ? <span className={styles.company}><Building2 style={{ width: 12, height: 12 }} />{c.franchiseName}</span>
-                          : '—'}
-                      </td>
+                      <td>{renderCustomerOrgBadge(c)}</td>
                       <td>
                         <button
                           className={`${styles.statusToggle} ${c.isActive ? styles.toggleOn : styles.toggleOff}`}

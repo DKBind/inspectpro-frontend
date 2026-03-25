@@ -10,12 +10,14 @@ import {
 } from 'lucide-react';
 
 import { userService } from '@/services/userService';
+import { organisationService } from '@/services/organisationService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useModuleStore } from '@/store/useModuleStore';
 import type {
   UserResponse, RoleResponse, RoleModuleAssignment, UserAddressRequest,
   ModuleResponse, RoleModulePermission, RoleUserItem,
 } from '@/services/models/user';
+import type { OrganisationResponse } from '@/services/models/organisation';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/shared-ui/Dialog/dialog';
@@ -71,6 +73,7 @@ const schema = z.object({
   bio: z.string().optional(),
   remark: z.string().optional(),
   roleId: z.string().min(1, 'Role is required'),
+  orgId: z.string().optional(),
   addressLine1: z.string().optional(),
   addressLine2: z.string().optional(),
   street: z.string().optional(),
@@ -83,7 +86,7 @@ type FormValues = z.infer<typeof schema>;
 
 const EMPTY: FormValues = {
   firstName: '', middleName: '', lastName: '', email: '', password: '',
-  gender: '', bio: '', remark: '', roleId: '', phoneNumber: '',
+  gender: '', bio: '', remark: '', roleId: '', phoneNumber: '', orgId: '',
   addressLine1: '', addressLine2: '', street: '', district: '',
   state: '', country: '', pincode: '',
 };
@@ -138,6 +141,21 @@ const UsersRoles = () => {
   // moduleId → Set<permissionName>
   const [modPerms, setModPerms] = useState<Map<number, Set<string>>>(new Map());
 
+  // Org admin: franchises belonging to authUser's org (for user create modal)
+  const [allOrgs, setAllOrgs] = useState<OrganisationResponse[]>([]);
+  const [orgAdminFranchises, setOrgAdminFranchises] = useState<OrganisationResponse[]>([]);
+
+  // User create: account type selector (super admin only)
+  const [userAccountType, setUserAccountType] = useState<'internal' | 'organisation' | 'franchise'>('internal');
+  const [parentOrgForUser, setParentOrgForUser] = useState('');
+  const [franchisesForUser2, setFranchisesForUser2] = useState<OrganisationResponse[]>([]);
+
+  // Role hierarchy (Part D): org/franchise selector in role modal
+  const [roleTargetType, setRoleTargetType] = useState<'platform' | 'organisation' | 'franchise'>('organisation');
+  const [roleTargetOrgId, setRoleTargetOrgId] = useState('');
+  const [roleTargetParentOrgId, setRoleTargetParentOrgId] = useState('');
+  const [roleTargetFranchises, setRoleTargetFranchises] = useState<OrganisationResponse[]>([]);
+
   // Available modules for the create/edit modal
   const [allModules, setAllModules] = useState<ModuleResponse[]>([]);
   const [modulesLoading, setModulesLoading] = useState(false);
@@ -162,20 +180,55 @@ const UsersRoles = () => {
 
   const selectedRoleId = watch('roleId');
   const selectedGender = watch('gender');
+  const selectedOrgId = watch('orgId');
   const selectedRole = roles.find((r) => String(r.roleId) === selectedRoleId);
+  const selectedUserOrg = allOrgs.find(o => o.uuid === selectedOrgId);
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  // Computed: is the logged-in user an Org Admin (top-level org)?
+  const authOrgInList = allOrgs.find(o => o.uuid === authUser?.orgId);
+  const isOrgAdmin = !isSuperAdmin && !!authOrgInList && !authOrgInList.parentOrgId;
+
+  // Hierarchical org display for user table rows
+  const renderOrgBadge = (u: UserResponse) => {
+    if (!u.orgId) return <span style={{ color: '#9CA3AF', fontSize: 13 }}>InspectPro Internal</span>;
+    const org = allOrgs.find(o => o.uuid === u.orgId);
+    if (!org) return <span style={{ fontSize: 13, color: '#6B7280' }}>{u.orgName ?? '—'}</span>;
+    if (org.parentOrgId) {
+      const parent = allOrgs.find(o => o.uuid === org.parentOrgId);
+      const parentName = parent?.name ?? org.parentOrgName ?? '?';
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: 13, color: '#6B7280' }}>{parentName}</span>
+          <span style={{ color: '#9CA3AF', fontSize: 12 }}>›</span>
+          <span style={{ fontSize: 13, color: '#6B7280' }}>{org.name}</span>
+        </div>
+      );
+    }
+    return <span style={{ fontSize: 13, color: '#6B7280' }}>{org.name}</span>;
+  };
 
   // ── Fetch users ───────────────────────────────────────────────────────────
   const fetchUsers = async (page = currentPage) => {
     setUsersLoading(true);
     try {
-      const [userData, rolesData] = await Promise.all([
+      const [userData, rolesData, orgsData] = await Promise.all([
         userService.listUsers(page - 1, PAGE_SIZE),
         userService.listRoles(),
+        organisationService.getOrganisations(0, 1000),
       ]);
       setUsers(userData.users);
       setTotal(userData.total);
       setRoles(rolesData);
+      const fetchedOrgs = orgsData.content ?? [];
+      setAllOrgs(fetchedOrgs);
+      // Load org admin's franchises if applicable
+      const authOrgData = fetchedOrgs.find(o => o.uuid === authUser?.orgId);
+      if (!isSuperAdmin && authOrgData && !authOrgData.parentOrgId && authUser?.orgId) {
+        organisationService.getFranchises(0, 500, authUser.orgId)
+          .then(d => setOrgAdminFranchises(d.content ?? []))
+          .catch(() => setOrgAdminFranchises([]));
+      }
     } catch { toast.error('Failed to load users'); }
     finally { setUsersLoading(false); }
   };
@@ -183,6 +236,22 @@ const UsersRoles = () => {
   useEffect(() => {
     if (subTab === 'users') fetchUsers(currentPage);
   }, [subTab, currentPage]);
+
+  // Load franchises when a parent org is selected in role modal (Part D)
+  useEffect(() => {
+    if (!roleModalOpen || !roleTargetParentOrgId) { setRoleTargetFranchises([]); return; }
+    organisationService.getFranchises(0, 500, roleTargetParentOrgId)
+      .then(d => setRoleTargetFranchises(d.content ?? []))
+      .catch(() => setRoleTargetFranchises([]));
+  }, [roleTargetParentOrgId, roleModalOpen]);
+
+  // Load franchises when super admin picks a parent org for franchise user creation
+  useEffect(() => {
+    if (!isSuperAdmin || !parentOrgForUser) { setFranchisesForUser2([]); return; }
+    organisationService.getFranchises(0, 500, parentOrgForUser)
+      .then(d => setFranchisesForUser2(d.content ?? []))
+      .catch(() => setFranchisesForUser2([]));
+  }, [parentOrgForUser]);
 
   // ── Fetch roles ───────────────────────────────────────────────────────────
   const fetchRoles = async () => {
@@ -206,29 +275,36 @@ const UsersRoles = () => {
     if (subTab === 'roles') fetchRoles();
   }, [subTab]);
 
-  // ── Fetch modules for role modal ──────────────────────────────────────────
+  // ── Fetch modules + orgs for role modal ──────────────────────────────────
   const loadModalData = async () => {
     setModulesLoading(true);
     try {
+      // Fetch modules
       if (isSuperAdmin) {
         const mods = await userService.listModules();
         setAllModules(mods.filter((m) => m.active !== false));
       } else {
-        // Non-admin: use the modules the logged-in user can access (always fresh from store)
         const mods = accessModules.map((m) => ({
-          id: m.moduleId,
-          name: m.name,
-          route: m.route,
-          active: true,
-          category: m.category ?? null,
-          icon: m.icon ?? null,
+          id: m.moduleId, name: m.name, route: m.route,
+          active: true, category: m.category ?? null, icon: m.icon ?? null,
         } as ModuleResponse));
         if (mods.length > 0) {
           setAllModules(mods);
         } else {
-          // Fallback: fetch from API if store is empty
           const fetched = await userService.listModules();
           setAllModules(fetched.filter((m) => m.active !== false));
+        }
+      }
+      // Fetch orgs for role hierarchy picker (if not already loaded)
+      if (allOrgs.length === 0) {
+        const orgsData = await organisationService.getOrganisations(0, 1000);
+        setAllOrgs(orgsData.content ?? []);
+        // Also load org admin franchises if needed
+        const authOrgData = orgsData.content?.find(o => o.uuid === authUser?.orgId);
+        if (!isSuperAdmin && authOrgData && !authOrgData.parentOrgId && authUser?.orgId) {
+          organisationService.getFranchises(0, 500, authUser.orgId)
+            .then(d => setOrgAdminFranchises(d.content ?? []))
+            .catch(() => setOrgAdminFranchises([]));
         }
       }
     } catch { toast.error('Failed to load modules'); }
@@ -241,6 +317,10 @@ const UsersRoles = () => {
     setRoleName('');
     setRoleDesc('');
     setModPerms(new Map());
+    setRoleTargetType(isSuperAdmin ? 'platform' : 'organisation');
+    setRoleTargetOrgId('');
+    setRoleTargetParentOrgId('');
+    setRoleTargetFranchises([]);
     setRoleModalOpen(true);
     await loadModalData();
   };
@@ -253,36 +333,41 @@ const UsersRoles = () => {
     const map = new Map<number, Set<string>>();
     for (const g of grouped) map.set(g.moduleId, new Set(g.permissions));
     setModPerms(map);
+    // Pre-fill role scope
+    const scope = role.scope;
+    setRoleTargetType(scope === 'FRANCHISE' ? 'franchise' : scope === 'PLATFORM' ? 'platform' : 'organisation');
+    setRoleTargetOrgId('');
+    setRoleTargetParentOrgId('');
+    setRoleTargetFranchises([]);
     setRoleModalOpen(true);
     await loadModalData();
   };
 
-  const closeRoleModal = () => { setRoleModalOpen(false); setEditRole(null); };
+  const closeRoleModal = () => {
+    setRoleModalOpen(false);
+    setEditRole(null);
+    setRoleTargetOrgId('');
+    setRoleTargetParentOrgId('');
+    setRoleTargetFranchises([]);
+  };
 
-  // Module selection helpers
-  const isModuleSelected = (moduleId: number) => modPerms.has(moduleId);
+  // Module selection helpers (Part C: module is "selected" only if ≥1 permission is ticked)
+  const isModuleSelected = (moduleId: number) => {
+    const perms = modPerms.get(moduleId);
+    return perms != null && perms.size > 0;
+  };
   const allModulesSelected = allModules.length > 0 && allModules.every((m) => {
     const perms = modPerms.get(m.id);
     return perms != null && ALL_PERM_NAMES.every((p) => perms.has(p));
   });
 
-  const toggleModule = (moduleId: number) => {
-    setModPerms((prev) => {
-      const next = new Map(prev);
-      if (next.has(moduleId)) { next.delete(moduleId); } else { next.set(moduleId, new Set()); }
-      return next;
-    });
-  };
-
   const toggleAllModules = () => {
     if (allModulesSelected) {
       setModPerms(new Map());
     } else {
-      // Select all modules with all permissions
       const next = new Map<number, Set<string>>();
       allModules.forEach((m) => {
-        const full = new Set([...ALL_PERM_NAMES, 'All']);
-        next.set(m.id, full);
+        next.set(m.id, new Set([...ALL_PERM_NAMES, 'All']));
       });
       setModPerms(next);
     }
@@ -299,8 +384,6 @@ const UsersRoles = () => {
         } else {
           ALL_PERM_NAMES.forEach((p) => perms.add(p));
           perms.add('All');
-          // Auto-select module when enabling All
-          if (!next.has(moduleId)) next.set(moduleId, new Set());
         }
       } else {
         if (perms.has(permName)) {
@@ -308,12 +391,16 @@ const UsersRoles = () => {
           perms.delete('All');
         } else {
           perms.add(permName);
-          // Auto-select the module when adding a permission
           const allSelected = ALL_PERM_NAMES.every((p) => perms.has(p));
           allSelected ? perms.add('All') : perms.delete('All');
         }
       }
-      next.set(moduleId, perms);
+      // Auto-remove module from map when no perms remain
+      if (perms.size === 0 || (perms.size === 1 && perms.has('All'))) {
+        next.delete(moduleId);
+      } else {
+        next.set(moduleId, perms);
+      }
       return next;
     });
   };
@@ -324,10 +411,9 @@ const UsersRoles = () => {
       const perms = new Set(next.get(moduleId) ?? []);
       const allSelected = ALL_PERM_NAMES.every((p) => perms.has(p));
       if (allSelected) {
-        // Clear all perms but keep module selected (empty set = selected, no perms)
-        next.set(moduleId, new Set());
+        // Clear all perms → remove module entirely
+        next.delete(moduleId);
       } else {
-        // Select all perms — also ensures module is selected
         const full = new Set(ALL_PERM_NAMES);
         full.add('All');
         next.set(moduleId, full);
@@ -349,10 +435,25 @@ const UsersRoles = () => {
     try {
       const modules: RoleModulePermission[] = [];
       modPerms.forEach((perms, moduleId) => {
-        const names = Array.from(perms);
+        const names = Array.from(perms).filter(p => p !== 'All');
         if (names.length > 0) modules.push({ moduleId, permissionNames: names });
       });
-      const payload = { name: roleName.trim(), description: roleDesc.trim() || undefined, modules };
+      // Determine scope and target org
+      const scopeMap: Record<string, 'PLATFORM' | 'ORGANISATION' | 'FRANCHISE'> = {
+        platform: 'PLATFORM', organisation: 'ORGANISATION', franchise: 'FRANCHISE',
+      };
+      const resolvedScope = scopeMap[roleTargetType] ?? 'ORGANISATION';
+      const resolvedOrgId = roleTargetType === 'platform' ? undefined
+        : roleTargetType === 'franchise' ? roleTargetOrgId || undefined
+          : (isOrgAdmin ? authUser?.orgId : roleTargetOrgId) || undefined;
+
+      const payload = {
+        name: roleName.trim(),
+        description: roleDesc.trim() || undefined,
+        scope: resolvedScope,
+        ...(resolvedOrgId ? { orgId: resolvedOrgId } : {}),
+        modules,
+      };
       if (editRole) {
         await userService.updateRole(editRole.roleId, payload);
         toast.success('Role updated successfully');
@@ -416,7 +517,14 @@ const UsersRoles = () => {
     setValue('password', Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join(''));
   };
 
-  const openCreate = () => { reset(EMPTY); setEditTarget(null); setModalMode('create'); };
+  const openCreate = () => {
+    reset({ ...EMPTY, orgId: '' });
+    setEditTarget(null);
+    setUserAccountType('internal');
+    setParentOrgForUser('');
+    setFranchisesForUser2([]);
+    setModalMode('create');
+  };
 
   const openEdit = (u: UserResponse) => {
     reset({
@@ -424,6 +532,7 @@ const UsersRoles = () => {
       email: u.email, password: '', phoneNumber: u.phoneNumber ?? '', gender: u.gender ?? '',
       bio: u.bio ?? '', remark: u.remark ?? '',
       roleId: u.roleId ? String(u.roleId) : '',
+      orgId: u.orgId ?? '',
       addressLine1: u.address?.addressLine1 ?? '',
       addressLine2: u.address?.addressLine2 ?? '',
       street: u.address?.street ?? '',
@@ -436,9 +545,29 @@ const UsersRoles = () => {
     setModalMode('edit');
   };
 
-  const closeModal = () => { setModalMode(null); setEditTarget(null); reset(EMPTY); };
+  const closeModal = () => {
+    setModalMode(null);
+    setEditTarget(null);
+    setUserAccountType('internal');
+    setParentOrgForUser('');
+    setFranchisesForUser2([]);
+    reset(EMPTY);
+  };
 
   const onSubmit = async (values: FormValues) => {
+    // Determine orgId based on who the user is being created for
+    let finalOrgId = values.orgId;
+    if (isSuperAdmin && modalMode === 'create') {
+      if (userAccountType === 'internal') {
+        finalOrgId = authUser?.orgId || '';
+      }
+      // organisation / franchise: orgId is set via the picker
+    } else if (isOrgAdmin && modalMode === 'create') {
+      if (!finalOrgId) { toast.error('Please select a franchise'); return; }
+    } else if (!isSuperAdmin) {
+      finalOrgId = values.orgId || authUser?.orgId || '';
+    }
+
     setSubmitting(true);
     try {
       const addressFields: UserAddressRequest = {
@@ -464,7 +593,7 @@ const UsersRoles = () => {
         address: hasAddress ? addressFields : undefined,
         roleId: Number(values.roleId),
         statusId: 1,
-        ...(!isSuperAdmin && authUser?.orgId ? { orgId: authUser.orgId } : {}),
+        ...(finalOrgId ? { orgId: finalOrgId } : {}),
       };
       if (modalMode === 'create') {
         await userService.createUser(payload);
@@ -554,14 +683,14 @@ const UsersRoles = () => {
                     <th>User</th>
                     <th>Phone</th>
                     <th>Email</th>
-                    {/* <th>Gender</th> */}
+                    <th>Organisation</th>
                     <th>Role</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => {
+                  {users.filter(u => u.roleName?.toLowerCase() !== 'client').map((u) => {
                     const isActive = (u.statusId ?? 1) === 1;
                     return (
                       <tr key={u.id}>
@@ -586,9 +715,7 @@ const UsersRoles = () => {
                             </span>
                             : <span style={{ color: '#D1D5DB' }}>—</span>}
                         </td>
-                        {/* <td className={styles.mutedCell}>
-                          {u.gender ?? <span style={{ color: '#D1D5DB' }}>—</span>}
-                        </td> */}
+                        <td>{renderOrgBadge(u)}</td>
                         <td>
                           {u.roleName
                             ? <span className={styles.roleBadge}>{u.roleName}</span>
@@ -864,6 +991,111 @@ const UsersRoles = () => {
               />
             </Fld>
 
+            {/* Role hierarchy — Part D */}
+            {(isSuperAdmin || isOrgAdmin) && (
+              <div>
+                <div className={styles.modulePickerHeader}>
+                  <span className={styles.modulePickerTitle}>
+                    <Shield size={13} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
+                    Assign Role To
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 0, border: '1px solid #E5E7EB', borderRadius: 8, overflow: 'hidden', background: '#F9FAFB', marginBottom: 12 }}>
+                  {(isSuperAdmin
+                    ? [{ value: 'platform', label: 'Platform' }, { value: 'organisation', label: 'Organisation' }, { value: 'franchise', label: 'Franchise' }]
+                    : [{ value: 'organisation', label: 'My Organisation' }, { value: 'franchise', label: 'My Franchise' }]
+                  ).map((opt, i, arr) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => { setRoleTargetType(opt.value as typeof roleTargetType); setRoleTargetOrgId(''); setRoleTargetParentOrgId(''); }}
+                      style={{
+                        flex: 1, padding: '8px 6px', fontSize: 12,
+                        fontWeight: roleTargetType === opt.value ? 600 : 500,
+                        color: roleTargetType === opt.value ? '#2563EB' : '#6B7280',
+                        background: roleTargetType === opt.value ? 'white' : 'transparent',
+                        border: 'none',
+                        borderRight: i < arr.length - 1 ? '1px solid #E5E7EB' : 'none',
+                        cursor: 'pointer',
+                        boxShadow: roleTargetType === opt.value ? '0 1px 3px rgba(0,0,0,0.07)' : 'none',
+                        transition: 'all 0.15s',
+                      }}
+                    >{opt.label}</button>
+                  ))}
+                </div>
+
+                {/* Org picker for super admin */}
+                {isSuperAdmin && roleTargetType === 'organisation' && (
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger className={selectCls(false)}>
+                      <span className={roleTargetOrgId ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+                        {allOrgs.find(o => o.uuid === roleTargetOrgId)?.name ?? '— Select organisation —'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)', maxHeight: 200, overflowY: 'auto' }}>
+                      {allOrgs.filter(o => !o.parentOrgId).map(o => (
+                        <DropdownMenuItem key={o.uuid} onSelect={() => setRoleTargetOrgId(o.uuid)} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">{o.name}</DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                {/* Franchise picker — super admin picks parent first */}
+                {isSuperAdmin && roleTargetType === 'franchise' && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger className={selectCls(false)}>
+                        <span className={roleTargetParentOrgId ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+                          {allOrgs.find(o => o.uuid === roleTargetParentOrgId)?.name ?? '— Select parent org —'}
+                        </span>
+                        <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)', maxHeight: 200, overflowY: 'auto' }}>
+                        {allOrgs.filter(o => !o.parentOrgId).map(o => (
+                          <DropdownMenuItem key={o.uuid} onSelect={() => { setRoleTargetParentOrgId(o.uuid); setRoleTargetOrgId(''); }} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">{o.name}</DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger className={selectCls(false)} disabled={!roleTargetParentOrgId}>
+                        <span className={roleTargetOrgId ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+                          {roleTargetFranchises.find(f => f.uuid === roleTargetOrgId)?.name ?? (roleTargetParentOrgId ? '— Select franchise —' : '— Select parent first —')}
+                        </span>
+                        <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)', maxHeight: 200, overflowY: 'auto' }}>
+                        {roleTargetFranchises.length === 0
+                          ? <DropdownMenuItem disabled>No franchises found</DropdownMenuItem>
+                          : roleTargetFranchises.map(f => (
+                            <DropdownMenuItem key={f.uuid} onSelect={() => setRoleTargetOrgId(f.uuid)} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">{f.name}</DropdownMenuItem>
+                          ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+
+                {/* Org admin franchise picker */}
+                {isOrgAdmin && roleTargetType === 'franchise' && (
+                  <DropdownMenu modal={false}>
+                    <DropdownMenuTrigger className={selectCls(false)}>
+                      <span className={roleTargetOrgId ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+                        {orgAdminFranchises.find(f => f.uuid === roleTargetOrgId)?.name ?? '— Select franchise —'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                      {orgAdminFranchises.length === 0
+                        ? <DropdownMenuItem disabled>No franchises found</DropdownMenuItem>
+                        : orgAdminFranchises.map(f => (
+                          <DropdownMenuItem key={f.uuid} onSelect={() => setRoleTargetOrgId(f.uuid)} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">{f.name}</DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </div>
+            )}
+
             {/* Module picker */}
             <div>
               <div className={styles.modulePickerHeader}>
@@ -888,14 +1120,8 @@ const UsersRoles = () => {
                     const pc = permCount(mod.id);
                     return (
                       <div key={mod.id} className={`${styles.modulePickerItem} ${selected ? styles.modulePickerItemSelected : ''}`}>
-                        {/* Module checkbox row */}
-                        <label className={styles.moduleCheckRow}>
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={() => toggleModule(mod.id)}
-                            className={styles.moduleCheckbox}
-                          />
+                        {/* Module name row — no checkbox; selection is driven purely by permissions */}
+                        <div className={styles.moduleCheckRow}>
                           <span className={styles.moduleCheckLabel}>
                             {mod.name}
                             {mod.category && <span className={styles.moduleCategoryTag}>{mod.category}</span>}
@@ -903,9 +1129,9 @@ const UsersRoles = () => {
                           {selected && pc > 0 && (
                             <span className={styles.permCountBadge}>{pc} perm{pc !== 1 ? 's' : ''}</span>
                           )}
-                        </label>
+                        </div>
 
-                        {/* Permission buttons — always visible */}
+                        {/* Permission buttons — tick at least one to include this module */}
                         <div className={styles.permRow}>
                           <button
                             type="button"
@@ -1078,6 +1304,113 @@ const UsersRoles = () => {
                   </Fld>
                 </div>
 
+                {/* Account Type + Org selector — top of create modal */}
+                {modalMode === 'create' && (isSuperAdmin || isOrgAdmin) && (
+                  <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {isSuperAdmin ? (
+                      <>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Creating user for</p>
+                        <div style={{ display: 'flex', gap: 0, border: '1px solid #E5E7EB', borderRadius: 10, overflow: 'hidden', background: 'white' }}>
+                          {([
+                            { value: 'internal', label: 'Super Admin', desc: 'InspectPro internal' },
+                            { value: 'organisation', label: 'Organisation', desc: 'Top-level org user' },
+                            { value: 'franchise', label: 'Franchise', desc: 'Sub-org user' },
+                          ] as const).map((opt, i) => (
+                            <button key={opt.value} type="button"
+                              onClick={() => { setUserAccountType(opt.value); setParentOrgForUser(''); setFranchisesForUser2([]); setValue('orgId', ''); }}
+                              style={{
+                                flex: 1, padding: '10px 6px', fontSize: 12, lineHeight: 1.3,
+                                fontWeight: userAccountType === opt.value ? 700 : 500,
+                                color: userAccountType === opt.value ? '#2563EB' : '#6B7280',
+                                background: userAccountType === opt.value ? '#EFF6FF' : 'transparent',
+                                border: 'none', borderRight: i < 2 ? '1px solid #E5E7EB' : 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                              }}>
+                              <div>{opt.label}</div>
+                              <div style={{ fontSize: 10, fontWeight: 400, color: userAccountType === opt.value ? '#93C5FD' : '#9CA3AF', marginTop: 2 }}>{opt.desc}</div>
+                            </button>
+                          ))}
+                        </div>
+                        {/* Org picker for 'organisation' type */}
+                        {userAccountType === 'organisation' && (
+                          <Fld label="Organisation" required>
+                            <DropdownMenu modal={false}>
+                              <DropdownMenuTrigger className={selectCls(!selectedOrgId && submitting)}>
+                                <span className={selectedUserOrg ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+                                  {selectedUserOrg ? selectedUserOrg.name : '— Select organisation —'}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)', maxHeight: 220, overflowY: 'auto' }}>
+                                {allOrgs.filter(o => !o.parentOrgId).map(o => (
+                                  <DropdownMenuItem key={o.uuid} onSelect={() => setValue('orgId', o.uuid, { shouldValidate: true })} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">{o.name}</DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </Fld>
+                        )}
+                        {/* Parent org → franchise cascade for 'franchise' type */}
+                        {userAccountType === 'franchise' && (
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <Fld label="Parent Organisation" required>
+                              <DropdownMenu modal={false}>
+                                <DropdownMenuTrigger className={selectCls(false)}>
+                                  <span className={parentOrgForUser ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+                                    {allOrgs.find(o => o.uuid === parentOrgForUser)?.name ?? '— Select parent org —'}
+                                  </span>
+                                  <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)', maxHeight: 220, overflowY: 'auto' }}>
+                                  {allOrgs.filter(o => !o.parentOrgId).map(o => (
+                                    <DropdownMenuItem key={o.uuid} onSelect={() => { setParentOrgForUser(o.uuid); setValue('orgId', ''); }} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">{o.name}</DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </Fld>
+                            <Fld label="Franchise" required>
+                              <DropdownMenu modal={false}>
+                                <DropdownMenuTrigger className={selectCls(!selectedOrgId && submitting)} disabled={!parentOrgForUser}>
+                                  <span className={selectedUserOrg ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+                                    {selectedUserOrg ? selectedUserOrg.name : parentOrgForUser ? '— Select franchise —' : '— Select parent first —'}
+                                  </span>
+                                  <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)', maxHeight: 220, overflowY: 'auto' }}>
+                                  {franchisesForUser2.length === 0
+                                    ? <DropdownMenuItem disabled>No franchises found</DropdownMenuItem>
+                                    : franchisesForUser2.map(f => (
+                                      <DropdownMenuItem key={f.uuid} onSelect={() => setValue('orgId', f.uuid, { shouldValidate: true })} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">{f.name}</DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </Fld>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      /* Org Admin: directly pick their franchise */
+                      <Fld label="Franchise" required>
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger className={selectCls(!selectedOrgId && submitting)}>
+                            <span className={selectedUserOrg ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+                              {selectedUserOrg ? selectedUserOrg.name : '— Select franchise —'}
+                            </span>
+                            <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                            {orgAdminFranchises.length === 0
+                              ? <DropdownMenuItem disabled>No franchises found</DropdownMenuItem>
+                              : orgAdminFranchises.map(f => (
+                                <DropdownMenuItem key={f.uuid} onSelect={() => setValue('orgId', f.uuid, { shouldValidate: true })} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">{f.name}</DropdownMenuItem>
+                              ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </Fld>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Fld label="Gender">
                     <DropdownMenu modal={false}>
@@ -1162,7 +1495,7 @@ const UsersRoles = () => {
               <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl flex gap-3">
                 <Button type="button" variant="ghost" onClick={closeModal} disabled={submitting}
                   className="text-[#6B7280] hover:text-[#263B4F] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Cancel</Button>
-                <Button type="submit" disabled={submitting}
+                <Button type="submit" disabled={submitting || (isOrgAdmin && modalMode === 'create' && !selectedOrgId)}
                   className="flex-1 sm:flex-none sm:min-w-44 bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg active:scale-95">
                   {submitting
                     ? <span className="flex items-center gap-2"><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{modalMode === 'create' ? 'Creating...' : 'Saving...'}</span>
