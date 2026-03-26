@@ -161,7 +161,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: #6B7280;
+  color: #263B4F;
 }
 
 .sectionBody {
@@ -194,7 +194,7 @@
   cursor: pointer;
   border: 1px solid #E5E7EB;
   background: white;
-  color: #6B7280;
+  color: #263B4F;
   transition: all 0.15s;
 }
 
@@ -224,12 +224,12 @@
 }
 
 .descTextarea::placeholder {
-  color: #9CA3AF;
+  color: #4B5563;
 }
 
 .descCounter {
   font-size: 11px;
-  color: #9CA3AF;
+  color: #4B5563;
   text-align: right;
   margin-top: 4px;
 }
@@ -240,7 +240,7 @@
 
 .descPreview {
   font-size: 11px;
-  color: #6B7280;
+  color: #263B4F;
   font-style: italic;
   margin-top: 4px;
   overflow: hidden;
@@ -348,7 +348,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  color: #9CA3AF;
+  color: #4B5563;
   transition: background 0.15s, color 0.15s;
 }
 
@@ -431,7 +431,7 @@
   padding: 8px 0;
   font-size: 13px;
   font-weight: 500;
-  color: #6B7280;
+  color: #263B4F;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -472,7 +472,7 @@
   border-radius: 9px;
   border: 1px solid #E5E7EB;
   background: white;
-  color: #6B7280;
+  color: #263B4F;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;

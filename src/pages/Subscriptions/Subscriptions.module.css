@@ -1,7 +1,9 @@
 /* ─── Page Layout ──────────────────────────────────────────────────────────── */
 
 .page {
-  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   min-height: 100%;
   color: var(--ip-text-primary);
 }
@@ -10,8 +12,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 28px;
+  gap: 12px;
 }
 
 .pageTitle {
@@ -75,7 +76,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 20px 24px;
   border-bottom: 1px solid var(--ip-border);
 }
 
@@ -158,7 +159,7 @@
 }
 
 .table th {
-  padding: 11px 16px;
+  padding: 12px 24px;
   text-align: left;
   font-size: 0.75rem;
   font-weight: 600;
@@ -182,7 +183,7 @@
 }
 
 .table td {
-  padding: 13px 16px;
+  padding: 14px 24px;
   vertical-align: middle;
 }
 
@@ -192,7 +193,7 @@
 }
 
 .mutedCell {
-  color: var(--ip-text-muted);
+  color: var(--ip-text-primary);
 }
 
 /* ─── Status Badge ─────────────────────────────────────────────────────────── */
@@ -251,7 +252,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 12px 24px;
   border-top: 1px solid var(--ip-border);
 }
 

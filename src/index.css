@@ -75,9 +75,9 @@
 
     /* Text */
     --ip-text-primary:   #263B4F;
-    --ip-text-secondary: #74879A;
-    --ip-text-muted:     #919EAC;
-    --ip-text-disabled:  #B9BFC6;
+    --ip-text-secondary: #263B4F;
+    --ip-text-muted:     #4B5563;
+    --ip-text-disabled:  #9CA3AF;
     --ip-text-inverse:   #FFFFFF;
 
     /* Borders */
@@ -124,8 +124,8 @@
     /* Sidebar (light) */
     --ip-sidebar-bg:          #FFFFFF;
     --ip-sidebar-border:      #E4E8EC;
-    --ip-sidebar-label:       #919EAC;
-    --ip-sidebar-text:        #74879A;
+    --ip-sidebar-label:       #4B5563;
+    --ip-sidebar-text:        #263B4F;
     --ip-sidebar-text-active: #298E7A;
     --ip-sidebar-active-bg:   rgba(51,174,149,0.10);
     --ip-sidebar-active-border: #33AE95;

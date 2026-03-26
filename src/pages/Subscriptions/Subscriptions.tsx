@@ -124,14 +124,14 @@ function PlanTable({
               </td>
               <td className={styles.mutedCell}>
                 {p.durationMonths != null
-                  ? `${p.durationMonths} mo${p.billingCycle ? ` \u00B7 ${p.billingCycle.charAt(0) + p.billingCycle.slice(1).toLowerCase()}` : ''}`
+                  ? `${p.durationMonths} ${p.billingCycle ? ` \u00B7 ${p.billingCycle.charAt(0) + p.billingCycle.slice(1).toLowerCase()}` : ''}`
                   : '\u2014'}
               </td>
               <td className={styles.mutedCell}>
                 {p.maxUsers != null ? p.maxUsers.toLocaleString() : '\u2014'}
               </td>
               <td className={styles.mutedCell}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#94a3b8' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#263B4F' }}>
                   <Package style={{ width: 12, height: 12 }} />
                   {p.modules?.length ?? 0}
                 </span>
@@ -419,8 +419,8 @@ const Subscriptions = () => {
               border: 'none',
               background: 'none',
               cursor: 'pointer',
-              borderBottom: activeTab === 'org' ? '2px solid #3b82f6' : '2px solid transparent',
-              color: activeTab === 'org' ? '#3b82f6' : '#6B7280',
+              borderBottom: activeTab === 'org' ? '2px solid #33AE95' : '2px solid transparent',
+              color: activeTab === 'org' ? '#33AE95' : '#6B7280',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
@@ -428,8 +428,8 @@ const Subscriptions = () => {
             }}
           >
             <Building2 size={15} />
-            Organisation Subscriptions
-            <span style={{ background: activeTab === 'org' ? '#dbeafe' : '#F3F4F6', color: activeTab === 'org' ? '#2563eb' : '#6B7280', borderRadius: 12, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>
+            Organisation
+            <span style={{ background: activeTab === 'org' ? '#dbeafe' : '#F3F4F6', color: activeTab === 'org' ? '#33AE95' : '#6B7280', borderRadius: 12, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>
               {orgPlans.length}
             </span>
           </button>
@@ -451,7 +451,7 @@ const Subscriptions = () => {
             }}
           >
             <Sparkles size={15} />
-            Franchise Subscriptions
+            Franchise
             <span style={{ background: activeTab === 'franchise' ? '#d1fae5' : '#F3F4F6', color: activeTab === 'franchise' ? '#059669' : '#6B7280', borderRadius: 12, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>
               {franchisePlans.length}
             </span>

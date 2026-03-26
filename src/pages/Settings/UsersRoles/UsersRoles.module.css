@@ -7,31 +7,35 @@
 /* Sub-tabs */
 .subTabs {
   display: flex;
-  gap: 8px;
+  gap: 0;
+  border-bottom: 2px solid var(--ip-border);
 }
 
 .subTab {
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 10px 22px;
+  border-radius: 0;
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--ip-text-secondary);
-  background: var(--ip-surface);
-  border: 1px solid var(--ip-border);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.18s ease, border-color 0.18s ease;
+  white-space: nowrap;
 }
 
 .subTab:hover {
-  border-color: var(--ip-border-strong);
   color: var(--ip-text-primary);
-  background: var(--ip-page-bg);
+  border-bottom-color: var(--ip-border-strong);
 }
 
 .subTabActive {
-  background: var(--ip-brand-light);
-  border-color: var(--ip-brand);
-  color: var(--ip-brand-hover);
+  color: var(--ip-brand);
+  font-weight: 600;
+  border-bottom-color: var(--ip-brand);
+  background: transparent;
 }
 
 /* Panel */
@@ -104,7 +108,7 @@
 .table td {
   padding: 14px 24px;
   font-size: 13.5px;
-  color: var(--ip-text-secondary);
+  color: var(--ip-text-primary);
   border-bottom: 1px solid var(--ip-border);
 }
 

@@ -4,7 +4,7 @@ import { ROUTES } from '@/components/Constant/Route';
 import {
   LayoutDashboard, FolderKanban, ClipboardCheck, ListChecks, Bug,
   BarChart3, Settings, Shield, Building2, CreditCard, GitBranch,
-  Sparkles, Users, Bell, UserCircle, FileText, Home,
+  Sparkles, Users, Bell, UserCircle, FileText, Home, Lock,
   type LucideIcon,
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
@@ -19,6 +19,7 @@ interface NavItem {
   icon: LucideIcon;
   path: string;
   badge?: number;
+  locked?: boolean;
 }
 
 // ─── Icon registry — maps DB icon string → Lucide component ──────────────────
@@ -52,32 +53,49 @@ const CATEGORY_ORDER: Record<string, number> = { main: 0 };
 
 const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
   const location = useLocation();
-  const { accessModules } = useModuleStore();
+  const { modules, accessModules } = useModuleStore();
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
   // ─── Build sections dynamically from DB categories ────────────────────────
   const buildSections = (): { label: string; items: NavItem[] }[] => {
     const seenPaths = new Set<string>();
-    // Ordered map: category label → items
     const sectionMap = new Map<string, NavItem[]>();
 
-    accessModules.forEach((m) => {
-      if (!m.route) return;
-      const topPath = '/' + m.route.split('/').filter(Boolean)[0];
-      if (seenPaths.has(topPath)) return;
-      seenPaths.add(topPath);
+    // Accessible paths set for O(1) lookup (only modules that have a real route)
+    const accessiblePaths = new Set(
+      accessModules
+        .filter((m) => !!m.route?.trim())
+        .map((m) => '/' + m.route.split('/').filter(Boolean)[0])
+    );
+
+    // Use org modules (full list) when available; fall back to accessModules
+    const source = modules.length > 0 ? modules : accessModules;
+
+    source.forEach((m) => {
+      const hasRoute = !!m.route?.trim();
+      // Use route-based key for real routes; name-based key for empty-route modules
+      const dedupeKey = hasRoute
+        ? '/' + m.route.split('/').filter(Boolean)[0]
+        : `__noroute__${m.name}`;
+
+      if (seenPaths.has(dedupeKey)) return;
+      seenPaths.add(dedupeKey);
+
+      const topPath = hasRoute ? '/' + m.route.split('/').filter(Boolean)[0] : null;
+      const isLocked = !hasRoute || (topPath !== null && !accessiblePaths.has(topPath));
 
       const category = m.category || 'Other';
       if (!sectionMap.has(category)) sectionMap.set(category, []);
       sectionMap.get(category)!.push({
         label: m.name,
         icon: resolveIcon(m.icon),
-        path: topPath,
+        path: topPath ?? '.',
+        locked: isLocked,
       });
     });
 
-    // Profile always present
+    // Profile always present and always accessible
     if (!seenPaths.has('/profile')) {
       const systemKey = [...sectionMap.keys()].find(k => k.toLowerCase() !== 'main') ?? 'System';
       if (!sectionMap.has(systemKey)) sectionMap.set(systemKey, []);
@@ -96,26 +114,48 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
 
   const sections = buildSections();
 
-  const renderNavItem = (item: NavItem) => (
-    <NavLink
-      key={item.path}
-      to={item.path}
-      className={`${styles.navItem} ${isActive(item.path) ? styles.navItemActive : ''}`}
-      title={collapsed ? item.label : undefined}
-    >
-      <span className={styles.navIcon}>
-        <item.icon />
-      </span>
-      <span className={`${styles.navText} ${collapsed ? styles.navTextHidden : ''}`}>
-        {item.label}
-      </span>
-      {item.badge && (
-        <span className={`${styles.badge} ${collapsed ? styles.badgeHidden : ''}`}>
-          {item.badge}
+  const renderNavItem = (item: NavItem) => {
+    if (item.locked) {
+      const tooltipLabel = collapsed
+        ? item.label
+        : (item.path === '.' ? `${item.label} — coming soon` : undefined);
+      return (
+        <div
+          key={item.path}
+          className={`${styles.navItem} ${styles.navItemLocked}`}
+          title={tooltipLabel}
+        >
+          <span className={styles.navIcon}>
+            <item.icon />
+          </span>
+          <span className={`${styles.navText} ${collapsed ? styles.navTextHidden : ''}`}>
+            {item.label}
+          </span>
+          {/* <Lock size={11} className={`${styles.lockIcon} ${collapsed ? styles.navTextHidden : ''}`} /> */}
+        </div>
+      );
+    }
+    return (
+      <NavLink
+        key={item.path}
+        to={item.path}
+        className={`${styles.navItem} ${isActive(item.path) ? styles.navItemActive : ''}`}
+        title={collapsed ? item.label : undefined}
+      >
+        <span className={styles.navIcon}>
+          <item.icon />
         </span>
-      )}
-    </NavLink>
-  );
+        <span className={`${styles.navText} ${collapsed ? styles.navTextHidden : ''}`}>
+          {item.label}
+        </span>
+        {item.badge && (
+          <span className={`${styles.badge} ${collapsed ? styles.badgeHidden : ''}`}>
+            {item.badge}
+          </span>
+        )}
+      </NavLink>
+    );
+  };
 
   return (
     <aside

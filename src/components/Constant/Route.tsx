@@ -9,7 +9,7 @@ export const ROUTES = {
   PROJECT_EDIT: '/projects/edit/:id',
   INSPECTIONS: '/inspections',
   INSPECTION_EXECUTE: '/inspections/:inspectionId',
-  CHECKLISTS: '/checklists',
+  CHECKLISTS: '/templates',
   DEFECTS: '/defects',
   DEFECT_SUMMARY: '/projects/:projectId/defect-summary',
   REPORTS: '/reports',
@@ -27,6 +27,7 @@ export const ROUTES = {
   USERS_ROLES: '/users-roles',
   NOTIFICATIONS: '/notifications',
   UNAUTHORIZED: '/unauthorized',
+  TEMPLATE_BUILDER: '/templates/:id/builder',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from '@/components/shared-ui/Sonner/sonner';
 import { ProtectedRoute, PublicRoute } from './routes/RouteGuards';
 import { ROUTES } from './components/Constant/Route';
 import AdminLayout from './components/layout/AdminLayout/AdminLayout';
@@ -20,6 +21,7 @@ import ProjectDetail from './pages/Projects/ProjectDetail';
 import ProjectCreate from './pages/Projects/ProjectCreate';
 import ProjectEdit from './pages/Projects/ProjectEdit';
 import Checklists from './pages/Checklists/Checklists';
+import TemplateBuilder from './pages/Templates/TemplateBuilder';
 import InspectionExecution from './pages/Inspections/InspectionExecution';
 import DefectSummary from './pages/Inspections/DefectSummary';
 import UsersRolesPage from './pages/UsersRoles/UsersRolesPage';
@@ -32,6 +34,7 @@ import Profile from './pages/Settings/Profile/Profile';
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" closeButton />
       <Routes>
         {/* Public Routes */}
         <Route element={<PublicRoute />}>
@@ -58,6 +61,7 @@ function App() {
             <Route path={ROUTES.INSPECTIONS} element={<Dashboard />} />
             <Route path={ROUTES.INSPECTION_EXECUTE} element={<InspectionExecution />} />
             <Route path={ROUTES.CHECKLISTS} element={<Checklists />} />
+            <Route path={ROUTES.TEMPLATE_BUILDER} element={<TemplateBuilder />} />
             <Route path={ROUTES.DEFECTS} element={<Dashboard />} />
             <Route path={ROUTES.DEFECT_SUMMARY} element={<DefectSummary />} />
             <Route path={ROUTES.REPORTS} element={<Dashboard />} />

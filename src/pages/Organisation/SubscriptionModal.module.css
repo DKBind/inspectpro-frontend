@@ -26,7 +26,7 @@
 }
 
 .modalDesc {
-  color: var(--ip-text-muted, #6B7280);
+  color: var(--ip-text-muted, #263B4F);
   font-size: 0.875rem;
   padding-left: 48px;
 }
@@ -62,7 +62,7 @@
 }
 
 .formInput::placeholder {
-  color: var(--ip-text-muted, #9CA3AF);
+  color: var(--ip-text-muted, #4B5563);
 }
 
 .textarea {
@@ -79,7 +79,7 @@
 }
 
 .textarea::placeholder {
-  color: var(--ip-text-muted, #9CA3AF);
+  color: var(--ip-text-muted, #4B5563);
 }
 
 .textarea:focus {
@@ -92,7 +92,7 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--ip-text-muted, #6B7280);
+  color: var(--ip-text-muted, #263B4F);
   pointer-events: none;
   z-index: 10;
 }
@@ -101,7 +101,7 @@
   position: absolute;
   left: 12px;
   top: 12px;
-  color: var(--ip-text-muted, #6B7280);
+  color: var(--ip-text-muted, #263B4F);
   pointer-events: none;
   z-index: 10;
 }
@@ -113,7 +113,7 @@
 }
 
 .fieldHint {
-  color: var(--ip-text-muted, #6B7280);
+  color: var(--ip-text-muted, #263B4F);
   font-size: 0.75rem;
 }
 
@@ -152,6 +152,6 @@
   height: var(--ip-input-height, 40px);
   display: flex;
   align-items: center;
-  color: var(--ip-text-muted, #6B7280);
+  color: var(--ip-text-muted, #263B4F);
   font-size: 0.875rem;
 }

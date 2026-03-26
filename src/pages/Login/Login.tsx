@@ -10,11 +10,12 @@ import styles from './Login.module.css';
 
 const Login = () => {
   const { setAuth } = useAuthStore();
-  const { setAccessModules } = useModuleStore();
+  const { setAccessModules, setModules } = useModuleStore();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -46,7 +47,15 @@ const Login = () => {
         return;
       }
 
-      await moduleService.getMyAccess(data.userId).then(setAccessModules).catch(() => { });
+      setAccessLoading(true);
+      try {
+        await Promise.all([
+          moduleService.getMyAccess(data.userId).then(setAccessModules),
+          data.orgId ? moduleService.getMyModules(data.orgId).then(setModules) : Promise.resolve(),
+        ]);
+      } catch { /* non-fatal */ } finally {
+        setAccessLoading(false);
+      }
 
       navigate(ROUTES.DASHBOARD);
     } catch (err: unknown) {
@@ -55,6 +64,26 @@ const Login = () => {
       setLoading(false);
     }
   };
+
+  if (accessLoading) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, background: '#fff',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: 16, zIndex: 9999,
+      }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: '50%',
+          border: '4px solid #E4E8EC', borderTopColor: '#33AE95',
+          animation: 'spin 0.7s linear infinite',
+        }} />
+        <p style={{ fontSize: 14, color: '#263B4F', fontWeight: 500 }}>
+          Loading your workspace…
+        </p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.authPage}>

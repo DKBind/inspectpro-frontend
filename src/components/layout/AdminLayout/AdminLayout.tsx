@@ -10,7 +10,7 @@ import styles from './AdminLayout.module.css';
 
 const AdminLayout = () => {
   const { user, isAuthenticated, isFirstLogin } = useAuthStore();
-  const { accessModules, setAccessModules } = useModuleStore();
+  const { modules, accessModules, setAccessModules, setModules } = useModuleStore();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const hasFetchedRef = useRef(false);
@@ -19,10 +19,14 @@ const AdminLayout = () => {
   // useRef guard prevents React StrictMode from firing this twice on mount.
   useEffect(() => {
     if (!isAuthenticated || !user) return;
-    if (accessModules.length > 0) return;
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
-    moduleService.getMyAccess(user.id).then(setAccessModules).catch(() => {});
+    if (accessModules.length === 0) {
+      moduleService.getMyAccess(user.id).then(setAccessModules).catch(() => {});
+    }
+    if (modules.length === 0 && user.orgId) {
+      moduleService.getMyModules(user.orgId).then(setModules).catch(() => {});
+    }
   }, [isAuthenticated, user?.id]);
 
   const handleToggleSidebar = () => {

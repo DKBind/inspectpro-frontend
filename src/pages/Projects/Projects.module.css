@@ -18,7 +18,7 @@
 
 .subtitle {
   font-size: 13px;
-  color: #9CA3AF;
+  color: #4B5563;
   margin: 0;
 }
 
@@ -38,7 +38,7 @@
   border: 1px solid #E5E7EB;
   background: white;
   cursor: pointer;
-  color: #6B7280;
+  color: #263B4F;
   transition: all 0.15s;
 }
 
@@ -76,7 +76,7 @@
   align-items: center;
   justify-content: center;
   padding: 80px 24px;
-  color: #9CA3AF;
+  color: #4B5563;
 }
 
 .emptyIcon {
@@ -94,13 +94,13 @@
 .emptyTitle {
   font-size: 15px;
   font-weight: 600;
-  color: #6B7280;
+  color: #263B4F;
   margin: 0 0 6px;
 }
 
 .emptySubtitle {
   font-size: 13px;
-  color: #9CA3AF;
+  color: #4B5563;
   margin: 0;
 }
 
@@ -207,7 +207,7 @@
 
 .cardCompany {
   font-size: 11px;
-  color: #9CA3AF;
+  color: #4B5563;
   margin: 0;
   display: flex;
   align-items: center;
@@ -217,7 +217,7 @@
 /* Card Description */
 .cardDesc {
   font-size: 12px;
-  color: #6B7280;
+  color: #263B4F;
   line-height: 1.5;
   margin: 0;
   display: -webkit-box;
@@ -275,7 +275,7 @@
 .cardTeamLabel {
   font-size: 9.5px;
   font-weight: 700;
-  color: #9CA3AF;
+  color: #4B5563;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin: 0 0 2px;
@@ -302,7 +302,7 @@
 .teamRoleTag {
   font-size: 9px;
   font-weight: 700;
-  color: #6B7280;
+  color: #263B4F;
   background: #F3F4F6;
   border-radius: 4px;
   padding: 1px 4px;
@@ -339,7 +339,7 @@
 }
 
 .infoMeta {
-  color: #9CA3AF;
+  color: #4B5563;
   font-size: 11.5px;
 }
 
@@ -362,7 +362,7 @@
 
 .budgetLabel {
   font-size: 10px;
-  color: #9CA3AF;
+  color: #4B5563;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   font-weight: 600;
@@ -422,7 +422,7 @@
   border: 1px solid #E5E7EB;
   background: white;
   cursor: pointer;
-  color: #6B7280;
+  color: #263B4F;
   transition: all 0.15s;
 }
 
@@ -448,7 +448,7 @@
 
 .paginationInfo {
   font-size: 12px;
-  color: #9CA3AF;
+  color: #4B5563;
 }
 
 .paginationControls {
@@ -468,7 +468,7 @@
   background: white;
   cursor: pointer;
   font-size: 12px;
-  color: #6B7280;
+  color: #263B4F;
   transition: all 0.15s;
 }
 
@@ -592,7 +592,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: #9CA3AF;
+  color: #4B5563;
 }
 
 .viewGrid {
@@ -616,7 +616,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #9CA3AF;
+  color: #4B5563;
 }
 
 .viewFieldValue {
@@ -628,7 +628,7 @@
 
 .viewFieldValueMuted {
   font-size: 13px;
-  color: #9CA3AF;
+  color: #4B5563;
 }
 
 /* Financials highlight */
@@ -655,7 +655,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #6B7280;
+  color: #263B4F;
 }
 
 .viewFinAmount {
@@ -749,14 +749,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.65px;
-  color: #6B7280;
+  color: #263B4F;
 }
 
 /* ── Form Section Label ───────────────────────────────────────────────────── */
 .sectionLabel {
   font-size: 11px;
   font-weight: 700;
-  color: #9CA3AF;
+  color: #4B5563;
   text-transform: uppercase;
   letter-spacing: 0.6px;
   margin: 0 0 12px;
@@ -869,7 +869,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  color: #9CA3AF;
+  color: #4B5563;
   transition: background 0.15s, color 0.15s;
 }
 

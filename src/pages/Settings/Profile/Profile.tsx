@@ -150,7 +150,7 @@ const Profile = () => {
             </div>
             <div className={styles.avatarInfo}>
               <h3>{fullName || 'Admin User'}</h3>
-              <p>{profile?.email || user?.email}</p>
+              <p>{profile?.orgName || 'InspectPro Internal'}</p>
             </div>
           </div>
 

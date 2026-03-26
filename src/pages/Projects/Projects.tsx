@@ -172,7 +172,7 @@ const Projects = () => {
 
     if (isSuperAdmin) {
       // Super admin: load orgs list; clients/users loaded after org selection
-      organisationService.getOrganisations(0, 200).then(d => setOrganisations(d.content ?? [])).catch(() => {});
+      organisationService.getOrganisations(0, 200).then(d => setOrganisations(d.content ?? [])).catch(() => { });
     } else {
       // Regular user: load clients + users for their own org
       customerService.listClients(0, 200).then(d => setClients(d.content ?? [])).catch(() => setClients([]));
@@ -194,7 +194,7 @@ const Projects = () => {
         load('inspector', setInspectorUsers);
         load('contractor', setContractorUsers);
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, [user?.id]);
 
   // When super admin picks an org → reload clients and team dropdowns for that org
@@ -235,8 +235,8 @@ const Projects = () => {
     label: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
     meta: u.email || undefined,
   }));
-  const managerOptions  = toUserOptions(managerUsers);
-  const qaOptions       = toUserOptions(qaUsers);
+  const managerOptions = toUserOptions(managerUsers);
+  const qaOptions = toUserOptions(qaUsers);
   const inspectorOptions = toUserOptions(inspectorUsers);
   const contractorOptions = toUserOptions(contractorUsers);
 
@@ -268,7 +268,7 @@ const Projects = () => {
 
     // Build role-based assignments for QA / Inspector / Contractor
     const assignments: ProjectAssignmentInput[] = [];
-    if (data.qaId && roleMap['qa'])         assignments.push({ userId: data.qaId, roleId: roleMap['qa'] });
+    if (data.qaId && roleMap['qa']) assignments.push({ userId: data.qaId, roleId: roleMap['qa'] });
     if (data.inspectorId && roleMap['inspector']) assignments.push({ userId: data.inspectorId, roleId: roleMap['inspector'] });
     if (data.contractorId && roleMap['contractor']) assignments.push({ userId: data.contractorId, roleId: roleMap['contractor'] });
 
@@ -341,7 +341,7 @@ const Projects = () => {
       {/* Page Header */}
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Projects</h1>
+          {/* <h1 className={styles.title}>Projects</h1> */}
           {/* <p className={styles.subtitle}>{totalItems} project{totalItems !== 1 ? 's' : ''}</p> */}
         </div>
         <div className={styles.headerActions}>
@@ -427,7 +427,7 @@ const Projects = () => {
                             <span>{a.userName}</span>
                           </div>
                         ))}
-                        {!p.managerName && (!p.assignments || p.assignments.filter(a => ['qa','inspector'].includes(a.roleName?.toLowerCase() ?? '')).length === 0) && (
+                        {!p.managerName && (!p.assignments || p.assignments.filter(a => ['qa', 'inspector'].includes(a.roleName?.toLowerCase() ?? '')).length === 0) && (
                           <span className={styles.teamEmpty}>No team assigned</span>
                         )}
                       </div>
@@ -656,163 +656,163 @@ const Projects = () => {
                     <span className={styles.formSectionTitle}>Property Details</span>
                   </div>
                   <div className="space-y-4">
-                  <Fld label="Property Type" required error={errors.propertyTypeId?.message}>
-                    <Controller
-                      name="propertyTypeId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={propertyTypeOptions}
-                          value={field.value || null}
-                          onChange={(val) => {
-                            field.onChange(val ?? '');
-                            setSpecValues({});
-                          }}
-                          placeholder="Select property type…"
-                          searchable
-                          searchPlaceholder="Search types…"
-                          error={errors.propertyTypeId?.message}
-                        />
-                      )}
-                    />
-                  </Fld>
-
-                  {/* Unified spec + custom fields block */}
-                  {selectedPropertyTypeId && (
-                    <div className={styles.specsBlock}>
-                      {/* Gradient header */}
-                      <div className={styles.specsHeader}>
-                        <div className={styles.specsHeaderIcon}>
-                          <ClipboardList size={14} />
-                        </div>
-                        <div className={styles.specsHeaderText}>
-                          <p className={styles.specsHeaderTitle}>{selectedPropertyType?.name} Details</p>
-                          <p className={styles.specsHeaderSub}>
-                            {specFields.length + customFields.length} question{specFields.length + customFields.length !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className={styles.specsBody}>
-                        {/* Standard template fields */}
-                        {specFields.map(f => {
-                          const opts = f.type === 'boolean' ? ['Yes', 'No'] : (f.options ?? []);
-                          const isSelect = f.type === 'dropdown' || f.type === 'boolean';
-                          return (
-                            <Fld key={f.label} label={f.label} required={f.required}>
-                              {isSelect ? (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button
-                                      type="button"
-                                      className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none data-[state=open]:border-[#33AE95] data-[state=open]:ring-1 data-[state=open]:ring-[#33AE95]/20 ${inputCls(false)}`}
-                                    >
-                                      <span className={specValues[f.label] ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
-                                        {specValues[f.label] || 'Select…'}
-                                      </span>
-                                      <ChevronDown size={14} className="text-[#9CA3AF] shrink-0" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent
-                                    align="start"
-                                    style={{ minWidth: 'var(--radix-dropdown-menu-trigger-width)' }}
-                                    className="bg-white border border-[#E5E7EB] shadow-lg z-[200]"
-                                  >
-                                    {opts.map(o => (
-                                      <DropdownMenuItem
-                                        key={o}
-                                        onSelect={() => setSpecValues(prev => ({ ...prev, [f.label]: o }))}
-                                        className={specValues[f.label] === o ? 'bg-[#F0FDF9] text-[#33AE95] font-medium' : ''}
-                                      >
-                                        {o}
-                                      </DropdownMenuItem>
-                                    ))}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              ) : (
-                                <Input
-                                  type={f.type === 'number' ? 'number' : 'text'}
-                                  placeholder={`Enter ${f.label.toLowerCase()}…`}
-                                  value={specValues[f.label] ?? ''}
-                                  onChange={e => setSpecValues(prev => ({ ...prev, [f.label]: e.target.value }))}
-                                  className={inputCls(false)}
-                                />
-                              )}
-                            </Fld>
-                          );
-                        })}
-
-                        {/* Separator before custom fields */}
-                        {customFields.length > 0 && (
-                          <div style={{ borderTop: '1px dashed #D1FAE5', margin: '2px 0' }} />
+                    <Fld label="Property Type" required error={errors.propertyTypeId?.message}>
+                      <Controller
+                        name="propertyTypeId"
+                        control={control}
+                        render={({ field }) => (
+                          <DropdownSelect
+                            options={propertyTypeOptions}
+                            value={field.value || null}
+                            onChange={(val) => {
+                              field.onChange(val ?? '');
+                              setSpecValues({});
+                            }}
+                            placeholder="Select property type…"
+                            searchable
+                            searchPlaceholder="Search types…"
+                            error={errors.propertyTypeId?.message}
+                          />
                         )}
+                      />
+                    </Fld>
 
-                        {/* Custom fields */}
-                        {customFields.map((cf, idx) => (
-                          <div key={idx} className={styles.customFieldCard}>
-                            <div className={styles.customFieldHeader}>
-                              {editingLabelIdx === idx ? (
-                                <input
-                                  autoFocus
-                                  placeholder="Type question label…"
-                                  value={cf.label}
-                                  onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, label: e.target.value } : f))}
-                                  onBlur={() => setEditingLabelIdx(null)}
-                                  onKeyDown={e => e.key === 'Enter' && setEditingLabelIdx(null)}
-                                  className={styles.customFieldLabelInput}
-                                />
-                              ) : (
-                                <span className={styles.customFieldLabelText}>
-                                  {cf.label || <span style={{ color: '#9CA3AF' }}>Unnamed question</span>}
-                                </span>
-                              )}
-                              <div className={styles.customFieldActions}>
-                                <button
-                                  type="button"
-                                  title="Edit label"
-                                  onClick={() => setEditingLabelIdx(editingLabelIdx === idx ? null : idx)}
-                                  className={styles.customFieldActionBtn}
-                                >
-                                  <Pencil size={11} />
-                                </button>
-                                <button
-                                  type="button"
-                                  title="Remove"
-                                  onClick={() => {
-                                    setCustomFields(prev => prev.filter((_, i) => i !== idx));
-                                    if (editingLabelIdx === idx) setEditingLabelIdx(null);
-                                  }}
-                                  className={`${styles.customFieldActionBtn} ${styles.danger}`}
-                                >
-                                  <Trash2 size={11} />
-                                </button>
-                              </div>
-                            </div>
-                            <Input
-                              placeholder="Enter value…"
-                              value={cf.value}
-                              onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, value: e.target.value } : f))}
-                              className={inputCls(false)}
-                            />
+                    {/* Unified spec + custom fields block */}
+                    {selectedPropertyTypeId && (
+                      <div className={styles.specsBlock}>
+                        {/* Gradient header */}
+                        <div className={styles.specsHeader}>
+                          <div className={styles.specsHeaderIcon}>
+                            <ClipboardList size={14} />
                           </div>
-                        ))}
+                          <div className={styles.specsHeaderText}>
+                            <p className={styles.specsHeaderTitle}>{selectedPropertyType?.name} Details</p>
+                            <p className={styles.specsHeaderSub}>
+                              {specFields.length + customFields.length} question{specFields.length + customFields.length !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </div>
 
-                        {/* Add Custom Detail button */}
-                        <button
-                          type="button"
-                          className={styles.addCustomBtn}
-                          onClick={() => {
-                            const newIdx = customFields.length;
-                            setCustomFields(prev => [...prev, { label: '', value: '' }]);
-                            setEditingLabelIdx(newIdx);
-                          }}
-                        >
-                          <PlusCircle size={14} />
-                          Add Custom Detail
-                        </button>
+                        <div className={styles.specsBody}>
+                          {/* Standard template fields */}
+                          {specFields.map(f => {
+                            const opts = f.type === 'boolean' ? ['Yes', 'No'] : (f.options ?? []);
+                            const isSelect = f.type === 'dropdown' || f.type === 'boolean';
+                            return (
+                              <Fld key={f.label} label={f.label} required={f.required}>
+                                {isSelect ? (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none data-[state=open]:border-[#33AE95] data-[state=open]:ring-1 data-[state=open]:ring-[#33AE95]/20 ${inputCls(false)}`}
+                                      >
+                                        <span className={specValues[f.label] ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
+                                          {specValues[f.label] || 'Select…'}
+                                        </span>
+                                        <ChevronDown size={14} className="text-[#9CA3AF] shrink-0" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="start"
+                                      style={{ minWidth: 'var(--radix-dropdown-menu-trigger-width)' }}
+                                      className="bg-white border border-[#E5E7EB] shadow-lg z-[200]"
+                                    >
+                                      {opts.map(o => (
+                                        <DropdownMenuItem
+                                          key={o}
+                                          onSelect={() => setSpecValues(prev => ({ ...prev, [f.label]: o }))}
+                                          className={specValues[f.label] === o ? 'bg-[#F0FDF9] text-[#33AE95] font-medium' : ''}
+                                        >
+                                          {o}
+                                        </DropdownMenuItem>
+                                      ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                ) : (
+                                  <Input
+                                    type={f.type === 'number' ? 'number' : 'text'}
+                                    placeholder={`Enter ${f.label.toLowerCase()}…`}
+                                    value={specValues[f.label] ?? ''}
+                                    onChange={e => setSpecValues(prev => ({ ...prev, [f.label]: e.target.value }))}
+                                    className={inputCls(false)}
+                                  />
+                                )}
+                              </Fld>
+                            );
+                          })}
+
+                          {/* Separator before custom fields */}
+                          {customFields.length > 0 && (
+                            <div style={{ borderTop: '1px dashed #D1FAE5', margin: '2px 0' }} />
+                          )}
+
+                          {/* Custom fields */}
+                          {customFields.map((cf, idx) => (
+                            <div key={idx} className={styles.customFieldCard}>
+                              <div className={styles.customFieldHeader}>
+                                {editingLabelIdx === idx ? (
+                                  <input
+                                    autoFocus
+                                    placeholder="Type question label…"
+                                    value={cf.label}
+                                    onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, label: e.target.value } : f))}
+                                    onBlur={() => setEditingLabelIdx(null)}
+                                    onKeyDown={e => e.key === 'Enter' && setEditingLabelIdx(null)}
+                                    className={styles.customFieldLabelInput}
+                                  />
+                                ) : (
+                                  <span className={styles.customFieldLabelText}>
+                                    {cf.label || <span style={{ color: '#9CA3AF' }}>Unnamed question</span>}
+                                  </span>
+                                )}
+                                <div className={styles.customFieldActions}>
+                                  <button
+                                    type="button"
+                                    title="Edit label"
+                                    onClick={() => setEditingLabelIdx(editingLabelIdx === idx ? null : idx)}
+                                    className={styles.customFieldActionBtn}
+                                  >
+                                    <Pencil size={11} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    title="Remove"
+                                    onClick={() => {
+                                      setCustomFields(prev => prev.filter((_, i) => i !== idx));
+                                      if (editingLabelIdx === idx) setEditingLabelIdx(null);
+                                    }}
+                                    className={`${styles.customFieldActionBtn} ${styles.danger}`}
+                                  >
+                                    <Trash2 size={11} />
+                                  </button>
+                                </div>
+                              </div>
+                              <Input
+                                placeholder="Enter value…"
+                                value={cf.value}
+                                onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, value: e.target.value } : f))}
+                                className={inputCls(false)}
+                              />
+                            </div>
+                          ))}
+
+                          {/* Add Custom Detail button */}
+                          <button
+                            type="button"
+                            className={styles.addCustomBtn}
+                            onClick={() => {
+                              const newIdx = customFields.length;
+                              setCustomFields(prev => [...prev, { label: '', value: '' }]);
+                              setEditingLabelIdx(newIdx);
+                            }}
+                          >
+                            <PlusCircle size={14} />
+                            Add Custom Detail
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                   </div>{/* closes space-y-4 */}
                 </div>{/* closes formSection (Property Details) */}
 

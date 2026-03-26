@@ -2,6 +2,52 @@
 
 export type TemplateScope = 'GLOBAL' | 'ORGANISATION' | 'PROJECT' | 'SCRATCH';
 
+// ─── Template Builder Types ───────────────────────────────────────────────────
+
+export type BuilderResponseType = 'DROPDOWN' | 'RADIO' | 'TEXT' | 'CHECKBOX' | 'NUMBER' | 'PHOTO' | 'PASS_FAIL';
+export type BuilderPanelType = 'SELECTION' | 'DAMAGE';
+
+export interface BuilderConditionalRule {
+  itemId: string;
+  operator: 'EQUALS' | 'NOT_EQUALS';
+  value: string;
+}
+
+export interface BuilderItem {
+  id: string;
+  label: string;
+  responseType: BuilderResponseType;
+  options: string[];
+  commonComments: string[];
+  required: boolean;
+  conditionalLogic: BuilderConditionalRule | null;
+}
+
+export interface BuilderPanel {
+  id: string;
+  name: string;
+  panelType: BuilderPanelType;
+  items: BuilderItem[];
+}
+
+export interface BuilderTab {
+  id: string;
+  name: string;
+  panels: BuilderPanel[];
+}
+
+export interface BuilderSubSection {
+  id: string;
+  name: string;
+  tabs: BuilderTab[];
+}
+
+export interface BuilderSection {
+  id: string;
+  name: string;
+  subSections: BuilderSubSection[];
+}
+
 // ─── HIP Hierarchy ───────────────────────────────────────────────────────────
 
 export interface ItemInfo {
@@ -40,6 +86,7 @@ export interface TemplateResponse {
   fields: FieldInfo[];             // legacy
   fieldCount: number;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface TemplateRequest {
@@ -49,15 +96,8 @@ export interface TemplateRequest {
   isGlobal?: boolean;              // legacy
   isLocked?: boolean;
   projectId?: string;
-  sections?: {
-    sectionName: string;
-    items: {
-      label: string;
-      responseType?: string;
-      options?: string[];
-      commonComments?: string[];
-    }[];
-  }[];
+  // Accepts both legacy flat format and new builder nested format
+  sections?: any[];
   fields?: {                       // legacy
     fieldTitle: string;
     fieldDescription?: string;
