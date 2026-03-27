@@ -105,6 +105,33 @@ export interface TemplateRequest {
   }[];
 }
 
+// ─── Inspection List (Inspector Dashboard) ───────────────────────────────────
+
+export interface InspectionListItem {
+  id: string;
+  status: 'DRAFT' | 'COMPLETED' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+  createdAt?: string;
+
+  projectId: string;
+  projectName: string;
+  projectStatus?: string;
+  address?: string;
+
+  clientId?: string;
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+
+  organisationId?: string;
+  organisationName?: string;
+
+  templateId?: string;
+  templateTitle?: string;
+
+  totalResults: number;
+  answeredResults: number;
+}
+
 // ─── Snapshot (Clone & Initialise) ───────────────────────────────────────────
 
 export interface SnapshotResponse {
@@ -121,6 +148,7 @@ export interface InspectionResultResponse {
   id: number;
   sectionName: string;
   itemLabel: string;
+  logicType?: 'SELECTION' | 'DAMAGE'; // from TemplateBuilder panelType; null for legacy items
   responseValue?: HipStatus;
   comments?: string;
   photoUrl?: string;
@@ -136,7 +164,7 @@ export interface InspectionWithResultsResponse {
   projectName?: string;
   templateId: string;
   templateTitle?: string;
-  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
   notes?: string;
   results: InspectionResultResponse[];
   createdAt?: string;

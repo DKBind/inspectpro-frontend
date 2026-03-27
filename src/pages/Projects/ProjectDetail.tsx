@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, FolderOpen, Users, Building2, MapPin,
   Calendar, IndianRupee, ClipboardList, Loader2, AlertTriangle, Pencil,
+  Globe, CheckCircle2, Search, ChevronDown, X, Layers, RefreshCw,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { projectService } from '@/services/projectService';
+import { checklistService } from '@/services/checklistService';
 import type { ProjectResponse } from '@/services/models/project';
+import type { TemplateResponse } from '@/services/models/checklist';
 import styles from './ProjectDetail.module.css';
 
 const PROJECT_STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -47,6 +51,18 @@ const ProjectDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Template assignment state ──────────────────────────────────────────────
+  const [pickerTemplates, setPickerTemplates] = useState<TemplateResponse[]>([]);
+  const [projectTemplate, setProjectTemplate] = useState<TemplateResponse | null>(null);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [showReassign, setShowReassign] = useState(false);
+  const [tplSearch, setTplSearch] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [selectedTpl, setSelectedTpl] = useState<TemplateResponse | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!id) return;
     setLoading(true);
@@ -55,6 +71,56 @@ const ProjectDetail = () => {
       .catch(e => setError(e.message || 'Failed to load project'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    setTemplatesLoading(true);
+    Promise.all([
+      checklistService.getPickerTemplates(),
+      checklistService.listProjectTemplates(id),
+    ]).then(([picker, projTpls]) => {
+      setPickerTemplates(picker.filter(t => t.id !== null && t.scope !== 'SCRATCH'));
+      if (projTpls.length > 0) setProjectTemplate(projTpls[0]);
+    }).catch(() => {}).finally(() => setTemplatesLoading(false));
+  }, [id]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
+        setDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filteredTpls = tplSearch.trim()
+    ? pickerTemplates.filter(t => t.title.toLowerCase().includes(tplSearch.toLowerCase()))
+    : pickerTemplates;
+
+  const totalItems = (selectedTpl?.sections ?? []).reduce((acc, s) => acc + (s.items?.length ?? 0), 0);
+
+  const handleAssign = async () => {
+    if (!selectedTpl?.id || !id) return;
+    setAssigning(true);
+    try {
+      const snap = await checklistService.snapshotTemplate(selectedTpl.id, id);
+      toast.success(`Template assigned — ${snap.totalRows} inspection items created`);
+      setShowConfirm(false);
+      navigate(`/inspections/${snap.inspectionId}`);
+    } catch (e: unknown) {
+      toast.error((e as Error).message || 'Assignment failed');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const openPicker = () => {
+    setSelectedTpl(null);
+    setTplSearch('');
+    setDropdownOpen(false);
+    setShowReassign(true);
+  };
 
   if (loading) {
     return (
@@ -229,7 +295,149 @@ const ProjectDetail = () => {
           </Section>
         )}
 
+        {/* ── Inspection Template ─────────────────────────────────────────── */}
+        <Section icon={<ClipboardList size={14} color="#33AE95" />} title="Inspection Template">
+          {templatesLoading ? (
+            <div className={styles.tplLoading}>
+              <Loader2 size={16} className={styles.tplSpinner} /> Loading templates…
+            </div>
+          ) : projectTemplate && !showReassign ? (
+            /* ── Already assigned ── */
+            <div className={styles.tplAssigned}>
+              <div className={styles.tplAssignedIcon}>
+                <CheckCircle2 size={22} color="#33AE95" />
+              </div>
+              <div className={styles.tplAssignedInfo}>
+                <p className={styles.tplAssignedTitle}>{projectTemplate.title}</p>
+                <p className={styles.tplAssignedMeta}>
+                  <Layers size={11} />{projectTemplate.sectionCount} section{projectTemplate.sectionCount !== 1 ? 's' : ''}
+                  &nbsp;·&nbsp;PROJECT copy
+                  {projectTemplate.organisationName && <>&nbsp;·&nbsp;{projectTemplate.organisationName}</>}
+                </p>
+              </div>
+              <button className={styles.tplReassignBtn} onClick={openPicker}>
+                <RefreshCw size={12} /> Re-assign
+              </button>
+            </div>
+          ) : (
+            /* ── Picker ── */
+            <div className={styles.tplPickerWrap}>
+              {projectTemplate && showReassign && (
+                <div className={styles.tplReassignWarning}>
+                  <AlertTriangle size={13} color="#D97706" />
+                  A template is already assigned. Re-assigning will create a new copy.
+                  <button className={styles.tplCancelReassign} onClick={() => setShowReassign(false)}>
+                    <X size={12} /> Cancel
+                  </button>
+                </div>
+              )}
+
+              <p className={styles.tplPickerLabel}>Select a master template to assign to this project:</p>
+
+              {/* Searchable dropdown */}
+              <div className={styles.tplDropdownWrap} ref={dropdownRef}>
+                <div className={styles.tplDropdownTrigger} onClick={() => setDropdownOpen(o => !o)}>
+                  <Search size={13} className={styles.tplSearchIcon} />
+                  <input
+                    className={styles.tplSearchInput}
+                    placeholder="Search templates…"
+                    value={tplSearch}
+                    onChange={e => { setTplSearch(e.target.value); setDropdownOpen(true); setSelectedTpl(null); }}
+                    onFocus={() => setDropdownOpen(true)}
+                  />
+                  <ChevronDown size={13} className={`${styles.tplChevron} ${dropdownOpen ? styles.tplChevronOpen : ''}`} />
+                </div>
+                {dropdownOpen && (
+                  <div className={styles.tplDropdown}>
+                    {filteredTpls.length === 0 ? (
+                      <div className={styles.tplDropdownEmpty}>No templates found</div>
+                    ) : filteredTpls.map(t => (
+                      <button key={t.id} className={styles.tplDropdownItem} onClick={() => {
+                        setSelectedTpl(t); setTplSearch(t.title); setDropdownOpen(false);
+                      }}>
+                        <Globe size={12} style={{ flexShrink: 0, color: '#9CA3AF' }} />
+                        <span className={styles.tplDropdownName}>{t.title}</span>
+                        <span className={styles.tplDropdownScope}>{t.scope}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Preview card — shown after selection */}
+              {selectedTpl && (
+                <div className={styles.tplPreview}>
+                  <div className={styles.tplPreviewHeader}>
+                    <div className={styles.tplPreviewIcon}><Globe size={16} color="#33AE95" /></div>
+                    <div>
+                      <p className={styles.tplPreviewTitle}>{selectedTpl.title}</p>
+                      {selectedTpl.description && (
+                        <p className={styles.tplPreviewDesc}>{selectedTpl.description}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className={styles.tplPreviewMeta}>
+                    <span className={styles.tplPreviewStat}>
+                      <Layers size={12} />{selectedTpl.sectionCount} sections
+                    </span>
+                    <span className={styles.tplPreviewStat}>
+                      <ClipboardList size={12} />{totalItems} items
+                    </span>
+                    <span className={styles.tplPreviewStat}>
+                      <Globe size={12} />{selectedTpl.scope}
+                    </span>
+                  </div>
+                  <button className={styles.tplAssignBtn} onClick={() => setShowConfirm(true)}>
+                    Assign to Project
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </Section>
+
       </div>
+
+      {/* ── Confirmation Modal ─────────────────────────────────────────────── */}
+      {showConfirm && selectedTpl && (
+        <div className={styles.confirmBackdrop} onClick={() => !assigning && setShowConfirm(false)}>
+          <div className={styles.confirmModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.confirmHeader}>
+              <div className={styles.confirmIcon}><ClipboardList size={20} color="#33AE95" /></div>
+              <div>
+                <h3 className={styles.confirmTitle}>Assign Template?</h3>
+                <p className={styles.confirmSub}>This action will create a unique project copy</p>
+              </div>
+            </div>
+            <p className={styles.confirmBody}>
+              Assigning <strong>"{selectedTpl.title}"</strong> will create a unique copy for{' '}
+              <strong>{project.name}</strong>. Any custom items added later will only affect this project.
+              The master template will remain unchanged.
+            </p>
+            <div className={styles.confirmStats}>
+              <span><Layers size={12} />{selectedTpl.sectionCount} sections</span>
+              <span><ClipboardList size={12} />{totalItems} items</span>
+              <span><Globe size={12} />{selectedTpl.scope} template</span>
+            </div>
+            <div className={styles.confirmFooter}>
+              <button
+                className={styles.confirmCancelBtn}
+                onClick={() => setShowConfirm(false)}
+                disabled={assigning}
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.confirmProceedBtn}
+                onClick={handleAssign}
+                disabled={assigning}
+              >
+                {assigning ? <><Loader2 size={13} className={styles.tplSpinner} /> Assigning…</> : 'Proceed'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

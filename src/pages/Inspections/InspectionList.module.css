@@ -1,0 +1,148 @@
+/* ─── Page ───────────────────────────────────────────────────────────────────── */
+.page { display: flex; flex-direction: column; gap: 0; }
+
+/* ─── Loading ─────────────────────────────────────────────────────────────────── */
+.loadingWrap {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 100px 24px;
+  gap: 14px; color: #6B7280; font-size: 14px;
+}
+.spinner { color: #33AE95; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Page Header ─────────────────────────────────────────────────────────────── */
+.pageHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.pageHeaderLeft { display: flex; align-items: center; gap: 14px; }
+.pageIcon {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  background: linear-gradient(135deg, #33AE95, #2a9a84);
+  display: flex; align-items: center; justify-content: center; color: white;
+  box-shadow: 0 4px 12px rgba(51,174,149,0.3);
+}
+.pageTitle { font-size: 22px; font-weight: 800; color: #263B4F; margin: 0 0 2px; }
+.pageSubtitle { font-size: 13px; color: #6B7280; margin: 0; }
+
+/* ─── Filter Tabs ─────────────────────────────────────────────────────────────── */
+.filterRow {
+  display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.filterBtn {
+  padding: 7px 16px; border-radius: 20px;
+  border: 1.5px solid #E5E7EB; background: white;
+  font-size: 12.5px; font-weight: 600; color: #6B7280;
+  cursor: pointer; transition: all 0.15s;
+}
+.filterBtn:hover { border-color: #33AE95; color: #33AE95; }
+.filterBtnActive {
+  background: #33AE95; border-color: #33AE95; color: white;
+  box-shadow: 0 2px 8px rgba(51,174,149,0.3);
+}
+
+/* ─── Empty State ─────────────────────────────────────────────────────────────── */
+.emptyState {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 80px 24px; text-align: center;
+}
+.emptyTitle { font-size: 16px; font-weight: 700; color: #374151; margin: 0 0 6px; }
+.emptyDesc { font-size: 13px; color: #9CA3AF; max-width: 380px; margin: 0; }
+
+/* ─── Card Grid ───────────────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 18px;
+}
+
+/* ─── Card ────────────────────────────────────────────────────────────────────── */
+.card {
+  background: white; border: 1px solid #E5E7EB; border-radius: 16px;
+  padding: 20px; display: flex; flex-direction: column; gap: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: box-shadow 0.2s, border-color 0.2s;
+}
+.card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.09); border-color: #D1D5DB; }
+.cardComplete { border-left: 3px solid #22c55e; }
+
+/* ─── Card Top ────────────────────────────────────────────────────────────────── */
+.cardTop {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.statusBadge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+}
+.statusPending {
+  background: rgba(245,158,11,0.10); color: #b45309;
+  border: 1px solid rgba(245,158,11,0.22);
+}
+.statusComplete {
+  background: rgba(34,197,94,0.10); color: #16a34a;
+  border: 1px solid rgba(34,197,94,0.22);
+}
+.cardDate { font-size: 11.5px; color: #9CA3AF; }
+
+/* ─── Project Name ────────────────────────────────────────────────────────────── */
+.projectName {
+  font-size: 17px; font-weight: 800; color: #263B4F;
+  margin-bottom: 6px; line-height: 1.3;
+}
+
+/* ─── Address ─────────────────────────────────────────────────────────────────── */
+.addressRow {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: #6B7280; margin-bottom: 14px;
+}
+
+/* ─── Divider ─────────────────────────────────────────────────────────────────── */
+.divider { height: 1px; background: #F3F4F6; margin: 12px 0; }
+
+/* ─── Meta Grid ───────────────────────────────────────────────────────────────── */
+.metaGrid { display: flex; flex-direction: column; gap: 10px; }
+
+.metaRow {
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.metaIcon { color: #9CA3AF; flex-shrink: 0; margin-top: 2px; }
+.metaRow > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.metaLabel { font-size: 10.5px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; }
+.metaValue { font-size: 13px; font-weight: 600; color: #263B4F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.metaSecondary { font-size: 11.5px; color: #6B7280; }
+
+/* ─── Progress ────────────────────────────────────────────────────────────────── */
+.progressWrap { display: flex; flex-direction: column; gap: 6px; }
+.progressInfo { display: flex; align-items: center; justify-content: space-between; }
+.progressLabel { font-size: 12px; color: #6B7280; }
+.progressPct { font-size: 12px; font-weight: 700; color: #33AE95; }
+.progressBar {
+  height: 6px; background: #F3F4F6; border-radius: 3px; overflow: hidden;
+}
+.progressFill {
+  height: 100%; border-radius: 3px; background: #E5E7EB; transition: width 0.4s ease;
+}
+
+/* ─── Card Footer ─────────────────────────────────────────────────────────────── */
+.cardFooter { margin-top: 16px; }
+
+.startBtn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 12px 20px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, #33AE95, #2a9a84);
+  color: white; font-size: 13.5px; font-weight: 700;
+  box-shadow: 0 3px 10px rgba(51,174,149,0.35);
+  cursor: pointer; transition: all 0.15s;
+}
+.startBtn:hover { background: linear-gradient(135deg, #2a9a84, #24877A); box-shadow: 0 5px 14px rgba(51,174,149,0.45); transform: translateY(-1px); }
+.startBtn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.viewBtn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 11px 20px; border-radius: 12px;
+  border: 1.5px solid #E5E7EB; background: white;
+  color: #263B4F; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.viewBtn:hover { background: #F9FAFB; border-color: #D1D5DB; }

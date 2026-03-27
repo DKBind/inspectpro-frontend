@@ -22,6 +22,7 @@ import ProjectCreate from './pages/Projects/ProjectCreate';
 import ProjectEdit from './pages/Projects/ProjectEdit';
 import Checklists from './pages/Checklists/Checklists';
 import TemplateBuilder from './pages/Templates/TemplateBuilder';
+import InspectionList from './pages/Inspections/InspectionList';
 import InspectionExecution from './pages/Inspections/InspectionExecution';
 import DefectSummary from './pages/Inspections/DefectSummary';
 import UsersRolesPage from './pages/UsersRoles/UsersRolesPage';
@@ -58,7 +59,7 @@ function App() {
             <Route path={ROUTES.PROJECT_CREATE} element={<ProjectCreate />} />
             <Route path={ROUTES.PROJECT_DETAIL} element={<ProjectDetail />} />
             <Route path={ROUTES.PROJECT_EDIT} element={<ProjectEdit />} />
-            <Route path={ROUTES.INSPECTIONS} element={<Dashboard />} />
+            <Route path={ROUTES.INSPECTIONS} element={<InspectionList />} />
             <Route path={ROUTES.INSPECTION_EXECUTE} element={<InspectionExecution />} />
             <Route path={ROUTES.CHECKLISTS} element={<Checklists />} />
             <Route path={ROUTES.TEMPLATE_BUILDER} element={<TemplateBuilder />} />

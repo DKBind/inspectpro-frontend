@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,9 +8,12 @@ import {
   ArrowLeft, FolderOpen, ClipboardList, MapPin, Calendar,
   IndianRupee, Loader2, Users, Building2, Navigation,
   Banknote, PlusCircle, Pencil, Trash2, ChevronDown,
+  Globe, Search, Layers, X,
 } from 'lucide-react';
 
 import { projectService } from '@/services/projectService';
+import { checklistService } from '@/services/checklistService';
+import type { TemplateResponse } from '@/services/models/checklist';
 import { customerService } from '@/services/customerService';
 import { userService } from '@/services/userService';
 import { organisationService } from '@/services/organisationService';
@@ -102,6 +105,13 @@ const ProjectCreate = () => {
   const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // ── Template picker state ────────────────────────────────────────────────
+  const [pickerTemplates, setPickerTemplates] = useState<TemplateResponse[]>([]);
+  const [selectedTpl, setSelectedTpl] = useState<TemplateResponse | null>(null);
+  const [tplSearch, setTplSearch] = useState('');
+  const [tplDropdownOpen, setTplDropdownOpen] = useState(false);
+  const tplDropdownRef = useRef<HTMLDivElement>(null);
+
   const {
     register, handleSubmit, watch, setValue, control,
     formState: { errors },
@@ -118,9 +128,22 @@ const ProjectCreate = () => {
   const specFields: SpecField[] = parseSpecFields(selectedPropertyType?.specTemplate);
 
 
+  // ── Close template dropdown on outside click ────────────────────────────
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (tplDropdownRef.current && !tplDropdownRef.current.contains(e.target as Node))
+        setTplDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   // ── Fetch on mount ──────────────────────────────────────────────────────
   useEffect(() => {
     propertyTypeService.listPropertyTypes().then(setPropertyTypes).catch(() => { });
+    checklistService.getPickerTemplates()
+      .then(tpls => setPickerTemplates(tpls.filter(t => t.id !== null && t.scope !== 'SCRATCH')))
+      .catch(() => { });
 
     // Load top-level orgs for super admin org/franchise picker
     if (isSuperAdmin) {
@@ -230,6 +253,10 @@ const ProjectCreate = () => {
   }));
   const topLevelOrgOptions = topLevelOrgs.map(o => ({ value: o.uuid, label: o.name }));
   const franchiseOptions = franchises.map(o => ({ value: o.uuid, label: o.name }));
+  const filteredTpls = tplSearch.trim()
+    ? pickerTemplates.filter(t => t.title.toLowerCase().includes(tplSearch.toLowerCase()))
+    : pickerTemplates;
+  const tplTotalItems = (selectedTpl?.sections ?? []).reduce((s, sec) => s + (sec.items?.length ?? 0), 0);
 
   // ── Submit ───────────────────────────────────────────────────────────────
   const onSubmit = async (data: FormValues) => {
@@ -273,8 +300,20 @@ const ProjectCreate = () => {
 
     try {
       const created = await projectService.createProject(payload);
-      toast.success('Project created!');
-      navigate(`/projects/${created.id}`);
+      if (selectedTpl?.id) {
+        try {
+          const snap = await checklistService.snapshotTemplate(selectedTpl.id, created.id!);
+          toast.success(`Project created & template assigned — ${snap.totalRows} inspection items ready`);
+          navigate(`/projects/${created.id}`);
+        } catch {
+          toast.success('Project created!');
+          toast.error('Template assignment failed — assign it from the project page');
+          navigate(`/projects/${created.id}`);
+        }
+      } else {
+        toast.success('Project created!');
+        navigate(`/projects/${created.id}`);
+      }
     } catch (e: any) {
       toast.error(e.message || 'Failed to create project');
     } finally {
@@ -820,6 +859,84 @@ const ProjectCreate = () => {
               </div>
             </div>
 
+            {/* Inspection Template (optional) */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionHead}>
+                <span className={styles.sectionIcon}><ClipboardList size={13} color="#33AE95" /></span>
+                <span className={styles.sectionTitle}>
+                  Inspection Template
+                  <span style={{ fontWeight: 400, color: '#9CA3AF', marginLeft: 8, textTransform: 'none', letterSpacing: 0 }}>
+                    · optional
+                  </span>
+                </span>
+              </div>
+              <div className={styles.sectionBody}>
+                <p className={styles.tplPickerHint}>
+                  Select a master template to automatically assign it when the project is created.
+                  A unique project copy will be created — the master stays unchanged.
+                </p>
+
+                {/* Searchable dropdown */}
+                <div className={styles.tplDropdownWrap} ref={tplDropdownRef}>
+                  <div className={styles.tplDropdownTrigger} onClick={() => setTplDropdownOpen(o => !o)}>
+                    <Search size={13} className={styles.tplSearchIcon} />
+                    <input
+                      className={styles.tplSearchInput}
+                      placeholder={selectedTpl ? selectedTpl.title : 'Search templates…'}
+                      value={tplSearch}
+                      onChange={e => { setTplSearch(e.target.value); setTplDropdownOpen(true); setSelectedTpl(null); }}
+                      onFocus={() => setTplDropdownOpen(true)}
+                    />
+                    {selectedTpl ? (
+                      <button
+                        type="button"
+                        className={styles.tplClearBtn}
+                        onClick={e => { e.stopPropagation(); setSelectedTpl(null); setTplSearch(''); }}
+                        title="Clear selection"
+                      >
+                        <X size={12} />
+                      </button>
+                    ) : (
+                      <ChevronDown size={13} className={`${styles.tplChevron} ${tplDropdownOpen ? styles.tplChevronOpen : ''}`} />
+                    )}
+                  </div>
+                  {tplDropdownOpen && (
+                    <div className={styles.tplDropdown}>
+                      {filteredTpls.length === 0 ? (
+                        <div className={styles.tplDropdownEmpty}>No templates found</div>
+                      ) : filteredTpls.map(t => (
+                        <button key={t.id} type="button" className={styles.tplDropdownItem} onClick={() => {
+                          setSelectedTpl(t); setTplSearch(''); setTplDropdownOpen(false);
+                        }}>
+                          <Globe size={12} style={{ flexShrink: 0, color: '#9CA3AF' }} />
+                          <span className={styles.tplDropdownName}>{t.title}</span>
+                          <span className={styles.tplDropdownScope}>{t.scope}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Preview card */}
+                {selectedTpl && (
+                  <div className={styles.tplPreviewCard}>
+                    <div className={styles.tplPreviewRow}>
+                      <div className={styles.tplPreviewIcon}><Globe size={15} color="#33AE95" /></div>
+                      <div>
+                        <p className={styles.tplPreviewTitle}>{selectedTpl.title}</p>
+                        {selectedTpl.description && <p className={styles.tplPreviewDesc}>{selectedTpl.description}</p>}
+                      </div>
+                    </div>
+                    <div className={styles.tplPreviewStats}>
+                      <span><Layers size={11} />{selectedTpl.sectionCount} sections</span>
+                      <span><ClipboardList size={11} />{tplTotalItems} items</span>
+                      <span><Globe size={11} />{selectedTpl.scope}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -831,11 +948,11 @@ const ProjectCreate = () => {
           <button type="submit" className={styles.saveBtn} disabled={submitting}>
             {submitting ? (
               <>
-                <Loader2 size={14} className={styles.spin} /> Creating…
+                <Loader2 size={14} className={styles.spin} /> {selectedTpl ? 'Creating & Assigning…' : 'Creating…'}
               </>
             ) : (
               <>
-                <FolderOpen size={14} /> Create Project
+                <FolderOpen size={14} /> {selectedTpl ? 'Create Project & Assign Template' : 'Create Project'}
               </>
             )}
           </button>

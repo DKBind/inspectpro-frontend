@@ -223,9 +223,9 @@ const Organisation = () => {
                       </td>
                       <td className={styles.mutedCell}>
                         <div>{org.contactedPersonName ?? '—'}</div>
-                        {org.contactedPersonEmail && (
+                        {/* {org.contactedPersonEmail && (
                           <div className={styles.orgMeta} style={{ marginTop: 2 }}>{org.contactedPersonEmail}</div>
-                        )}
+                        )} */}
                       </td>
                       <td className={styles.mutedCell}>
                         {org.phoneNumber

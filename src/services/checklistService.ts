@@ -7,6 +7,7 @@ import type {
   SnapshotResponse,
   InspectionWithResultsResponse,
   InspectionResultResponse,
+  InspectionListItem,
   HipStatus,
   DefectSummaryResponse,
 } from './models/checklist';
@@ -93,6 +94,15 @@ export const checklistService = {
     return res.object as SnapshotResponse;
   },
 
+  // ─── Inspection List (Inspector Dashboard) ──────────────────────────────────
+
+  /** Returns all inspections for the caller's organisation with project/client/progress data. */
+  listAllInspections: async (): Promise<InspectionListItem[]> => {
+    const res = await api.get<ApiResponse<InspectionListItem[]>>('/inspections');
+    if (!res.status) throw new Error(res.message || 'Failed to fetch inspections');
+    return (res.object as InspectionListItem[]) ?? [];
+  },
+
   // ─── Inspection Execution ────────────────────────────────────────────────────
 
   /** Load an inspection with all its result rows. */
@@ -114,6 +124,25 @@ export const checklistService = {
       data
     );
     if (!res.status) throw new Error(res.message || 'Failed to update result');
+    return res.object as InspectionResultResponse;
+  },
+
+  /** Mark an inspection as COMPLETED (all results already saved individually). */
+  completeInspection: async (inspectionId: string): Promise<void> => {
+    const res = await api.patch<ApiResponse<null>>(`/inspections/${inspectionId}/complete`, {});
+    if (!res.status) throw new Error(res.message || 'Failed to complete inspection');
+  },
+
+  /** Add a custom row to an in-progress inspection. */
+  addCustomResult: async (
+    inspectionId: string,
+    data: { itemLabel: string; sectionName?: string; logicType?: string }
+  ): Promise<InspectionResultResponse> => {
+    const res = await api.post<ApiResponse<InspectionResultResponse>>(
+      `/inspections/${inspectionId}/results`,
+      data
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to add custom result');
     return res.object as InspectionResultResponse;
   },
 

@@ -518,3 +518,199 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Template Picker ─────────────────────────────────────────────────────── */
+.tplPickerHint {
+  font-size: 12.5px;
+  color: #64748B;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.tplDropdownWrap {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.tplDropdownTrigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 9px;
+  background: white;
+  cursor: text;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.tplDropdownTrigger:focus-within {
+  border-color: #33AE95;
+  box-shadow: 0 0 0 3px rgba(51, 174, 149, 0.1);
+}
+
+.tplSearchIcon {
+  color: #9CA3AF;
+  flex-shrink: 0;
+}
+
+.tplSearchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #1E293B;
+  background: transparent;
+  min-width: 0;
+}
+
+.tplSearchInput::placeholder {
+  color: #9CA3AF;
+}
+
+.tplChevron {
+  color: #9CA3AF;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.tplChevronOpen {
+  transform: rotate(180deg);
+}
+
+.tplClearBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: #E5E7EB;
+  color: #6B7280;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+
+.tplClearBtn:hover {
+  background: #D1D5DB;
+  color: #374151;
+}
+
+.tplDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.tplDropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.tplDropdownItem:hover {
+  background: #F1F5F9;
+}
+
+.tplDropdownName {
+  flex: 1;
+  font-size: 13px;
+  color: #1E293B;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.tplDropdownScope {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(51, 174, 149, 0.1);
+  color: #33AE95;
+  flex-shrink: 0;
+}
+
+.tplDropdownEmpty {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #9CA3AF;
+}
+
+.tplPreviewCard {
+  border: 1.5px solid rgba(51, 174, 149, 0.3);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(51, 174, 149, 0.03);
+}
+
+.tplPreviewRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(51, 174, 149, 0.15);
+}
+
+.tplPreviewIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(51, 174, 149, 0.1);
+  border: 1px solid rgba(51, 174, 149, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tplPreviewTitle {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0 0 3px;
+}
+
+.tplPreviewDesc {
+  font-size: 12px;
+  color: #64748B;
+  margin: 0;
+}
+
+.tplPreviewStats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.tplPreviewStats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}

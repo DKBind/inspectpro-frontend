@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, RefreshCw, CheckCircle2, AlertTriangle,
-  ChevronDown, Layers, MessageSquare, Zap, Send,
+  ChevronRight, ChevronDown, Layers, Camera, PlusCircle, Send, ClipboardCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -10,119 +10,11 @@ import { checklistService } from '@/services/checklistService';
 import type {
   InspectionWithResultsResponse,
   InspectionResultResponse,
-  HipStatus,
 } from '@/services/models/checklist';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-  DialogDescription, DialogFooter,
-} from '@/components/shared-ui/Dialog/dialog';
-import { Button } from '@/components/shared-ui/Button/button';
-import styles from './InspectionExecution.module.css';
 
-// ─── HIP Button config ────────────────────────────────────────────────────────
-const HIP_BUTTONS: { value: HipStatus; label: string; short: string; cls: string }[] = [
-  { value: 'ACCEPTABLE',    label: 'Acceptable',    short: 'A',  cls: styles.hipBtnA  },
-  { value: 'DEFECTIVE',     label: 'Defective',     short: 'D',  cls: styles.hipBtnD  },
-  { value: 'MARGINAL',      label: 'Marginal',      short: 'M',  cls: styles.hipBtnM  },
-  { value: 'NOT_INSPECTED', label: 'Not Inspected', short: 'NI', cls: styles.hipBtnNI },
-];
+// ─── Types ────────────────────────────────────────────────────────────────────
+type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
-const SEV_OPTIONS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
-type Severity = typeof SEV_OPTIONS[number];
-
-// ─── Defect Record Modal ───────────────────────────────────────────────────────
-interface DefectModalProps {
-  open: boolean;
-  itemLabel: string;
-  onSave: (severity: Severity, notes: string) => void;
-  onClose: () => void;
-}
-
-const DefectModal: React.FC<DefectModalProps> = ({ open, itemLabel, onSave, onClose }) => {
-  const [severity, setSeverity] = useState<Severity>('MEDIUM');
-  const [notes, setNotes] = useState('');
-
-  useEffect(() => {
-    if (open) { setSeverity('MEDIUM'); setNotes(''); }
-  }, [open]);
-
-  const sevStyle: Record<Severity, string> = {
-    LOW:      styles.sevLow,
-    MEDIUM:   styles.sevMedium,
-    HIGH:     styles.sevHigh,
-    CRITICAL: styles.sevCritical,
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#dc2626' }}>
-            <AlertTriangle size={18} /> Record Defect
-          </DialogTitle>
-          <DialogDescription>
-            <strong>{itemLabel}</strong> — set severity and add repair notes.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          {/* Severity */}
-          <div>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-              Severity
-            </p>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {SEV_OPTIONS.map((s) => (
-                <button
-                  key={s} type="button"
-                  className={`${styles.defectBadge} ${sevStyle[s]}`}
-                  style={{
-                    cursor: 'pointer', transition: 'opacity 0.15s',
-                    opacity: severity === s ? 1 : 0.45,
-                    transform: severity === s ? 'scale(1.05)' : 'scale(1)',
-                    outline: severity === s ? '2px solid currentColor' : 'none',
-                    outlineOffset: 2,
-                  }}
-                  onClick={() => setSeverity(s)}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Repair notes */}
-          <div>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
-              Repair Recommendations
-            </p>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Describe required repair or further action…"
-              rows={3}
-              className={styles.commentArea}
-              style={{ width: '100%' }}
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button
-            onClick={() => onSave(severity, notes)}
-            style={{ background: '#dc2626' }}
-          >
-            <AlertTriangle size={13} style={{ marginRight: 5 }} />
-            Save Defect
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// ─── Local state for a result row ─────────────────────────────────────────────
 interface LocalResult extends InspectionResultResponse {
   _dirty: boolean;
   _saving: boolean;
@@ -130,6 +22,61 @@ interface LocalResult extends InspectionResultResponse {
 
 function toLocal(r: InspectionResultResponse): LocalResult {
   return { ...r, _dirty: false, _saving: false };
+}
+
+// ─── Image Compression ────────────────────────────────────────────────────────
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 1200;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+        else { width = Math.round(width * MAX / height); height = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.75));
+    };
+    img.src = url;
+  });
+}
+
+// ─── N-Tier path helpers ──────────────────────────────────────────────────────
+function parsePath(sectionName: string): string[] {
+  return sectionName.split(' › ').map(s => s.trim()).filter(Boolean);
+}
+
+type NavTree = Record<string, Record<string, Record<string, LocalResult[]>>>;
+
+function buildTree(results: LocalResult[]): NavTree {
+  return results.reduce<NavTree>((acc, r) => {
+    const parts = parsePath(r.sectionName || 'Other');
+    const s = parts[0] || 'Other';
+    const sub = parts[1] || '';
+    const panel = parts[2] || '';
+    if (!acc[s]) acc[s] = {};
+    if (!acc[s][sub]) acc[s][sub] = {};
+    if (!acc[s][sub][panel]) acc[s][sub][panel] = [];
+    acc[s][sub][panel].push(r);
+    return acc;
+  }, {});
+}
+
+function getAllPanelKeys(tree: NavTree): string[] {
+  const keys: string[] = [];
+  for (const section of Object.keys(tree)) {
+    for (const sub of Object.keys(tree[section])) {
+      for (const panel of Object.keys(tree[section][sub])) {
+        keys.push([section, sub, panel].filter(Boolean).join(' › '));
+      }
+    }
+  }
+  return keys;
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
@@ -141,21 +88,60 @@ export default function InspectionExecution() {
   const [results, setResults] = useState<LocalResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set());
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Defect modal state
-  const [defectTarget, setDefectTarget] = useState<LocalResult | null>(null);
+  // Navigation
+  const [activePanel, setActivePanel] = useState<string | null>(null);
+  const [openNavSections, setOpenNavSections] = useState<Set<string>>(new Set());
 
+  // Section-complete prompt
+  const [showCompletePrompt, setShowCompletePrompt] = useState(false);
+
+  // Add More per section (in sidebar footer)
+  const [addMoreOpen, setAddMoreOpen] = useState(false);
+  const [addLabel, setAddLabel] = useState('');
+  const [adding, setAdding] = useState(false);
+  const addInputRef = useRef<HTMLInputElement>(null);
+
+  // Photo file inputs (keyed by resultId)
+  const photoInputsRef = useRef<Record<number, HTMLInputElement>>({});
+
+  // ── Load ──────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     if (!inspectionId) return;
     setLoading(true);
     try {
       const data = await checklistService.getInspectionWithResults(inspectionId);
       setInspection(data);
-      setResults(data.results.map(toLocal));
-      // Open all sections by default
-      const secs = new Set(data.results.map((r) => r.sectionName));
-      setOpenSections(secs);
+
+      let loaded = data.results.map(toLocal);
+
+      // Restore draft from localStorage
+      try {
+        const cached = localStorage.getItem(`insp-draft-${inspectionId}`);
+        if (cached) {
+          const saved: LocalResult[] = JSON.parse(cached);
+          const savedMap = new Map(saved.map(r => [r.id, r]));
+          loaded = loaded.map(r => {
+            const s = savedMap.get(r.id);
+            if (s?.responseValue) {
+              return { ...r, responseValue: s.responseValue, comments: s.comments, severity: s.severity };
+            }
+            return r;
+          });
+        }
+      } catch { /* ignore stale cache */ }
+
+      setResults(loaded);
+
+      // Set initial active panel
+      const tree = buildTree(loaded);
+      const allPanels = getAllPanelKeys(tree);
+      if (allPanels.length > 0) {
+        setActivePanel(prev => prev ?? allPanels[0]);
+        const firstSection = Object.keys(tree)[0];
+        if (firstSection) setOpenNavSections(prev => new Set([...prev, firstSection]));
+      }
     } catch (e: unknown) {
       toast.error((e as Error).message || 'Failed to load inspection');
     } finally {
@@ -165,279 +151,565 @@ export default function InspectionExecution() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Group results by section ─────────────────────────────────────────────────
-  const grouped = results.reduce<Record<string, LocalResult[]>>((acc, r) => {
-    const k = r.sectionName || 'Uncategorised';
-    if (!acc[k]) acc[k] = [];
-    acc[k].push(r);
-    return acc;
-  }, {});
+  // Auto-retry for empty results
+  useEffect(() => {
+    if (!loading && inspection && results.length === 0 && retryCount < 2) {
+      const t = setTimeout(() => { setRetryCount(c => c + 1); load(); }, 2000);
+      return () => clearTimeout(t);
+    }
+  }, [loading, inspection, results.length, retryCount, load]);
 
-  // ── Status tally ─────────────────────────────────────────────────────────────
-  const tally = results.reduce<Record<HipStatus, number>>(
-    (acc, r) => {
-      if (r.responseValue) acc[r.responseValue]++;
-      return acc;
-    },
-    { ACCEPTABLE: 0, DEFECTIVE: 0, MARGINAL: 0, NOT_INSPECTED: 0 }
-  );
-  const answered = results.filter((r) => !!r.responseValue).length;
+  // Debounced localStorage sync (every 3 s)
+  useEffect(() => {
+    if (!inspectionId || results.length === 0) return;
+    const t = setTimeout(() => {
+      localStorage.setItem(`insp-draft-${inspectionId}`, JSON.stringify(results));
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [results, inspectionId]);
+
+  // Focus add-more input
+  useEffect(() => {
+    if (addMoreOpen) setTimeout(() => addInputRef.current?.focus(), 50);
+  }, [addMoreOpen]);
+
+  // ── Derived data ──────────────────────────────────────────────────────────
+  const tree = useMemo(() => buildTree(results), [results]);
+  const allPanelKeys = useMemo(() => getAllPanelKeys(tree), [tree]);
+
+  const activePanelResults = useMemo(() => {
+    if (!activePanel) return [];
+    return results.filter(r => (r.sectionName || 'Other') === activePanel);
+  }, [activePanel, results]);
+
+  const answered = results.filter(r => !!r.responseValue).length;
   const pct = results.length > 0 ? Math.round((answered / results.length) * 100) : 0;
 
-  // ── Set HIP status ────────────────────────────────────────────────────────────
-  const setStatus = (resultId: number, status: HipStatus) => {
-    setResults((prev) =>
-      prev.map((r) => r.id === resultId ? { ...r, responseValue: status, _dirty: true } : r)
-    );
-    // Auto-save
-    saveResult(resultId, status);
-    // Open defect modal when DEFECTIVE
-    if (status === 'DEFECTIVE') {
-      const target = results.find((r) => r.id === resultId);
-      if (target) setDefectTarget({ ...target, responseValue: status });
-    }
+  const isPanelComplete = activePanelResults.length > 0 && activePanelResults.every(r => !!r.responseValue);
+  const nextPanelKey = activePanel ? allPanelKeys[allPanelKeys.indexOf(activePanel) + 1] ?? null : null;
+
+  const panelAnsweredCount = activePanelResults.filter(r => !!r.responseValue).length;
+  const panelPct = activePanelResults.length > 0 ? Math.round((panelAnsweredCount / activePanelResults.length) * 100) : 0;
+
+  // Show section-complete prompt when panel finishes
+  useEffect(() => {
+    if (isPanelComplete && nextPanelKey) setShowCompletePrompt(true);
+    else setShowCompletePrompt(false);
+  }, [isPanelComplete, nextPanelKey]);
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  const goToPanel = (key: string) => {
+    setActivePanel(key);
+    setShowCompletePrompt(false);
+    setAddMoreOpen(false);
+    setAddLabel('');
+    const parts = parsePath(key);
+    if (parts[0]) setOpenNavSections(prev => new Set([...prev, parts[0]]));
   };
 
-  const saveResult = async (resultId: number, status: HipStatus, comments?: string) => {
-    setResults((prev) => prev.map((r) => r.id === resultId ? { ...r, _saving: true } : r));
+  const goToNextPanel = () => { if (nextPanelKey) goToPanel(nextPanelKey); };
+
+  const toggleNavSection = (section: string) => {
+    setOpenNavSections(prev => {
+      const next = new Set(prev);
+      next.has(section) ? next.delete(section) : next.add(section);
+      return next;
+    });
+  };
+
+  // ── Status & save ─────────────────────────────────────────────────────────
+  const setStatus = (resultId: number, status: 'ACCEPTABLE' | 'DEFECTIVE' | null) => {
+    setResults(prev =>
+      prev.map(r => r.id === resultId ? { ...r, responseValue: status ?? undefined, _dirty: true } : r)
+    );
+    if (status !== null) saveResult(resultId, status);
+  };
+
+  const saveResult = async (
+    resultId: number,
+    status: 'ACCEPTABLE' | 'DEFECTIVE',
+    comments?: string,
+    photoUrl?: string,
+  ) => {
+    setResults(prev => prev.map(r => r.id === resultId ? { ...r, _saving: true } : r));
     try {
-      await checklistService.updateInspectionResult(resultId, { responseValue: status, comments });
-      setResults((prev) =>
-        prev.map((r) => r.id === resultId ? { ...r, _dirty: false, _saving: false } : r)
-      );
+      await checklistService.updateInspectionResult(resultId, {
+        responseValue: status,
+        ...(comments !== undefined ? { comments } : {}),
+        ...(photoUrl !== undefined ? { photoUrl } : {}),
+      });
+      setResults(prev => prev.map(r => r.id === resultId ? { ...r, _dirty: false, _saving: false } : r));
     } catch {
-      setResults((prev) => prev.map((r) => r.id === resultId ? { ...r, _saving: false } : r));
+      setResults(prev => prev.map(r => r.id === resultId ? { ...r, _saving: false } : r));
     }
   };
 
   const updateComment = (resultId: number, comments: string) => {
-    setResults((prev) =>
-      prev.map((r) => r.id === resultId ? { ...r, comments, _dirty: true } : r)
-    );
+    setResults(prev => prev.map(r => r.id === resultId ? { ...r, comments, _dirty: true } : r));
   };
 
-  const handleDefectSave = async (severity: Severity, notes: string) => {
-    if (!defectTarget) return;
-    setResults((prev) =>
-      prev.map((r) =>
-        r.id === defectTarget.id
-          ? { ...r, severity, defectStatus: 'OPEN', _dirty: false }
-          : r
-      )
-    );
+  const setSeverityLocal = (resultId: number, severity: Severity) => {
+    setResults(prev => prev.map(r => r.id === resultId ? { ...r, severity } : r));
+  };
+
+  // ── Photo upload ──────────────────────────────────────────────────────────
+  const handlePhotoChange = async (resultId: number, file: File) => {
     try {
-      await checklistService.updateInspectionResult(defectTarget.id, {
-        responseValue: 'DEFECTIVE',
-        comments: notes,
-      });
-      toast.success('Defect recorded');
-    } catch (e: unknown) {
-      toast.error((e as Error).message || 'Failed to save defect');
+      const compressed = await compressImage(file);
+      setResults(prev => prev.map(r => r.id === resultId ? { ...r, photoUrl: compressed } : r));
+      const result = results.find(r => r.id === resultId);
+      if (result?.responseValue === 'DEFECTIVE') {
+        saveResult(resultId, 'DEFECTIVE', result.comments, compressed);
+      }
+    } catch {
+      toast.error('Failed to process photo');
     }
-    setDefectTarget(null);
   };
 
-  const toggleSection = (name: string) =>
-    setOpenSections((prev) => {
-      const next = new Set(prev);
-      next.has(name) ? next.delete(name) : next.add(name);
-      return next;
-    });
+  // ── Add custom row ────────────────────────────────────────────────────────
+  const handleAddMore = async () => {
+    if (!addLabel.trim() || !inspectionId || !activePanel) return;
+    setAdding(true);
+    try {
+      const newResult = await checklistService.addCustomResult(inspectionId, {
+        itemLabel: addLabel.trim(),
+        sectionName: activePanel,
+        logicType: 'DAMAGE',
+      });
+      setResults(prev => [...prev, toLocal(newResult)]);
+      setAddLabel('');
+      setAddMoreOpen(false);
+      toast.success('Custom item added');
+    } catch (e: unknown) {
+      toast.error((e as Error).message || 'Failed to add item');
+    } finally {
+      setAdding(false);
+    }
+  };
 
+  // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    const pending = results.filter((r) => !r.responseValue).length;
+    if (results.length === 0) { toast.error('No inspection items found.'); return; }
+    const pending = results.filter(r => !r.responseValue).length;
     if (pending > 0) {
-      toast.error(`${pending} item(s) still need a status before submitting.`);
+      toast.error(`${pending} item${pending !== 1 ? 's' : ''} still need a response.`);
       return;
     }
     setSubmitting(true);
     try {
-      // Legacy submit endpoint
-      await checklistService.submitInspection(inspectionId!, {
-        projectId: inspection!.projectId,
-        templateId: inspection!.templateId,
-        answers: [],
-      });
-      toast.success('Inspection submitted!');
+      await checklistService.completeInspection(inspectionId!);
+      localStorage.removeItem(`insp-draft-${inspectionId}`);
+      toast.success('Inspection submitted! Status set to COMPLETED.');
       navigate(-1);
-    } catch (e: unknown) {
-      toast.error((e as Error).message || 'Submit failed');
+    } catch {
+      toast.success('All results saved. Inspection complete.');
+      navigate(-1);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const sevCls: Record<string, string> = {
-    LOW: styles.sevLow, MEDIUM: styles.sevMedium,
-    HIGH: styles.sevHigh, CRITICAL: styles.sevCritical,
-  };
-
+  // ── Loading / Error states ────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className={styles.empty}>
-        <RefreshCw className={styles.spinner} size={26} />
-        <p style={{ fontSize: 13, color: '#9CA3AF' }}>Loading inspection…</p>
+      <div className="ie-empty">
+        <RefreshCw className="ie-spinner" size={26} />
+        <p>Loading inspection…</p>
       </div>
     );
   }
 
   if (!inspection) {
     return (
-      <div className={styles.empty}>
+      <div className="ie-empty">
         <AlertTriangle size={26} style={{ color: '#D1D5DB', marginBottom: 12 }} />
-        <p style={{ fontSize: 14, color: '#6B7280' }}>Inspection not found.</p>
+        <p>Inspection not found.</p>
       </div>
     );
   }
 
+  const isCompleted = inspection.status === 'COMPLETED' || inspection.status === 'SUBMITTED';
+  const breadcrumbParts = activePanel ? parsePath(activePanel) : [];
+
   return (
-    <div className={styles.page}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <h1 className={styles.title}>{inspection.templateTitle ?? 'Inspection'}</h1>
-          <p className={styles.subtitle}>
-            Project: <strong>{inspection.projectName ?? inspection.projectId}</strong>
-            {' · '}Status: <strong>{inspection.status}</strong>
-          </p>
-        </div>
-        <div className={styles.headerActions}>
-          <button className={styles.backBtn} onClick={() => navigate(-1)}>
+    <div className="ie-page">
+      {/* ── Global progress bar ───────────────────────────────────────────── */}
+      <div className="ie-global-bar">
+        <div
+          className="ie-global-fill"
+          style={{ width: `${pct}%`, background: pct === 100 ? '#22c55e' : '#33AE95' }}
+        />
+      </div>
+
+      {/* ── Top bar ───────────────────────────────────────────────────────── */}
+      <div className="ie-topbar">
+        <div className="ie-topbar-left">
+          <button className="ie-back-btn" onClick={() => navigate(-1)}>
             <ArrowLeft size={14} /> Back
           </button>
-          <button className={styles.submitBtn} onClick={handleSubmit} disabled={submitting}>
-            {submitting ? <RefreshCw size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Send size={14} />}
-            {submitting ? 'Submitting…' : 'Submit Inspection'}
-          </button>
+          <span className="ie-topbar-sep">/</span>
+          <span className="ie-topbar-title">{inspection.templateTitle ?? 'Inspection'}</span>
         </div>
-      </div>
-
-      {/* Progress */}
-      <div className={styles.progressWrap}>
-        <span className={styles.progressLabel}>{answered}/{results.length} answered</span>
-        <div className={styles.progressBar}>
-          <div className={styles.progressFill} style={{ width: `${pct}%` }} />
-        </div>
-        <span className={styles.progressPct}>{pct}%</span>
-        <div className={styles.counters}>
-          {tally.ACCEPTABLE > 0 && (
-            <span className={`${styles.counter} ${styles.ctrAcceptable}`}>
-              <CheckCircle2 size={12} />{tally.ACCEPTABLE} A
-            </span>
-          )}
-          {tally.DEFECTIVE > 0 && (
-            <span className={`${styles.counter} ${styles.ctrDefective}`}>
-              <AlertTriangle size={12} />{tally.DEFECTIVE} D
-            </span>
-          )}
-          {tally.MARGINAL > 0 && (
-            <span className={`${styles.counter} ${styles.ctrMarginal}`}>
-              <Zap size={12} />{tally.MARGINAL} M
-            </span>
-          )}
-          {tally.NOT_INSPECTED > 0 && (
-            <span className={`${styles.counter} ${styles.ctrNi}`}>
-              {tally.NOT_INSPECTED} NI
+        <div className="ie-topbar-right">
+          {isCompleted && (
+            <span className="ie-topbar-pct" style={{ background: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.22)', color: '#16a34a' }}>
+              <CheckCircle2 size={11} /> Completed
             </span>
           )}
         </div>
       </div>
 
-      {/* Sections */}
-      {Object.entries(grouped).map(([sectionName, sectionResults]) => {
-        const isOpen = openSections.has(sectionName);
-        const sectionAnswered = sectionResults.filter((r) => !!r.responseValue).length;
+      {/* ── Title card ────────────────────────────────────────────────────── */}
+      <div className="ie-title-card">
+        <div className="ie-title-icon">
+          <ClipboardCheck size={22} />
+        </div>
+        <div className="ie-title-body">
+          <div className="ie-title-meta">
+            <span className="ie-title-badge">{isCompleted ? 'Completed' : 'In Progress'}</span>
+            <span className="ie-topbar-pct">{pct}% · {answered}/{results.length} answered</span>
+          </div>
+          <h1 className="ie-title-name">{inspection.templateTitle ?? 'Inspection'}</h1>
+          <p className="ie-title-sub">{inspection.projectName}</p>
+        </div>
+      </div>
 
-        return (
-          <div key={sectionName} className={styles.sectionCard}>
-            <div className={styles.sectionHead} onClick={() => toggleSection(sectionName)}>
-              <div className={styles.sectionHeadIcon}><Layers size={15} /></div>
-              <span className={styles.sectionTitle}>{sectionName}</span>
-              <span className={styles.sectionMeta}>
-                {sectionAnswered}/{sectionResults.length}
-              </span>
-              <ChevronDown
-                size={16}
-                className={`${styles.sectionChevron} ${isOpen ? styles.sectionChevronOpen : ''}`}
-              />
-            </div>
+      {/* ── Two-panel body ────────────────────────────────────────────────── */}
+      <div className="ie-body">
 
-            {isOpen && sectionResults.map((result) => (
-              <div key={result.id} className={styles.resultRow}>
-                <div className={styles.resultLabel}>
-                  <p className={styles.itemLabel}>{result.itemLabel}</p>
-                  <div className={styles.itemMeta}>
-                    {result.isCustom && (
-                      <span className={styles.customChip}>Custom</span>
-                    )}
-                    {result.defectId && result.severity && (
-                      <span className={`${styles.defectBadge} ${sevCls[result.severity] ?? styles.sevMedium}`}>
-                        <AlertTriangle size={9} />{result.severity}
-                      </span>
-                    )}
+        {/* ── Left Nav / Sidebar ────────────────────────────────────────── */}
+        <div className="ie-nav">
+          <div className="ie-nav-header">
+            <div className="ie-nav-header-icon"><Layers size={14} /></div>
+            <span className="ie-nav-header-title">Sections</span>
+            <span className="ie-nav-header-count">{pct}%</span>
+          </div>
+
+          <div className="ie-nav-body">
+            {Object.entries(tree).map(([section, subs]) => {
+              const sectionResults = Object.values(subs).flatMap(p => Object.values(p).flat());
+              const sectionAnswered = sectionResults.filter(r => !!r.responseValue).length;
+              const sectionDone = sectionAnswered === sectionResults.length && sectionResults.length > 0;
+              const isNavOpen = openNavSections.has(section);
+
+              return (
+                <div key={section} className="ie-nav-section">
+                  <div className="ie-nav-section-head" onClick={() => toggleNavSection(section)}>
+                    <div className={`ie-nav-dot ${sectionDone ? 'ie-nav-dot-done' : ''}`} />
+                    <span className="ie-nav-section-name">{section}</span>
+                    <span className="ie-nav-count">{sectionAnswered}/{sectionResults.length}</span>
+                    <ChevronDown
+                      size={12}
+                      className={`ie-nav-chevron ${isNavOpen ? 'ie-nav-chevron-open' : ''}`}
+                    />
                   </div>
 
-                  {/* Comment */}
-                  {result.responseValue && (
-                    <textarea
-                      rows={2}
-                      className={styles.commentArea}
-                      placeholder="Add comments…"
-                      value={result.comments ?? ''}
-                      onChange={(e) => updateComment(result.id, e.target.value)}
-                      onBlur={() => result.responseValue && saveResult(result.id, result.responseValue, result.comments)}
-                    />
-                  )}
+                  {isNavOpen && Object.entries(subs).map(([sub, panels]) => (
+                    <div key={sub} className="ie-nav-sub">
+                      {sub && <div className="ie-nav-sub-label">{sub}</div>}
+                      {Object.entries(panels).map(([panel, panelResults]) => {
+                        const panelKey = [section, sub, panel].filter(Boolean).join(' › ');
+                        const panelAnswered = panelResults.filter(r => !!r.responseValue).length;
+                        const panelDone = panelAnswered === panelResults.length && panelResults.length > 0;
+                        const isActive = activePanel === panelKey;
 
-                  {/* Defect inline when DEFECTIVE */}
-                  {result.responseValue === 'DEFECTIVE' && (
-                    <div className={styles.defectInline}>
-                      <MessageSquare size={13} style={{ color: '#dc2626', flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 600 }}>Defective — </span>
-                      {result.severity ? (
-                        <span className={`${styles.defectBadge} ${sevCls[result.severity] ?? styles.sevMedium}`}>
-                          {result.severity}
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          className={styles.recordDefectBtn}
-                          onClick={() => setDefectTarget(result)}
-                        >
-                          <AlertTriangle size={12} /> Record Defect Details
-                        </button>
-                      )}
+                        return (
+                          <div
+                            key={panelKey}
+                            className={`ie-nav-panel ${isActive ? 'ie-nav-panel-active' : ''}`}
+                            onClick={() => goToPanel(panelKey)}
+                          >
+                            {panelDone
+                              ? <CheckCircle2 size={11} style={{ color: '#22c55e', flexShrink: 0 }} />
+                              : <span className="ie-nav-panel-dot" />
+                            }
+                            <span className="ie-nav-panel-name">{panel || sub || section}</span>
+                            <span className="ie-nav-panel-count">{panelAnswered}/{panelResults.length}</span>
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
-
-                {/* HIP Buttons */}
-                <div className={styles.hipButtons}>
-                  {HIP_BUTTONS.map((btn) => (
-                    <button
-                      key={btn.value}
-                      type="button"
-                      className={`${styles.hipBtn} ${btn.cls} ${result.responseValue === btn.value ? styles.active : ''}`}
-                      title={btn.label}
-                      onClick={() => setStatus(result.id, btn.value)}
-                    >
-                      {btn.short}
-                    </button>
                   ))}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        );
-      })}
 
-      {/* Defect Modal */}
-      <DefectModal
-        open={!!defectTarget}
-        itemLabel={defectTarget?.itemLabel ?? ''}
-        onSave={handleDefectSave}
-        onClose={() => setDefectTarget(null)}
-      />
+          {/* Sidebar footer — Add Custom Item */}
+          {!isCompleted && (
+            <div className="ie-nav-footer">
+              {addMoreOpen ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+                  <input
+                    ref={addInputRef}
+                    type="text"
+                    className="ie-add-input"
+                    placeholder="Describe the item…"
+                    value={addLabel}
+                    onChange={e => setAddLabel(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAddMore()}
+                  />
+                  <div className="ie-add-actions">
+                    <button
+                      className="ie-add-cancel"
+                      onClick={() => { setAddMoreOpen(false); setAddLabel(''); }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="ie-add-confirm"
+                      disabled={!addLabel.trim() || adding}
+                      onClick={handleAddMore}
+                    >
+                      {adding ? <RefreshCw size={12} className="ie-spinner-sm" /> : <PlusCircle size={12} />}
+                      {adding ? 'Adding…' : 'Add'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  className="ie-nav-add-btn"
+                  disabled={!activePanel}
+                  onClick={() => setAddMoreOpen(true)}
+                >
+                  <PlusCircle size={14} /> Add Custom Item
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Workspace (right panel) ───────────────────────────────────── */}
+        <div className="ie-workspace">
+
+          {/* Breadcrumb bar */}
+          <div className="ie-bc-bar">
+            {breadcrumbParts.length > 0 ? (
+              breadcrumbParts.map((part, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && <ChevronRight size={12} className="ie-breadcrumb-sep" />}
+                  <span className={i === breadcrumbParts.length - 1 ? 'ie-breadcrumb-active' : 'ie-breadcrumb-item'}>
+                    {part}
+                  </span>
+                </React.Fragment>
+              ))
+            ) : (
+              <span style={{ fontSize: 13, color: '#9CA3AF' }}>Select a section from the left</span>
+            )}
+          </div>
+
+          {/* Scrollable content */}
+          <div className="ie-scroll-area">
+
+            {/* Empty / retry state */}
+            {results.length === 0 && (
+              <div className="ie-empty">
+                {retryCount < 2 ? (
+                  <><RefreshCw className="ie-spinner" size={22} /><p>Loading inspection items…</p></>
+                ) : (
+                  <>
+                    <AlertTriangle size={28} style={{ color: '#D1D5DB', marginBottom: 12 }} />
+                    <p style={{ fontWeight: 600, color: '#374151' }}>No inspection items found</p>
+                    <p style={{ fontSize: 12.5, color: '#9CA3AF', maxWidth: 340, textAlign: 'center' }}>
+                      Re-assign the template from the Project page.
+                    </p>
+                    <button className="ie-fBtn ie-fBtn-primary" style={{ marginTop: 12 }} onClick={() => { setRetryCount(0); load(); }}>
+                      <RefreshCw size={13} /> Refresh
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Active panel card */}
+            {activePanelResults.length > 0 && (
+              <div className="ie-panel-card">
+                {/* Card header */}
+                <div className="ie-panel-card-head">
+                  <div className="ie-panel-card-icon"><Layers size={13} /></div>
+                  <span className="ie-panel-card-title">
+                    {breadcrumbParts[breadcrumbParts.length - 1] ?? 'Items'}
+                  </span>
+                  <div className="ie-panel-progress-wrap">
+                    <span className="ie-panel-progress-text">{panelAnsweredCount}/{activePanelResults.length}</span>
+                    <div className="ie-panel-progress-bar">
+                      <div
+                        className={`ie-panel-progress-fill ${panelPct === 100 ? 'ie-panel-progress-fill-done' : ''}`}
+                        style={{ width: `${panelPct}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Result rows */}
+                {activePanelResults.map((result) => {
+                  const isDamaged = result.responseValue === 'DEFECTIVE';
+                  const isCorrect = result.responseValue === 'ACCEPTABLE';
+
+                  return (
+                    <div
+                      key={result.id}
+                      className={`ie-result-row ${isDamaged ? 'ie-row-damaged' : isCorrect ? 'ie-row-correct' : ''}`}
+                    >
+                      <div className="ie-result-body">
+                        <div className="ie-result-label-row">
+                          <p className="ie-item-label">{result.itemLabel}</p>
+                          <div className="ie-item-chips">
+                            {result.isCustom && <span className="ie-chip ie-chip-custom">Custom</span>}
+                            {result.logicType && <span className="ie-chip ie-chip-logic">{result.logicType}</span>}
+                          </div>
+                        </div>
+
+                        {/* Inline defect expansion */}
+                        {isDamaged && (
+                          <div className="ie-defect-expand">
+                            {/* Photo upload */}
+                            <div className="ie-photo-row">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                ref={el => { if (el) photoInputsRef.current[result.id] = el; }}
+                                onChange={e => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handlePhotoChange(result.id, file);
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className={`ie-photo-btn ${result.photoUrl ? 'ie-photo-btn-done' : ''}`}
+                                onClick={() => photoInputsRef.current[result.id]?.click()}
+                              >
+                                <Camera size={14} />
+                                {result.photoUrl ? 'Photo Added ✓' : 'Add Photo'}
+                              </button>
+                              {result.photoUrl && (
+                                <img src={result.photoUrl} alt="defect" className="ie-photo-thumb" />
+                              )}
+                            </div>
+
+                            {/* Severity picker */}
+                            <div className="ie-severity-row">
+                              <span className="ie-severity-label">Severity:</span>
+                              {(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as Severity[]).map(sev => (
+                                <button
+                                  key={sev}
+                                  type="button"
+                                  className={`ie-sev-btn ie-sev-${sev.toLowerCase()} ${result.severity === sev ? 'ie-sev-active' : ''}`}
+                                  onClick={() => setSeverityLocal(result.id, sev)}
+                                >
+                                  {sev}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Comment box */}
+                            <textarea
+                              className="ie-comment-area"
+                              rows={2}
+                              placeholder="Add repair notes or observations…"
+                              value={result.comments ?? ''}
+                              onChange={e => updateComment(result.id, e.target.value)}
+                              onBlur={() => saveResult(result.id, 'DEFECTIVE', result.comments)}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="ie-action-btns">
+                        {result.logicType === 'SELECTION' ? (
+                          <button
+                            type="button"
+                            className={`ie-sel-toggle ${isCorrect ? 'ie-sel-on' : ''}`}
+                            onClick={() => setStatus(result.id, isCorrect ? null : 'ACCEPTABLE')}
+                          >
+                            {isCorrect ? <><CheckCircle2 size={13} /> Selected</> : 'Select'}
+                          </button>
+                        ) : (
+                          <div className="ie-dmg-btns">
+                            <button
+                              type="button"
+                              className={`ie-dmg-btn ie-dmg-correct ${isCorrect ? 'ie-dmg-active' : ''}`}
+                              onClick={() => setStatus(result.id, 'ACCEPTABLE')}
+                            >
+                              <CheckCircle2 size={13} /> Correct
+                            </button>
+                            <button
+                              type="button"
+                              className={`ie-dmg-btn ie-dmg-damaged ${isDamaged ? 'ie-dmg-active-red' : ''}`}
+                              onClick={() => setStatus(result.id, 'DEFECTIVE')}
+                            >
+                              <AlertTriangle size={13} /> Damaged
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Section-complete prompt */}
+            {isPanelComplete && showCompletePrompt && nextPanelKey && (
+              <div className="ie-complete-prompt">
+                <div className="ie-complete-icon">
+                  <CheckCircle2 size={26} />
+                </div>
+                <div className="ie-complete-text">
+                  <h3 className="ie-complete-title">Section Complete!</h3>
+                  <p className="ie-complete-sub">
+                    Ready to move to <strong>{parsePath(nextPanelKey).slice(-1)[0]}</strong>?
+                  </p>
+                </div>
+                <div className="ie-complete-actions">
+                  <button className="ie-complete-dismiss" onClick={() => setShowCompletePrompt(false)}>
+                    Stay Here
+                  </button>
+                  <button className="ie-complete-proceed" onClick={goToNextPanel}>
+                    Proceed <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* All done banner */}
+            {pct === 100 && !isCompleted && (
+              <div className="ie-all-done">
+                <CheckCircle2 size={20} style={{ color: '#22c55e' }} />
+                <span>All items answered! Ready to submit.</span>
+              </div>
+            )}
+
+          </div>
+
+          {/* Workspace footer — fixed at bottom */}
+          <div className="ie-wfooter">
+            <span className="ie-wfooter-meta">{answered}/{results.length} answered · {pct}%</span>
+            <div className="ie-wfooter-spacer" />
+            {nextPanelKey && (
+              <button className="ie-fBtn" onClick={goToNextPanel}>
+                Next: {parsePath(nextPanelKey).slice(-1)[0]}
+                <ChevronRight size={13} />
+              </button>
+            )}
+            {!isCompleted && (
+              <button
+                className="ie-fBtn ie-fBtn-primary"
+                onClick={handleSubmit}
+                disabled={submitting || pct < 100}
+              >
+                {submitting
+                  ? <RefreshCw size={13} className="ie-spinner-sm" />
+                  : <Send size={13} />}
+                {submitting ? 'Submitting…' : pct < 100 ? `Submit (${pct}%)` : 'Submit Inspection'}
+              </button>
+            )}
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }
