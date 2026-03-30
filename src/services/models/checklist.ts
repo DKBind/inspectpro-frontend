@@ -2,6 +2,22 @@
 
 export type TemplateScope = 'GLOBAL' | 'ORGANISATION' | 'PROJECT' | 'SCRATCH';
 
+// ─── Recursive Template Node (new unlimited-depth tree) ───────────────────────
+
+export type TemplateNodeType = 'FOLDER' | 'LEAF';
+
+export interface TemplateNode {
+  id: string;
+  name: string;
+  type: TemplateNodeType;
+  /** "SELECTION" | "DAMAGE" — only meaningful when type = LEAF */
+  panelType?: BuilderPanelType;
+  /** Inspection items — LEAF only */
+  items?: BuilderItem[];
+  /** Child nodes — FOLDER only (self-referential, unlimited depth) */
+  children?: TemplateNode[];
+}
+
 // ─── Template Builder Types ───────────────────────────────────────────────────
 
 export type BuilderResponseType = 'DROPDOWN' | 'RADIO' | 'TEXT' | 'CHECKBOX' | 'NUMBER' | 'PHOTO' | 'PASS_FAIL';
@@ -16,6 +32,8 @@ export interface BuilderConditionalRule {
 export interface BuilderItem {
   id: string;
   label: string;
+  /** Alias shown in PDF reports. Defaults to label when not set. */
+  reportName?: string;
   responseType: BuilderResponseType;
   options: string[];
   commonComments: string[];
@@ -81,6 +99,8 @@ export interface TemplateResponse {
   projectName?: string;
   organisationId?: string;
   organisationName?: string;
+  /** New recursive tree — populated for templates saved in the new format */
+  nodes?: TemplateNode[];
   sections: SectionInfo[];
   sectionCount: number;
   fields: FieldInfo[];             // legacy
@@ -96,9 +116,10 @@ export interface TemplateRequest {
   isGlobal?: boolean;              // legacy
   isLocked?: boolean;
   projectId?: string;
-  // Accepts both legacy flat format and new builder nested format
+  /** New recursive node tree — takes precedence over sections when present */
+  nodes?: TemplateNode[];
   sections?: any[];
-  fields?: {                       // legacy
+  fields?: {
     fieldTitle: string;
     fieldDescription?: string;
     fieldType: 'INPUT' | 'CHECKBOX';
@@ -137,7 +158,34 @@ export interface InspectionListItem {
 export interface SnapshotResponse {
   inspectionId: string;
   snapshotTemplateId: string;
-  totalRows: number;
+  totalRows?: number;
+  totalChecklists?: number;
+}
+
+// ─── Inspection Checklist (folder-driven execution model) ─────────────────────
+
+export type ChecklistStatus = 'CORRECT' | 'DAMAGED' | 'N/A';
+
+export interface ChecklistItem {
+  id: string;
+  itemLabel: string;
+  panelType: 'SELECTION' | 'DAMAGE';
+  status?: ChecklistStatus;
+  comment?: string;
+  photos?: string[];
+  sortOrder: number;
+  isCustom: boolean;
+  folderId?: string;
+  folderName?: string;
+  templateNodeId?: string;
+}
+
+export interface FolderNode {
+  id: string;
+  name: string;
+  type: 'FOLDER';
+  parentId?: string;
+  children?: FolderNode[];
 }
 
 // ─── Inspection Execution ─────────────────────────────────────────────────────

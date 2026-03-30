@@ -3,14 +3,13 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Plus, Trash2, ChevronRight, ChevronDown, Search, X,
-  Loader2, ArrowLeft, Save, FilePlus2, Edit2, Copy,
-  AlertTriangle, Camera, CheckCircle2, XCircle, MoveRight,
-  FolderOpen, Folder, FileText, LayoutTemplate,
+  Loader2, ArrowLeft, Save, FilePlus2, Edit2,
+  AlertTriangle, Camera, CheckCircle2,
+  FolderOpen, Folder, LayoutTemplate, Copy, ArrowUp, ArrowDown, ArrowRight,
 } from 'lucide-react';
 import { checklistService } from '@/services/checklistService';
 import type {
-  BuilderSection, BuilderSubSection, BuilderTab, BuilderPanel,
-  BuilderItem, BuilderPanelType, TemplateResponse,
+  TemplateNode, BuilderItem, BuilderPanelType, TemplateResponse,
 } from '@/services/models/checklist';
 import css from './TemplateBuilder.module.css';
 
@@ -23,65 +22,166 @@ const emptyItem = (): BuilderItem => ({
   id: genId(), label: 'New Item', responseType: 'TEXT',
   options: [], commonComments: [], required: false, conditionalLogic: null,
 });
-const emptyPanel = (type: BuilderPanelType, name: string): BuilderPanel => ({
-  id: genId(), name, panelType: type, items: [],
+
+const emptyFolder = (name: string): TemplateNode => ({
+  id: genId(), name, type: 'FOLDER', children: [],
 });
-const emptyTab = (name: string): BuilderTab => ({ id: genId(), name, panels: [] });
-const emptySubSection = (name: string): BuilderSubSection => ({ id: genId(), name, tabs: [] });
-const emptySection = (name: string): BuilderSection => ({ id: genId(), name, subSections: [] });
 
-function deepCopyItem(i: BuilderItem): BuilderItem {
-  return { ...i, id: genId(), options: [...i.options], commonComments: [...i.commonComments] };
-}
-function deepCopyPanel(p: BuilderPanel): BuilderPanel {
-  return { ...p, id: genId(), items: p.items.map(deepCopyItem) };
-}
-function deepCopyTab(t: BuilderTab): BuilderTab {
-  return { ...t, id: genId(), panels: t.panels.map(deepCopyPanel) };
-}
-function deepCopySub(ss: BuilderSubSection): BuilderSubSection {
-  return { ...ss, id: genId(), tabs: ss.tabs.map(deepCopyTab) };
+const emptyLeaf = (name: string, panelType: BuilderPanelType): TemplateNode => ({
+  id: genId(), name, type: 'LEAF', panelType, items: [],
+});
+
+// ── Immutable tree helpers ──────────────────────────────────────────────────
+
+function mapNode(
+  nodes: TemplateNode[],
+  id: string,
+  fn: (n: TemplateNode) => TemplateNode,
+): TemplateNode[] {
+  return nodes.map(n => {
+    if (n.id === id) return fn(n);
+    if (n.type === 'FOLDER' && n.children?.length) {
+      return { ...n, children: mapNode(n.children, id, fn) };
+    }
+    return n;
+  });
 }
 
-function toLegacyBuilder(sections: any[]): BuilderSection[] {
+function removeNode(nodes: TemplateNode[], id: string): TemplateNode[] {
+  return nodes
+    .filter(n => n.id !== id)
+    .map(n => {
+      if (n.type === 'FOLDER' && n.children?.length) {
+        return { ...n, children: removeNode(n.children, id) };
+      }
+      return n;
+    });
+}
+
+function addChildTo(nodes: TemplateNode[], parentId: string, child: TemplateNode): TemplateNode[] {
+  return nodes.map(n => {
+    if (n.id === parentId && n.type === 'FOLDER') {
+      return { ...n, children: [...(n.children ?? []), child] };
+    }
+    if (n.type === 'FOLDER' && n.children?.length) {
+      return { ...n, children: addChildTo(n.children, parentId, child) };
+    }
+    return n;
+  });
+}
+
+function findNode(nodes: TemplateNode[], id: string): TemplateNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    if (n.type === 'FOLDER' && n.children?.length) {
+      const found = findNode(n.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/** Returns ancestry path from root up to and including the node with `id`. */
+function findPath(nodes: TemplateNode[], id: string, path: TemplateNode[] = []): TemplateNode[] | null {
+  for (const n of nodes) {
+    if (n.id === id) return [...path, n];
+    if (n.type === 'FOLDER' && n.children?.length) {
+      const found = findPath(n.children, id, [...path, n]);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/** Deep-clone a node tree with fresh IDs. */
+function deepCloneNode(node: TemplateNode, name?: string): TemplateNode {
+  return {
+    ...node,
+    id: genId(),
+    name: name ?? node.name,
+    children: (node.children ?? []).map(c => deepCloneNode(c)),
+    items: (node.items ?? []).map(i => ({ ...i, id: genId() })),
+  };
+}
+
+/** Check whether a name already exists among siblings at the same level. */
+function isDuplicateName(nodes: TemplateNode[], parentId: string | null, name: string): boolean {
+  const siblings = parentId ? (findNode(nodes, parentId)?.children ?? []) : nodes;
+  return siblings.some(n => n.name.trim().toLowerCase() === name.trim().toLowerCase());
+}
+
+/** Count total items under a subtree (for progress roll-up display). */
+function countItems(nodes: TemplateNode[]): number {
+  let count = 0;
+  for (const n of nodes) {
+    if (n.type === 'LEAF') count += n.items?.length ?? 0;
+    else if (n.children?.length) count += countItems(n.children);
+  }
+  return count;
+}
+
+/** Count leaf nodes (panels) under a subtree. */
+function countLeaves(nodes: TemplateNode[]): number {
+  let count = 0;
+  for (const n of nodes) {
+    if (n.type === 'LEAF') count++;
+    else if (n.children?.length) count += countLeaves(n.children);
+  }
+  return count;
+}
+
+/** Convert old BuilderSection[] format to TemplateNode[] (backward compat). */
+function sectionsToNodes(sections: any[]): TemplateNode[] {
   if (!sections?.length) return [];
   return sections.map((sec: any) => {
-    if (sec.subSections) return sec as BuilderSection;
+    // Already in new node format?
+    if (sec.type === 'FOLDER' || sec.type === 'LEAF') return sec as TemplateNode;
+
+    // New BuilderSection format (has subSections)
+    if (sec.subSections) {
+      return {
+        id: sec.id ?? genId(),
+        name: sec.name || sec.sectionName || 'Section',
+        type: 'FOLDER' as const,
+        children: (sec.subSections ?? []).map((sub: any) => ({
+          id: sub.id ?? genId(),
+          name: sub.name || 'Subsection',
+          type: 'FOLDER' as const,
+          children: (sub.tabs ?? []).map((tab: any) => ({
+            id: tab.id ?? genId(),
+            name: tab.name || 'Tab',
+            type: 'FOLDER' as const,
+            children: (tab.panels ?? []).map((panel: any) => ({
+              id: panel.id ?? genId(),
+              name: panel.name || 'Panel',
+              type: 'LEAF' as const,
+              panelType: panel.panelType ?? 'SELECTION',
+              items: panel.items ?? [],
+            })),
+          })),
+        })),
+      };
+    }
+
+    // Legacy flat section (has direct items)
     return {
       id: genId(),
       name: sec.sectionName || sec.name || 'Section',
-      subSections: [{
+      type: 'FOLDER' as const,
+      children: [{
         id: genId(),
-        name: sec.sectionName || sec.name || 'Section',
-        tabs: [{
-          id: genId(), name: 'Main',
-          panels: [{
-            id: genId(), name: 'General', panelType: 'SELECTION' as BuilderPanelType,
-            items: (sec.items || []).map((i: any) => ({
-              id: genId(), label: i.label || '', responseType: 'TEXT',
-              options: [], commonComments: [], required: false, conditionalLogic: null,
-            })),
-          }],
-        }],
+        name: 'General',
+        type: 'LEAF' as const,
+        panelType: 'SELECTION' as const,
+        items: (sec.items ?? []).map((i: any) => ({
+          id: genId(), label: i.label || '', responseType: 'TEXT',
+          options: [], commonComments: [], required: false, conditionalLogic: null,
+        })),
       }],
     };
   });
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   Types
-───────────────────────────────────────────────────────────────── */
-const ROOT_ID = '__template_root__';
-type SelLevel = 'root' | 'section' | 'subsection' | 'inspection' | 'panel' | null;
-interface TreeSel {
-  level: SelLevel;
-  sectionId: string | null;
-  subId: string | null;
-  tabId: string | null;
-  panelId: string | null;
-}
-const NO_SEL: TreeSel = { level: null, sectionId: null, subId: null, tabId: null, panelId: null };
-const ROOT_SEL: TreeSel = { level: 'root', sectionId: null, subId: null, tabId: null, panelId: null };
 type ItemState = 'none' | 'selected' | 'correct' | 'damaged';
 
 /* ─────────────────────────────────────────────────────────────────
@@ -97,17 +197,47 @@ export default function TemplateBuilder() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [titleError, setTitleError] = useState(false);
-  const [sections, setSections] = useState<BuilderSection[]>([]);
-  const [sel, setSel] = useState<TreeSel>(ROOT_SEL);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set([ROOT_ID]));
+  const [nodes, setNodes] = useState<TemplateNode[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Which LEAF panel is "open" inside the selected folder (Level 2 drill-down)
+  const [selectedLeafId, setSelectedLeafId] = useState<string | null>(null);
+  // Which panel row is "focused" (selected in Level 1 for toolbar actions)
+  const [focusedLeafId, setFocusedLeafId] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['__root__']));
   const [changes, setChanges] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!isNew);
   const [treeSearch, setTreeSearch] = useState('');
   const [itemStates, setItemStates] = useState<Record<string, ItemState>>({});
-  const [selItemIds, setSelItemIds] = useState<Set<string>>(new Set());
-  const [copyMoveModal, setCopyMoveModal] = useState<{ itemId: string; panelId: string } | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [addPanelOpen, setAddPanelOpen] = useState(false);
+  const [addNodeType, setAddNodeType] = useState<'FOLDER' | 'LEAF'>('FOLDER');
+  const [addLeafPanelType, setAddLeafPanelType] = useState<BuilderPanelType>('SELECTION');
+
+  // Name-validation modal state
+  const [nameModal, setNameModal] = useState<{
+    type: 'FOLDER' | 'LEAF';
+    leafType: BuilderPanelType;
+    parentId: string | null;
+  } | null>(null);
+
+  // Add-item modal state (RHS checklist)
+  const [addItemModal, setAddItemModal] = useState<{
+    leafId: string;
+    existingLabels: string[];
+  } | null>(null);
+
+  // Move/Copy item to another panel
+  const [moveCopyModal, setMoveCopyModal] = useState<{
+    itemId: string;
+    fromLeafId: string;
+    mode: 'move' | 'copy';
+  } | null>(null);
+
+  // Reset drill-down state whenever the selected folder changes
+  useEffect(() => { setSelectedLeafId(null); setFocusedLeafId(null); }, [selectedId]);
+  // Reset focused row when entering Level 2
+  useEffect(() => { if (selectedLeafId) setFocusedLeafId(null); }, [selectedLeafId]);
 
   /* load */
   useEffect(() => {
@@ -117,145 +247,204 @@ export default function TemplateBuilder() {
       setTitle(tpl.title || '');
       setDescription((tpl as any).description || '');
       templateIdRef.current = tpl.id?.toString();
-      const built = toLegacyBuilder(tpl.sections ?? []);
-      setSections(built);
-      setExpanded(new Set([ROOT_ID, ...(built.length ? [built[0].id] : [])]));
+      // Prefer new recursive nodes, fall back to legacy sections
+      const loaded = (tpl.nodes && tpl.nodes.length > 0)
+        ? tpl.nodes
+        : sectionsToNodes(tpl.sections ?? []);
+      setNodes(loaded);
+      if (loaded.length > 0) {
+        setExpandedIds(new Set(['__root__', loaded[0].id]));
+      }
     }).catch(() => toast.error('Failed to load template')).finally(() => setLoading(false));
   }, [id, isNew]);
 
-  const dirty = useCallback((fn: (p: BuilderSection[]) => BuilderSection[]) => {
-    setSections(fn); setChanges(c => c + 1);
+  const dirty = useCallback((fn: (p: TemplateNode[]) => TemplateNode[]) => {
+    setNodes(fn); setChanges(c => c + 1);
   }, []);
 
-  const toggle = (nodeId: string) =>
-    setExpanded(p => { const n = new Set(p); n.has(nodeId) ? n.delete(nodeId) : n.add(nodeId); return n; });
+  const toggleExpand = (nodeId: string) =>
+    setExpandedIds(p => { const n = new Set(p); n.has(nodeId) ? n.delete(nodeId) : n.add(nodeId); return n; });
 
-  /* ── Section CRUD ── */
-  const addSection = () => {
-    const sec = emptySection(`Section ${sections.length + 1}`);
-    dirty(p => [...p, sec]);
-    setSel({ level: 'section', sectionId: sec.id, subId: null, tabId: null, panelId: null });
-    setExpanded(p => new Set([...p, sec.id]));
-  };
-  const delSection = (sid: string) => {
-    dirty(p => p.filter(s => s.id !== sid));
-    if (sel.sectionId === sid) setSel(NO_SEL);
-  };
-  const renameSection = (sid: string, name: string) =>
-    dirty(p => p.map(s => s.id === sid ? { ...s, name } : s));
-
-  /* ── Subsection CRUD ── */
-  const addSub = (sid: string) => {
-    const sec = sections.find(s => s.id === sid);
-    const sub = emptySubSection(`Subsection ${(sec?.subSections.length ?? 0) + 1}`);
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: [...s.subSections, sub] } : s));
-    setSel({ level: 'subsection', sectionId: sid, subId: sub.id, tabId: null, panelId: null });
-    setExpanded(p => new Set([...p, sid]));
-  };
-  const delSub = (sid: string, ssid: string) => {
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.filter(ss => ss.id !== ssid) } : s));
-    if (sel.subId === ssid) setSel(s => ({ ...s, level: 'section', subId: null, tabId: null, panelId: null }));
-  };
-  const renameSub = (sid: string, ssid: string, name: string) =>
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, name } : ss) } : s));
-
-  /* ── Inspection CRUD ── */
-  const addInspection = (sid: string, ssid: string) => {
-    const sub = sections.find(s => s.id === sid)?.subSections.find(ss => ss.id === ssid);
-    const tab = emptyTab(`Inspection ${(sub?.tabs.length ?? 0) + 1}`);
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, tabs: [...ss.tabs, tab] } : ss) } : s));
-    setSel({ level: 'inspection', sectionId: sid, subId: ssid, tabId: tab.id, panelId: null });
-    setExpanded(p => new Set([...p, sid, ssid]));
-  };
-  const delInspection = (sid: string, ssid: string, tabId: string) => {
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, tabs: ss.tabs.filter(t => t.id !== tabId) } : ss) } : s));
-    if (sel.tabId === tabId) setSel(s => ({ ...s, level: 'subsection', tabId: null, panelId: null }));
-  };
-  const renameInspection = (sid: string, ssid: string, tabId: string, name: string) =>
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, tabs: ss.tabs.map(t => t.id === tabId ? { ...t, name } : t) } : ss) } : s));
-
-  /* ── Panel CRUD ── */
-  const addPanel = (type: BuilderPanelType) => {
-    if (!sel.sectionId || !sel.subId || !sel.tabId) return;
-    const { sectionId: sid, subId: ssid, tabId } = sel;
-    const tab = sections.find(s => s.id === sid)?.subSections.find(ss => ss.id === ssid)?.tabs.find(t => t.id === tabId);
-    const panel = emptyPanel(type, `${type === 'SELECTION' ? 'Selection' : 'Damaged'} Section ${(tab?.panels.length ?? 0) + 1}`);
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, tabs: ss.tabs.map(t => t.id === tabId ? { ...t, panels: [...t.panels, panel] } : t) } : ss) } : s));
-    setSel({ level: 'panel', sectionId: sid, subId: ssid, tabId, panelId: panel.id });
-    setExpanded(p => new Set([...p, sid, ssid, tabId]));
-  };
-  const delPanel = (panelId: string) => {
-    if (!sel.sectionId || !sel.subId || !sel.tabId) return;
-    const { sectionId: sid, subId: ssid, tabId } = sel;
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, tabs: ss.tabs.map(t => t.id === tabId ? { ...t, panels: t.panels.filter(p2 => p2.id !== panelId) } : t) } : ss) } : s));
-    if (sel.panelId === panelId) setSel(s => ({ ...s, level: 'inspection', panelId: null }));
-  };
-  const renamePanel = (panelId: string, name: string) => {
-    if (!sel.sectionId || !sel.subId || !sel.tabId) return;
-    const { sectionId: sid, subId: ssid, tabId } = sel;
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, tabs: ss.tabs.map(t => t.id === tabId ? { ...t, panels: t.panels.map(p2 => p2.id === panelId ? { ...p2, name } : p2) } : t) } : ss) } : s));
+  /* ── Node CRUD ── */
+  const addRootFolder = (name?: string) => {
+    const node = emptyFolder(name ?? `Section ${nodes.length + 1}`);
+    dirty(p => [...p, node]);
+    setSelectedId(node.id);
+    setExpandedIds(p => new Set([...p, '__root__', node.id]));
   };
 
-  /* ── Item CRUD ── */
-  const addItem = (panelId: string) => {
-    if (!sel.sectionId || !sel.subId || !sel.tabId) return;
-    const { sectionId: sid, subId: ssid, tabId } = sel;
+  const addRootLeaf = (type: BuilderPanelType, name?: string) => {
+    const node = emptyLeaf(name ?? `${type === 'SELECTION' ? 'Selection' : 'Damage'} ${nodes.length + 1}`, type);
+    dirty(p => [...p, node]);
+    setSelectedId(null); // root LEAFs not shown in workspace; stay at root view
+  };
+
+  const addChildFolder = (parentId: string, name?: string) => {
+    const parent = findNode(nodes, parentId);
+    const childCount = parent?.children?.length ?? 0;
+    const child = emptyFolder(name ?? `Group ${childCount + 1}`);
+    dirty(p => addChildTo(p, parentId, child));
+    setSelectedId(child.id);
+    setExpandedIds(p => new Set([...p, parentId, child.id]));
+  };
+
+  const addChildLeaf = (parentId: string, type: BuilderPanelType, name?: string) => {
+    const parent = findNode(nodes, parentId);
+    const leafCount = (parent?.children ?? []).filter(c => c.type === 'LEAF').length;
+    const child = emptyLeaf(name ?? `${type === 'SELECTION' ? 'Selection' : 'Damage'} ${leafCount + 1}`, type);
+    dirty(p => addChildTo(p, parentId, child));
+    setSelectedId(parentId);   // stay in parent folder so checklist view refreshes
+    setExpandedIds(p => new Set([...p, parentId]));
+  };
+
+  const renameNode = (nodeId: string, name: string) =>
+    dirty(p => mapNode(p, nodeId, n => ({ ...n, name })));
+
+  const deleteNode = (nodeId: string) => {
+    dirty(p => removeNode(p, nodeId));
+    if (selectedId === nodeId) setSelectedId(null);
+    if (selectedLeafId === nodeId) setSelectedLeafId(null);
+  };
+
+  /* ── Item CRUD (inside LEAF nodes) ── */
+  const addItem = (leafId: string) => {
     const item = emptyItem();
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, tabs: ss.tabs.map(t => t.id === tabId ? { ...t, panels: t.panels.map(p2 => p2.id === panelId ? { ...p2, items: [...p2.items, item] } : p2) } : t) } : ss) } : s));
+    dirty(p => mapNode(p, leafId, n => ({ ...n, items: [...(n.items ?? []), item] })));
   };
-  const addItemToFirstPanel = () => {
-    if (!sel.sectionId || !sel.subId || !sel.tabId) return;
-    if (sel.panelId) { addItem(sel.panelId); return; }
-    const tab = sections.find(s => s.id === sel.sectionId)?.subSections.find(ss => ss.id === sel.subId)?.tabs.find(t => t.id === sel.tabId);
-    if (!tab?.panels.length) { toast.info('Add an Inspection Section first.'); return; }
-    addItem(tab.panels[0].id);
+
+  const deleteItem = (leafId: string, itemId: string) => {
+    dirty(p => mapNode(p, leafId, n => ({ ...n, items: (n.items ?? []).filter(i => i.id !== itemId) })));
   };
-  const delItem = (panelId: string, itemId: string) => {
-    if (!sel.sectionId || !sel.subId || !sel.tabId) return;
-    const { sectionId: sid, subId: ssid, tabId } = sel;
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, tabs: ss.tabs.map(t => t.id === tabId ? { ...t, panels: t.panels.map(p2 => p2.id === panelId ? { ...p2, items: p2.items.filter(i => i.id !== itemId) } : p2) } : t) } : ss) } : s));
-    setSelItemIds(p => { const n = new Set(p); n.delete(itemId); return n; });
+
+  const renameItem = (leafId: string, itemId: string, label: string) => {
+    dirty(p => mapNode(p, leafId, n => ({
+      ...n, items: (n.items ?? []).map(i => i.id === itemId ? { ...i, label } : i),
+    })));
   };
-  const renameItem = (panelId: string, itemId: string, label: string) => {
-    if (!sel.sectionId || !sel.subId || !sel.tabId) return;
-    const { sectionId: sid, subId: ssid, tabId } = sel;
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, tabs: ss.tabs.map(t => t.id === tabId ? { ...t, panels: t.panels.map(p2 => p2.id === panelId ? { ...p2, items: p2.items.map(i => i.id === itemId ? { ...i, label } : i) } : p2) } : t) } : ss) } : s));
+
+  const handleSmartAdd = () => {
+    const target = selectedId ? findNode(nodes, selectedId) : null;
+    const parentId = target?.type === 'FOLDER' ? selectedId : null;
+    setAddPanelOpen(false);
+    setNameModal({ type: addNodeType, leafType: addLeafPanelType, parentId });
   };
-  const delSelectedItems = () => {
-    if (!selItemIds.size || !sel.sectionId || !sel.subId || !sel.tabId) return;
-    const { sectionId: sid, subId: ssid, tabId } = sel;
-    const ids = selItemIds;
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, tabs: ss.tabs.map(t => t.id === tabId ? { ...t, panels: t.panels.map(p2 => ({ ...p2, items: p2.items.filter(i => !ids.has(i.id)) })) } : t) } : ss) } : s));
-    setSelItemIds(new Set());
+
+  const openModal = (type: 'FOLDER' | 'LEAF', leafType: BuilderPanelType, parentId: string | null) => {
+    setNameModal({ type, leafType, parentId });
   };
-  const copyItem = (panelId: string, itemId: string) => {
-    if (!sel.sectionId || !sel.subId || !sel.tabId) return;
-    const { sectionId: sid, subId: ssid, tabId } = sel;
-    const item = sections.find(s => s.id === sid)?.subSections.find(ss => ss.id === ssid)?.tabs.find(t => t.id === tabId)?.panels.find(p => p.id === panelId)?.items.find(i => i.id === itemId);
+
+  const handleNameModalConfirm = (name: string) => {
+    if (!nameModal) return;
+    const { type, leafType, parentId } = nameModal;
+
+    if (isDuplicateName(nodes, parentId, name)) {
+      toast.error(`A node named "${name}" already exists in this folder.`);
+      return;
+    }
+
+    if (type === 'FOLDER') {
+      if (parentId) addChildFolder(parentId, name);
+      else addRootFolder(name);
+    } else {
+      if (parentId) addChildLeaf(parentId, leafType, name);
+      else addRootLeaf(leafType, name);
+    }
+    setNameModal(null);
+  };
+
+  /* ── Copy folder ── */
+  const copyFolder = (nodeId: string) => {
+    const node = findNode(nodes, nodeId);
+    if (!node) return;
+    const path = findPath(nodes, nodeId);
+    const parentId = path && path.length > 1 ? path[path.length - 2].id : null;
+    const copy = deepCloneNode(node, `Copy of ${node.name}`);
+    if (parentId) dirty(p => addChildTo(p, parentId, copy));
+    else dirty(p => [...p, copy]);
+    toast.success(`"${node.name}" copied.`);
+  };
+
+  /* ── Item sort ── */
+  const moveItemUp = (leafId: string, itemId: string) => {
+    dirty(p => mapNode(p, leafId, n => {
+      const items = [...(n.items ?? [])];
+      const idx = items.findIndex(i => i.id === itemId);
+      if (idx <= 0) return n;
+      [items[idx - 1], items[idx]] = [items[idx], items[idx - 1]];
+      return { ...n, items };
+    }));
+  };
+
+  const moveItemDown = (leafId: string, itemId: string) => {
+    dirty(p => mapNode(p, leafId, n => {
+      const items = [...(n.items ?? [])];
+      const idx = items.findIndex(i => i.id === itemId);
+      if (idx < 0 || idx >= items.length - 1) return n;
+      [items[idx], items[idx + 1]] = [items[idx + 1], items[idx]];
+      return { ...n, items };
+    }));
+  };
+
+  /** Add item with a validated name and optional PDF report alias. */
+  const addItemWithName = (leafId: string, label: string, reportName?: string) => {
+    const item: BuilderItem = {
+      ...emptyItem(),
+      label,
+      reportName: reportName && reportName !== label ? reportName : undefined,
+    };
+    dirty(p => mapNode(p, leafId, n => ({ ...n, items: [...(n.items ?? []), item] })));
+  };
+
+  /** Move an item from one LEAF panel to another. */
+  const moveItemToLeaf = (fromLeafId: string, itemId: string, toLeafId: string) => {
+    const fromLeaf = findNode(nodes, fromLeafId);
+    const item = fromLeaf?.items?.find(i => i.id === itemId);
+    if (!item || fromLeafId === toLeafId) return;
+    dirty(p => {
+      let tree = mapNode(p, fromLeafId, n => ({ ...n, items: (n.items ?? []).filter(i => i.id !== itemId) }));
+      tree = mapNode(tree, toLeafId, n => ({ ...n, items: [...(n.items ?? []), { ...item }] }));
+      return tree;
+    });
+  };
+
+  /** Copy an item from one LEAF panel to another (fresh id). */
+  const copyItemToLeaf = (fromLeafId: string, itemId: string, toLeafId: string) => {
+    const fromLeaf = findNode(nodes, fromLeafId);
+    const item = fromLeaf?.items?.find(i => i.id === itemId);
     if (!item) return;
-    const copy = { ...deepCopyItem(item), label: item.label + ' (Copy)' };
-    dirty(p => p.map(s => s.id === sid ? { ...s, subSections: s.subSections.map(ss => ss.id === ssid ? { ...ss, tabs: ss.tabs.map(t => t.id === tabId ? { ...t, panels: t.panels.map(p2 => p2.id === panelId ? { ...p2, items: [...p2.items, copy] } : p2) } : t) } : ss) } : s));
-    toast.success('Item copied');
+    const copy = { ...item, id: genId() };
+    dirty(p => mapNode(p, toLeafId, n => ({ ...n, items: [...(n.items ?? []), copy] })));
   };
-  const moveItem = (srcPanelId: string, itemId: string, dstPanelId: string) => {
-    if (!sel.sectionId || !sel.subId || !sel.tabId || srcPanelId === dstPanelId) return;
-    const { sectionId: sid, subId: ssid, tabId } = sel;
-    const item = sections.find(s => s.id === sid)?.subSections.find(ss => ss.id === ssid)?.tabs.find(t => t.id === tabId)?.panels.find(p => p.id === srcPanelId)?.items.find(i => i.id === itemId);
-    if (!item) return;
-    const copy = { ...deepCopyItem(item), id: item.id };
-    dirty(p => p.map(s => s.id === sid ? {
-      ...s, subSections: s.subSections.map(ss => ss.id === ssid ? {
-        ...ss, tabs: ss.tabs.map(t => t.id === tabId ? {
-          ...t, panels: t.panels.map(p2 => {
-            if (p2.id === srcPanelId) return { ...p2, items: p2.items.filter(i => i.id !== itemId) };
-            if (p2.id === dstPanelId) return { ...p2, items: [...p2.items, copy] };
-            return p2;
-          })
-        } : t)
-      } : ss)
-    } : s));
-    setCopyMoveModal(null);
-    toast.success('Item moved');
+
+  /* ── Leaf (panel) sort & copy within a folder ── */
+  const moveLeafUp = (leafId: string) => {
+    if (!selectedId) return;
+    dirty(p => mapNode(p, selectedId, n => {
+      const ch = [...(n.children ?? [])];
+      const i = ch.findIndex(c => c.id === leafId);
+      if (i <= 0) return n;
+      [ch[i - 1], ch[i]] = [ch[i], ch[i - 1]];
+      return { ...n, children: ch };
+    }));
+  };
+
+  const moveLeafDown = (leafId: string) => {
+    if (!selectedId) return;
+    dirty(p => mapNode(p, selectedId, n => {
+      const ch = [...(n.children ?? [])];
+      const i = ch.findIndex(c => c.id === leafId);
+      if (i < 0 || i >= ch.length - 1) return n;
+      [ch[i], ch[i + 1]] = [ch[i + 1], ch[i]];
+      return { ...n, children: ch };
+    }));
+  };
+
+  const copyLeaf = (leafId: string) => {
+    if (!selectedId) return;
+    const leaf = findNode(nodes, leafId);
+    if (!leaf) return;
+    const copy = deepCloneNode(leaf, `Copy of ${leaf.name}`);
+    dirty(p => mapNode(p, selectedId, n => ({ ...n, children: [...(n.children ?? []), copy] })));
   };
 
   /* ── Save ── */
@@ -264,7 +453,13 @@ export default function TemplateBuilder() {
     if (!trimmed) { setTitleError(true); toast.error('Please enter a template name.'); return; }
     setTitleError(false); setSaving(true);
     try {
-      const payload = { title: trimmed, description: description.trim() || undefined, scope: searchParams.get('scope') || 'ORGANISATION', sections: sections as any[] };
+      const payload = {
+        title: trimmed,
+        description: description.trim() || undefined,
+        scope: searchParams.get('scope') || 'ORGANISATION',
+        nodes: nodes as any[],
+        sections: [],
+      };
       if (isNew || !templateIdRef.current) {
         const saved = await checklistService.createTemplate(payload);
         templateIdRef.current = saved.id?.toString();
@@ -279,18 +474,21 @@ export default function TemplateBuilder() {
   };
 
   /* ── Derived ── */
-  const activeSection = sections.find(s => s.id === sel.sectionId) ?? null;
-  const activeSub = activeSection?.subSections.find(ss => ss.id === sel.subId) ?? null;
-  const activeTab = activeSub?.tabs.find(t => t.id === sel.tabId) ?? null;
-  const activePanel = activeTab?.panels.find(p => p.id === sel.panelId) ?? null;
+  const selectedNode = selectedId ? findNode(nodes, selectedId) : null;
+  const breadcrumb = selectedId ? findPath(nodes, selectedId) ?? [] : [];
+  const parentInPath = breadcrumb.length > 1 ? breadcrumb[breadcrumb.length - 2] : null;
+  const selectedLeafNode = selectedLeafId ? findNode(nodes, selectedLeafId) : null;
+  const goBack = () => {
+    if (selectedLeafId !== null) {
+      setSelectedLeafId(null); // Level 2 → Level 1
+    } else {
+      setSelectedId(parentInPath?.id ?? null); // Level 1 → parent folder
+    }
+  };
 
-  const filteredSections = treeSearch
-    ? sections.filter(s =>
-      s.name.toLowerCase().includes(treeSearch.toLowerCase()) ||
-      s.subSections.some(ss =>
-        ss.name.toLowerCase().includes(treeSearch.toLowerCase()) ||
-        ss.tabs.some(t => t.name.toLowerCase().includes(treeSearch.toLowerCase()))))
-    : sections;
+  const filteredNodes = treeSearch
+    ? nodes.filter(n => nodeMatchesSearch(n, treeSearch.toLowerCase()))
+    : nodes;
 
   /* ── Loading ── */
   if (loading) return (
@@ -303,6 +501,43 @@ export default function TemplateBuilder() {
   return (
     <div className={css.page}>
 
+      {/* ═══ NAME MODAL ═══ */}
+      {nameModal && (
+        <NameModal
+          title={nameModal.type === 'FOLDER' ? 'New Folder' : `New ${nameModal.leafType === 'SELECTION' ? 'Selection' : 'Damage'} Panel`}
+          placeholder={nameModal.type === 'FOLDER' ? 'e.g. Exterior' : 'e.g. Roof Inspection'}
+          onConfirm={handleNameModalConfirm}
+          onCancel={() => setNameModal(null)}
+        />
+      )}
+
+      {/* ═══ ADD ITEM MODAL ═══ */}
+      {addItemModal && (
+        <AddItemModal
+          existingLabels={addItemModal.existingLabels}
+          onConfirm={(label, reportName) => {
+            addItemWithName(addItemModal.leafId, label, reportName);
+            setAddItemModal(null);
+          }}
+          onCancel={() => setAddItemModal(null)}
+        />
+      )}
+
+      {/* ═══ MOVE / COPY MODAL ═══ */}
+      {moveCopyModal && (
+        <MoveCopyModal
+          mode={moveCopyModal.mode}
+          nodes={nodes}
+          fromLeafId={moveCopyModal.fromLeafId}
+          onConfirm={(toLeafId) => {
+            if (moveCopyModal.mode === 'move') moveItemToLeaf(moveCopyModal.fromLeafId, moveCopyModal.itemId, toLeafId);
+            else copyItemToLeaf(moveCopyModal.fromLeafId, moveCopyModal.itemId, toLeafId);
+            setMoveCopyModal(null);
+          }}
+          onCancel={() => setMoveCopyModal(null)}
+        />
+      )}
+
       {/* ═══ TOP NAV BAR ═══ */}
       <header className={css.header}>
         <button className={css.backBtn} onClick={() => navigate('/templates')}>
@@ -310,12 +545,12 @@ export default function TemplateBuilder() {
         </button>
         <span className={css.headerSep}>/</span>
         <span className={css.headerTitle}>{isNew ? 'New Template' : title || 'Edit Template'}</span>
-        {changes > 0 && (
+        {/* {changes > 0 && (
           <span className={css.changesChip}>
             <span className={css.changesDot} />
             {changes} unsaved
           </span>
-        )}
+        )} */}
         {changes > 0 && (
           <button className={css.saveBtn} onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 size={13} style={{ animation: 'spin .7s linear infinite' }} /> : isNew ? <FilePlus2 size={13} /> : <Save size={13} />}
@@ -354,13 +589,12 @@ export default function TemplateBuilder() {
 
         {/* ════ LEFT SIDEBAR ════ */}
         <nav className={css.sidebar}>
-
-          {/* Section header */}
           <div className={css.sidebarHead}>
             <div className={css.sidebarHeadIcon}>
               <FolderOpen size={14} color="#33AE95" />
             </div>
             <span className={css.sidebarHeadTitle}>Template Menu</span>
+            <NodeActionBtn icon={<Plus size={11} />} title="Add Section" onClick={() => openModal('FOLDER', 'SELECTION', null)} />
           </div>
 
           {/* Search */}
@@ -380,150 +614,74 @@ export default function TemplateBuilder() {
 
           {/* Tree */}
           <div className={css.treeArea}>
-
-            {/* Root node */}
-            <div
-              className={`${css.nodeRow} ${sel.level === 'root' ? css.nodeRowActive : ''}`}
-              onClick={() => setSel(ROOT_SEL)}>
-              <button onClick={e => { e.stopPropagation(); toggle(ROOT_ID); }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 4px 8px 8px', color: '#9CA3AF', display: 'flex', flexShrink: 0 }}>
-                {expanded.has(ROOT_ID) ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-              </button>
-              <span style={{ flexShrink: 0, marginRight: 7, display: 'flex', alignItems: 'center' }}>
-                {expanded.has(ROOT_ID)
-                  ? <FolderOpen size={15} color="#33AE95" />
-                  : <Folder size={15} color="#33AE95" />}
-              </span>
-              <span className={css.nodeLabel} style={{ fontSize: 14, fontWeight: 700, color: sel.level === 'root' ? '#298E7A' : '#263B4F', paddingBlock: 8 }}>
-                Menu
-              </span>
-              <div className={css.nodeActions}>
-                <NodeActionBtn icon={<Plus size={11} />} title="Add Section" onClick={e => { e.stopPropagation(); addSection(); }} />
-              </div>
-            </div>
-
-            {/* Sections */}
-            {expanded.has(ROOT_ID) && (
-              <div>
-                {filteredSections.length === 0 && !treeSearch && (
-                  <p style={{ fontSize: 13, color: '#9CA3AF', padding: '8px 16px 8px 34px', lineHeight: 1.6, margin: 0 }}>
-                    No sections yet.
-                  </p>
-                )}
-
-                {filteredSections.map(sec => (
-                  <div key={sec.id}>
-                    {/* L1: Section */}
-                    <div
-                      className={`${css.nodeRow} ${sel.sectionId === sec.id && sel.level === 'section' ? css.nodeRowActive : ''}`}
-                      onClick={() => setSel({ level: 'section', sectionId: sec.id, subId: null, tabId: null, panelId: null })}>
-                      <button onClick={e => { e.stopPropagation(); toggle(sec.id); }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '7px 4px 7px 22px', color: '#9CA3AF', display: 'flex', flexShrink: 0 }}>
-                        {expanded.has(sec.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                      </button>
-                      <span style={{ flexShrink: 0, marginRight: 7, display: 'flex', alignItems: 'center' }}>
-                        {expanded.has(sec.id) ? <FolderOpen size={14} color="#33AE95" /> : <Folder size={14} color="#33AE95" />}
-                      </span>
-                      <SidebarNodeLabel nodeId={sec.id} name={sec.name}
-                        isActive={sel.sectionId === sec.id && sel.level === 'section'} bold
-                        editingNodeId={editingNodeId} setEditingNodeId={setEditingNodeId}
-                        onRename={name => renameSection(sec.id, name)} />
-                      <div className={css.nodeActions}>
-                        <NodeActionBtn icon={<Plus size={11} />} title="Add Subsection" onClick={e => { e.stopPropagation(); addSub(sec.id); }} />
-                        <NodeActionBtn icon={<Edit2 size={11} />} title="Rename" onClick={e => { e.stopPropagation(); setEditingNodeId(sec.id); }} />
-                        <NodeActionBtn icon={<Trash2 size={11} />} title="Delete" danger onClick={e => { e.stopPropagation(); delSection(sec.id); }} />
-                      </div>
-                    </div>
-
-                    {/* L2: Subsections */}
-                    {expanded.has(sec.id) && sec.subSections.map(ss => (
-                      <div key={ss.id}>
-                        <div
-                          className={`${css.nodeRow} ${sel.subId === ss.id && sel.level === 'subsection' ? css.nodeRowActive : ''}`}
-                          onClick={() => setSel({ level: 'subsection', sectionId: sec.id, subId: ss.id, tabId: null, panelId: null })}>
-                          <button onClick={e => { e.stopPropagation(); toggle(ss.id); }}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '7px 4px 7px 40px', color: '#9CA3AF', display: 'flex', flexShrink: 0 }}>
-                            {expanded.has(ss.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                          </button>
-                          <span style={{ flexShrink: 0, marginRight: 7, display: 'flex', alignItems: 'center' }}>
-                            <FolderOpen size={13} color="#6B7280" />
-                          </span>
-                          <SidebarNodeLabel nodeId={ss.id} name={ss.name}
-                            isActive={sel.subId === ss.id && sel.level === 'subsection'}
-                            editingNodeId={editingNodeId} setEditingNodeId={setEditingNodeId}
-                            onRename={name => renameSub(sec.id, ss.id, name)} />
-                          <div className={css.nodeActions}>
-                            <NodeActionBtn icon={<Plus size={10} />} title="Add Inspection" onClick={e => { e.stopPropagation(); addInspection(sec.id, ss.id); }} />
-                            <NodeActionBtn icon={<Edit2 size={10} />} title="Rename" onClick={e => { e.stopPropagation(); setEditingNodeId(ss.id); }} />
-                            <NodeActionBtn icon={<Trash2 size={10} />} title="Delete" danger onClick={e => { e.stopPropagation(); delSub(sec.id, ss.id); }} />
-                          </div>
-                        </div>
-
-                        {/* L3: Inspections */}
-                        {expanded.has(ss.id) && ss.tabs.map(tab => (
-                          <div key={tab.id}>
-                            <div
-                              className={`${css.nodeRow} ${sel.tabId === tab.id && sel.level === 'inspection' ? css.nodeRowActive : ''}`}
-                              onClick={() => setSel({ level: 'inspection', sectionId: sec.id, subId: ss.id, tabId: tab.id, panelId: null })}>
-                              <button onClick={e => { e.stopPropagation(); toggle(tab.id); }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '7px 4px 7px 58px', color: '#9CA3AF', display: 'flex', flexShrink: 0 }}>
-                                {expanded.has(tab.id) ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-                              </button>
-                              <span style={{ flexShrink: 0, marginRight: 7, display: 'flex', alignItems: 'center' }}>
-                                <FileText size={12} color={sel.tabId === tab.id ? '#298E7A' : '#9CA3AF'} />
-                              </span>
-                              <SidebarNodeLabel nodeId={tab.id} name={tab.name}
-                                isActive={sel.tabId === tab.id && sel.level === 'inspection'} small
-                                editingNodeId={editingNodeId} setEditingNodeId={setEditingNodeId}
-                                onRename={name => renameInspection(sec.id, ss.id, tab.id, name)} />
-                              <div className={css.nodeActions}>
-                                <NodeActionBtn icon={<Edit2 size={10} />} title="Rename" onClick={e => { e.stopPropagation(); setEditingNodeId(tab.id); }} />
-                                <NodeActionBtn icon={<Trash2 size={10} />} title="Delete" danger onClick={e => { e.stopPropagation(); delInspection(sec.id, ss.id, tab.id); }} />
-                              </div>
-                            </div>
-
-                            {/* L4: Panels */}
-                            {expanded.has(tab.id) && tab.panels.map(panel => {
-                              const isPSel = panel.panelType === 'SELECTION';
-                              return (
-                                <div key={panel.id}
-                                  className={`${css.nodeRow} ${sel.panelId === panel.id ? css.nodeRowActive : ''}`}
-                                  onClick={() => setSel({ level: 'panel', sectionId: sec.id, subId: ss.id, tabId: tab.id, panelId: panel.id })}>
-                                  <span style={{ flexShrink: 0, padding: '7px 4px 7px 76px', display: 'flex', alignItems: 'center' }}>
-                                    {isPSel
-                                      ? <CheckCircle2 size={11} color={sel.panelId === panel.id ? '#16A34A' : '#9CA3AF'} />
-                                      : <AlertTriangle size={11} color={sel.panelId === panel.id ? '#DC2626' : '#9CA3AF'} />}
-                                  </span>
-                                  <SidebarNodeLabel nodeId={panel.id} name={panel.name}
-                                    isActive={sel.panelId === panel.id} small
-                                    editingNodeId={editingNodeId} setEditingNodeId={setEditingNodeId}
-                                    onRename={name => renamePanel(panel.id, name)} />
-                                  <div className={css.nodeActions}>
-                                    <NodeActionBtn icon={<Edit2 size={10} />} title="Rename" onClick={e => { e.stopPropagation(); setEditingNodeId(panel.id); }} />
-                                    <NodeActionBtn icon={<Trash2 size={10} />} title="Delete" danger onClick={e => { e.stopPropagation(); delPanel(panel.id); }} />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
+            {filteredNodes.length === 0 && !treeSearch && (
+              <p style={{ fontSize: 13, color: '#9CA3AF', padding: '16px', margin: 0, textAlign: 'center' }}>
+                No sections yet.<br />Click <strong>+</strong> above to add one.
+              </p>
             )}
+            {filteredNodes.map(node => (
+              <RecursiveTreeNode
+                key={node.id}
+                node={node}
+                depth={0}
+                selectedId={selectedId}
+                expandedIds={expandedIds}
+                editingNodeId={editingNodeId}
+                onSelect={setSelectedId}
+                onToggle={toggleExpand}
+                onRename={renameNode}
+                onDelete={deleteNode}
+                onCopy={copyFolder}
+                onAddFolder={(parentId) => openModal('FOLDER', 'SELECTION', parentId)}
+                onAddLeaf={(parentId, type) => openModal('LEAF', type, parentId)}
+                setEditingNodeId={setEditingNodeId}
+              />
+            ))}
           </div>
 
           {/* Sidebar footer */}
           <div className={css.sidebarFooter}>
-            <button className={css.sidebarAddBtn} onClick={addSection}>
-              <Plus size={13} /> Add Section
-            </button>
-            <button className={css.sidebarDelBtn} disabled={!sel.sectionId}
-              onClick={() => { if (sel.sectionId) delSection(sel.sectionId); }}>
-              <Trash2 size={13} /> Delete
-            </button>
+            {addPanelOpen ? (
+              <div className={css.addPanel}>
+                <p className={css.addPanelLabel}>
+                  {selectedId && findNode(nodes, selectedId)?.type === 'FOLDER'
+                    ? `Inside "${findNode(nodes, selectedId)!.name}"`
+                    : 'Add to root'}
+                </p>
+                <div className={css.addPanelRow}>
+                  <button className={`${css.addTypeBtn} ${addNodeType === 'FOLDER' ? css.addTypeBtnActive : ''}`}
+                    onClick={() => setAddNodeType('FOLDER')}>
+                    <Folder size={12} /> Folder
+                  </button>
+                  {selectedId && findNode(nodes, selectedId)?.type === 'FOLDER' && (
+                    <button className={`${css.addTypeBtn} ${addNodeType === 'LEAF' ? css.addTypeBtnActive : ''}`}
+                      onClick={() => setAddNodeType('LEAF')}>
+                      <CheckCircle2 size={12} /> Item
+                    </button>
+                  )}
+                </div>
+                {addNodeType === 'LEAF' && (
+                  <div className={css.addPanelRow}>
+                    <button className={`${css.addTypeBtn} ${addLeafPanelType === 'SELECTION' ? css.addTypeBtnSel : ''}`}
+                      onClick={() => setAddLeafPanelType('SELECTION')}>
+                      <CheckCircle2 size={12} /> Selection
+                    </button>
+                    <button className={`${css.addTypeBtn} ${addLeafPanelType === 'DAMAGE' ? css.addTypeBtnDmg : ''}`}
+                      onClick={() => setAddLeafPanelType('DAMAGE')}>
+                      <AlertTriangle size={12} /> Damage
+                    </button>
+                  </div>
+                )}
+                <div className={css.addPanelActions}>
+                  <button className={css.addPanelCancelBtn} onClick={() => setAddPanelOpen(false)}>Cancel</button>
+                  <button className={css.addPanelConfirmBtn} onClick={handleSmartAdd}>Add</button>
+                </div>
+              </div>
+            ) : (
+              <button className={css.sidebarAddBtn} onClick={() => setAddPanelOpen(true)}>
+                <Plus size={13} /> Add New
+              </button>
+            )}
           </div>
         </nav>
 
@@ -532,132 +690,650 @@ export default function TemplateBuilder() {
 
           {/* Breadcrumb bar */}
           <div className={css.breadcrumbBar}>
-            <button className={`${css.bcBtn} ${sel.level === 'root' ? css.bcActive : css.bcLink}`}
-              onClick={() => setSel(ROOT_SEL)}>
+            {(selectedId !== null || selectedLeafId !== null) && (
+              <>
+                <button className={css.bcBackBtn} onClick={goBack}>
+                  <ArrowLeft size={12} />
+                  {selectedLeafId !== null
+                    ? (selectedNode?.name ?? 'Panels')
+                    : (parentInPath ? parentInPath.name : 'Menu')}
+                </button>
+                <span className={css.bcBarDivider} />
+              </>
+            )}
+            <button className={`${css.bcBtn} ${selectedId === null ? css.bcActive : css.bcLink}`}
+              onClick={() => { setSelectedId(null); setSelectedLeafId(null); }}>
               <FolderOpen size={13} /> Template Menu
             </button>
-            {activeSection && <>
-              <ChevronRight size={12} color="#D1D5DB" style={{ flexShrink: 0 }} />
-              <button className={`${css.bcBtn} ${sel.level === 'section' ? css.bcActive : css.bcLink}`}
-                onClick={() => setSel({ level: 'section', sectionId: activeSection.id, subId: null, tabId: null, panelId: null })}>
-                {activeSection.name}
-              </button>
-            </>}
-            {activeSub && <>
-              <ChevronRight size={12} color="#D1D5DB" style={{ flexShrink: 0 }} />
-              <button className={`${css.bcBtn} ${sel.level === 'subsection' ? css.bcActive : css.bcLink}`}
-                onClick={() => setSel({ level: 'subsection', sectionId: activeSection!.id, subId: activeSub.id, tabId: null, panelId: null })}>
-                {activeSub.name}
-              </button>
-            </>}
-            {activeTab && <>
-              <ChevronRight size={12} color="#D1D5DB" style={{ flexShrink: 0 }} />
-              <button className={`${css.bcBtn} ${sel.level === 'inspection' ? css.bcActive : css.bcLink}`}
-                onClick={() => setSel({ level: 'inspection', sectionId: activeSection!.id, subId: activeSub!.id, tabId: activeTab.id, panelId: null })}>
-                {activeTab.name}
-              </button>
-            </>}
-            {activePanel && <>
-              <ChevronRight size={12} color="#D1D5DB" style={{ flexShrink: 0 }} />
-              <span className={`${css.bcBtn} ${css.bcActive}`}>{activePanel.name}</span>
-            </>}
+            {breadcrumb.map((crumb, i) => {
+              const isLast = i === breadcrumb.length - 1;
+              return (
+                <React.Fragment key={crumb.id}>
+                  <ChevronRight size={12} color="#D1D5DB" style={{ flexShrink: 0 }} />
+                  <button
+                    className={`${css.bcBtn} ${isLast && !selectedLeafId ? css.bcActive : css.bcLink}`}
+                    onClick={() => {
+                      setSelectedId(crumb.id);
+                      if (isLast) setSelectedLeafId(null); // clicking current folder goes back to Level 1
+                    }}>
+                    {crumb.name}
+                  </button>
+                </React.Fragment>
+              );
+            })}
+            {/* Level 2: append panel name as the active (last) crumb */}
+            {selectedLeafNode && (
+              <>
+                <ChevronRight size={12} color="#D1D5DB" style={{ flexShrink: 0 }} />
+                <button className={`${css.bcBtn} ${css.bcActive}`}>
+                  {selectedLeafNode.name}
+                </button>
+              </>
+            )}
           </div>
 
           {/* Scrollable content */}
-          <div className={css.scrollArea} style={{ paddingBottom: sel.level === 'panel' ? 72 : 20 }}>
-            {sel.level === 'root' && (
-              <CardGrid
-                title="Template Menu"
-                subtitle={`${sections.length} section${sections.length !== 1 ? 's' : ''}`}
-                emptyMsg="No sections yet. Click '+ Add Section' in the sidebar or the button above."
-                items={sections.map(sec => ({
-                  id: sec.id, name: sec.name,
-                  meta: `${sec.subSections.length} subsection${sec.subSections.length !== 1 ? 's' : ''}`,
-                  icon: <FolderOpen size={22} color="#33AE95" />,
-                  onClick: () => setSel({ level: 'section', sectionId: sec.id, subId: null, tabId: null, panelId: null }),
-                }))}
-                onAdd={addSection} addLabel="Add Section"
+          <div className={css.scrollArea} style={{ paddingBottom: 20 }}>
+
+            {/* Root level — show folder cards only */}
+            {selectedId === null && (
+              nodes.filter(n => n.type === 'FOLDER').length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 280, gap: 14 }}>
+                  <FolderOpen size={44} color="#D1D5DB" />
+                  <p style={{ color: '#9CA3AF', fontSize: 14, margin: 0, textAlign: 'center' }}>
+                    No folders yet.<br />Click <strong>+</strong> in the sidebar to add one.
+                  </p>
+                </div>
+              ) : (
+                <div className={css.fadeUp}>
+                  <div className={css.cgHeader}>
+                    <div>
+                      <h2 className={css.cgTitle}>Template Menu</h2>
+                      <p className={css.cgSub}>{nodes.filter(n => n.type === 'FOLDER').length} folder{nodes.filter(n => n.type === 'FOLDER').length !== 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
+                  <div className={css.cgGrid}>
+                    {nodes.filter(n => n.type === 'FOLDER').map(node => (
+                      <button key={node.id} className={css.cgCard} onClick={() => setSelectedId(node.id)}>
+                        <div className={css.cgCardIcon}><FolderOpen size={22} color="#33AE95" /></div>
+                        <div className={css.cgCardName}>{node.name}</div>
+                        <div className={css.cgCardMeta}>{countItems(node.children ?? [])} item{countItems(node.children ?? []) !== 1 ? 's' : ''}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
+
+            {/* Folder selected — Level 1 (panel cards) or Level 2 (items) */}
+            {selectedNode?.type === 'FOLDER' && (
+              <FolderChecklistView
+                folder={selectedNode}
+                itemStates={itemStates}
+                setItemStates={setItemStates}
+                selectedLeafId={selectedLeafId}
+                onSelectLeaf={setSelectedLeafId}
+                focusedLeafId={focusedLeafId}
+                onFocusLeaf={setFocusedLeafId}
+                onAddItem={(leafId) => {
+                  const leaf = findNode(nodes, leafId);
+                  const existingLabels = (leaf?.items ?? []).map(i => i.label);
+                  setAddItemModal({ leafId, existingLabels });
+                }}
+                onDeleteItem={(leafId, itemId) => deleteItem(leafId, itemId)}
+                onRenameItem={(leafId, itemId, label) => renameItem(leafId, itemId, label)}
+                onMoveItemUp={(leafId, itemId) => moveItemUp(leafId, itemId)}
+                onMoveItemDown={(leafId, itemId) => moveItemDown(leafId, itemId)}
+                onMoveItem={(leafId, itemId) => setMoveCopyModal({ itemId, fromLeafId: leafId, mode: 'move' })}
+                onCopyItem={(leafId, itemId) => setMoveCopyModal({ itemId, fromLeafId: leafId, mode: 'copy' })}
+                onAddLeaf={(panelType) => openModal('LEAF', panelType, selectedNode.id)}
+                onDeleteLeaf={(leafId) => deleteNode(leafId)}
+                onMoveLeafUp={moveLeafUp}
+                onMoveLeafDown={moveLeafDown}
+                onCopyLeaf={copyLeaf}
               />
             )}
-            {sel.level === 'section' && activeSection && (
-              <CardGrid
-                title={activeSection.name}
-                subtitle={`${activeSection.subSections.length} subsection${activeSection.subSections.length !== 1 ? 's' : ''}`}
-                emptyMsg="No subsections yet. Hover the section in the menu and click (+) to add one."
-                items={activeSection.subSections.map(ss => ({
-                  id: ss.id, name: ss.name,
-                  meta: `${ss.tabs.length} inspection${ss.tabs.length !== 1 ? 's' : ''}`,
-                  icon: <FolderOpen size={22} color="#33AE95" />,
-                  onClick: () => setSel({ level: 'subsection', sectionId: activeSection.id, subId: ss.id, tabId: null, panelId: null }),
-                }))}
-                onAdd={() => addSub(activeSection.id)} addLabel="Add Subsection"
-              />
-            )}
-            {sel.level === 'subsection' && activeSub && activeSection && (
-              <CardGrid
-                title={activeSub.name}
-                subtitle={`${activeSub.tabs.length} inspection${activeSub.tabs.length !== 1 ? 's' : ''}`}
-                emptyMsg="No inspections yet. Hover the subsection and click (+) to add one."
-                items={activeSub.tabs.map(tab => {
-                  const total = tab.panels.reduce((a, p) => a + p.items.length, 0);
-                  return {
-                    id: tab.id, name: tab.name,
-                    meta: `${tab.panels.length} section${tab.panels.length !== 1 ? 's' : ''} · ${total} item${total !== 1 ? 's' : ''}`,
-                    icon: <FileText size={22} color="#6366F1" />,
-                    onClick: () => setSel({ level: 'inspection', sectionId: activeSection.id, subId: activeSub.id, tabId: tab.id, panelId: null }),
-                  };
-                })}
-                onAdd={() => addInspection(activeSection.id, activeSub.id)} addLabel="Add Inspection"
-              />
-            )}
-            {sel.level === 'inspection' && activeTab && activeSection && activeSub && (
-              <InspectionHub
-                tab={activeTab}
-                onSelectPanel={panelId => setSel({ level: 'panel', sectionId: activeSection.id, subId: activeSub.id, tabId: activeTab.id, panelId })}
-                onAddPanel={addPanel}
-              />
-            )}
-            {sel.level === 'panel' && activePanel && activeTab && (
-              <PanelEditor
-                panel={activePanel} tab={activeTab}
-                itemStates={itemStates} setItemStates={setItemStates}
-                selItemIds={selItemIds} setSelItemIds={setSelItemIds}
-                onDelPanel={delPanel} onRenamePanel={renamePanel}
-                onAddItem={addItem} onDelItem={delItem} onRenameItem={renameItem}
-              />
-            )}
+
           </div>
 
-          {/* Workspace footer — shown at panel (item editor) level */}
-          {sel.level === 'panel' && activePanel && (
-            <WorkspaceFooter
-              selCount={selItemIds.size} activePanel={activePanel}
-              onAddItem={addItemToFirstPanel}
-              onDeleteSelected={delSelectedItems}
-              onCopy={() => {
-                if (selItemIds.size !== 1) { toast.info('Select exactly one item to copy.'); return; }
-                const [iid] = selItemIds;
-                copyItem(activePanel.id, iid);
-              }}
-              onCopyMove={() => {
-                if (selItemIds.size !== 1) { toast.info('Select exactly one item.'); return; }
-                const [iid] = selItemIds;
-                setCopyMoveModal({ itemId: iid, panelId: activePanel.id });
-              }}
-            />
-          )}
+          {/* ── Fixed bottom toolbar (Level 1 panel management) ── */}
+          {selectedNode?.type === 'FOLDER' && selectedLeafId === null && (() => {
+            const leaves = (selectedNode.children ?? []).filter(c => c.type === 'LEAF');
+            const focusedIdx = focusedLeafId ? leaves.findIndex(l => l.id === focusedLeafId) : -1;
+            const hasFocus = focusedIdx >= 0;
+            return (
+              <div className={css.panelToolbar}>
+                <div className={css.panelToolbarGroup}>
+                  <button className={css.panelToolbarBtn}
+                    disabled={!hasFocus || focusedIdx === 0}
+                    onClick={() => focusedLeafId && moveLeafUp(focusedLeafId)}>
+                    <ArrowUp size={13} /> Up
+                  </button>
+                  <button className={css.panelToolbarBtn}
+                    disabled={!hasFocus || focusedIdx === leaves.length - 1}
+                    onClick={() => focusedLeafId && moveLeafDown(focusedLeafId)}>
+                    <ArrowDown size={13} /> Down
+                  </button>
+                  <button className={css.panelToolbarBtn}
+                    disabled={!hasFocus}
+                    onClick={() => focusedLeafId && copyLeaf(focusedLeafId)}>
+                    <Copy size={13} /> Copy
+                  </button>
+                  <button className={`${css.panelToolbarBtn} ${css.panelToolbarBtnDanger}`}
+                    disabled={!hasFocus}
+                    onClick={() => focusedLeafId && deleteNode(focusedLeafId)}>
+                    <Trash2 size={13} /> Delete
+                  </button>
+                </div>
+                <div className={css.panelToolbarGroup}>
+                  <button className={`${css.panelToolbarBtn} ${css.panelToolbarBtnSel}`}
+                    onClick={() => openModal('LEAF', 'SELECTION', selectedNode.id)}>
+                    <Plus size={13} /> Selection
+                  </button>
+                  <button className={`${css.panelToolbarBtn} ${css.panelToolbarBtnDmg}`}
+                    onClick={() => openModal('LEAF', 'DAMAGE', selectedNode.id)}>
+                    <Plus size={13} /> Damage
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
         </main>
       </div>
+    </div>
+  );
+}
 
-      {/* Copy & Move Modal */}
-      {copyMoveModal && activeTab && (
-        <CopyMoveModal
-          panels={activeTab.panels}
-          srcPanelId={copyMoveModal.panelId}
-          onMove={dst => moveItem(copyMoveModal.panelId, copyMoveModal.itemId, dst)}
-          onClose={() => setCopyMoveModal(null)}
-        />
+/* ─────────────────────────────────────────────────────────────────
+   Folder Checklist View — Level 1: Panel Cards / Level 2: Items
+───────────────────────────────────────────────────────────────── */
+function FolderChecklistView({
+  folder, itemStates, setItemStates,
+  selectedLeafId, onSelectLeaf,
+  focusedLeafId, onFocusLeaf,
+  onAddItem, onDeleteItem, onRenameItem, onMoveItemUp, onMoveItemDown,
+  onMoveItem, onCopyItem,
+  onDeleteLeaf,
+}: {
+  folder: TemplateNode;
+  itemStates: Record<string, ItemState>;
+  setItemStates: React.Dispatch<React.SetStateAction<Record<string, ItemState>>>;
+  selectedLeafId: string | null;
+  onSelectLeaf: (leafId: string | null) => void;
+  focusedLeafId: string | null;
+  onFocusLeaf: (leafId: string | null) => void;
+  onAddItem: (leafId: string) => void;
+  onDeleteItem: (leafId: string, itemId: string) => void;
+  onRenameItem: (leafId: string, itemId: string, label: string) => void;
+  onMoveItemUp: (leafId: string, itemId: string) => void;
+  onMoveItemDown: (leafId: string, itemId: string) => void;
+  onMoveItem: (leafId: string, itemId: string) => void;
+  onCopyItem: (leafId: string, itemId: string) => void;
+  onDeleteLeaf: (leafId: string) => void;
+}) {
+  const leaves = (folder.children ?? []).filter(c => c.type === 'LEAF');
+  const totalItems = leaves.reduce((acc, l) => acc + (l.items?.length ?? 0), 0);
+
+  /* ── Level 2: Items for a specific panel ── */
+  if (selectedLeafId) {
+    const leaf = leaves.find(l => l.id === selectedLeafId);
+    if (!leaf) return null;
+    const isSel = leaf.panelType === 'SELECTION';
+    const accent = isSel ? '#29A356' : '#EF4444';
+    const accentLight = isSel ? 'rgba(41,163,86,0.07)' : 'rgba(239,68,68,0.05)';
+    const accentBorder = isSel ? 'rgba(41,163,86,0.18)' : 'rgba(239,68,68,0.18)';
+    const items = leaf.items ?? [];
+
+    return (
+      <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Panel header strip */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: accentLight, border: `1px solid ${accentBorder}`,
+          borderRadius: 10, padding: '10px 14px',
+        }}>
+          {isSel
+            ? <CheckCircle2 size={18} style={{ color: accent, flexShrink: 0 }} />
+            : <AlertTriangle size={18} style={{ color: accent, flexShrink: 0 }} />}
+          <div style={{ flex: 1 }}>
+            <div className={css.cgTitle} style={{ margin: 0 }}>{leaf.name}</div>
+            <div className={css.cgSub} style={{ margin: 0 }}>
+              {items.length} item{items.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+          <span className={isSel ? css.panelBadgeSel : css.panelBadgeDmg}>
+            {isSel ? 'SELECTION' : 'DAMAGE'}
+          </span>
+        </div>
+
+        {/* Items list */}
+        <div className={`${css.panelCard} ${isSel ? css.panelCardHeadSel : css.panelCardHeadDmg}`}>
+          {items.length === 0 && (
+            <p className={css.panelEmpty}>No items yet. Click "Add Item" below.</p>
+          )}
+          {items.map((item, idx) => {
+            const state = itemStates[item.id] ?? 'none';
+            return isSel
+              ? <SelectionRow key={item.id} item={item} state={state}
+                  onToggle={() => setItemStates(p => ({ ...p, [item.id]: state === 'selected' ? 'none' : 'selected' }))}
+                  onDelete={() => onDeleteItem(leaf.id, item.id)}
+                  onRename={l => onRenameItem(leaf.id, item.id, l)}
+                  onMoveUp={idx > 0 ? () => onMoveItemUp(leaf.id, item.id) : undefined}
+                  onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(leaf.id, item.id) : undefined}
+                  onMoveToFolder={() => onMoveItem(leaf.id, item.id)}
+                  onCopyToFolder={() => onCopyItem(leaf.id, item.id)} />
+              : <DamageRow key={item.id} item={item} state={state}
+                  onCorrect={() => setItemStates(p => ({ ...p, [item.id]: state === 'correct' ? 'none' : 'correct' }))}
+                  onDamage={() => setItemStates(p => ({ ...p, [item.id]: state === 'damaged' ? 'none' : 'damaged' }))}
+                  onDelete={() => onDeleteItem(leaf.id, item.id)}
+                  onRename={l => onRenameItem(leaf.id, item.id, l)}
+                  onMoveUp={idx > 0 ? () => onMoveItemUp(leaf.id, item.id) : undefined}
+                  onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(leaf.id, item.id) : undefined}
+                  onMoveToFolder={() => onMoveItem(leaf.id, item.id)}
+                  onCopyToFolder={() => onCopyItem(leaf.id, item.id)} />;
+          })}
+          <button onClick={() => onAddItem(leaf.id)}
+            className={`${css.panelFooterBtn} ${isSel ? css.panelFooterBtnSel : css.panelFooterBtnDmg}`}>
+            <Plus size={12} /> Add Item
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Level 1: Panel rows list ── */
+  return (
+    <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      {/* Folder header */}
+      <div className={css.cgHeader} style={{ marginBottom: 12 }}>
+        <div>
+          <h2 className={css.cgTitle}>{folder.name}</h2>
+          <p className={css.cgSub}>
+            {leaves.length} panel{leaves.length !== 1 ? 's' : ''} · {totalItems} item{totalItems !== 1 ? 's' : ''}
+          </p>
+        </div>
+      </div>
+
+      {leaves.length === 0 && (
+        <div className={css.panelCardsEmpty}>
+          <LayoutTemplate size={40} color="#D1D5DB" />
+          <p>No panels yet.<br />Use the toolbar below to add a panel.</p>
+        </div>
       )}
+
+      {/* Panel rows */}
+      <div className={css.panelRowList}>
+        {leaves.map((leaf, idx) => {
+          const isSel = leaf.panelType === 'SELECTION';
+          const accent = isSel ? '#29A356' : '#EF4444';
+          const accentLight = isSel ? 'rgba(41,163,86,0.07)' : 'rgba(239,68,68,0.05)';
+          const isFocused = focusedLeafId === leaf.id;
+          const items = leaf.items ?? [];
+
+          return (
+            <div
+              key={leaf.id}
+              className={`${css.panelRowItem} ${isFocused ? css.panelRowItemFocused : ''}`}
+              onClick={() => onFocusLeaf(isFocused ? null : leaf.id)}
+            >
+              {/* Colored top border */}
+              <div className={css.panelRowAccent} style={{ background: accent }} />
+
+              <div className={css.panelRowContent} style={{ background: isFocused ? accentLight : undefined }}>
+                {/* Left: chevron + icon + name */}
+                <span style={{ color: accent, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  <ChevronRight size={14} />
+                </span>
+                {isSel
+                  ? <CheckCircle2 size={15} style={{ color: accent, flexShrink: 0 }} />
+                  : <AlertTriangle size={15} style={{ color: accent, flexShrink: 0 }} />}
+                <div className={css.panelRowLabel}>
+                  <span className={css.panelHeadName}>{leaf.name}</span>
+                  <span className={css.panelAccordionSub}>{items.length} item{items.length !== 1 ? 's' : ''}</span>
+                </div>
+
+                {/* Right: badge + delete + open */}
+                <span className={isSel ? css.panelBadgeSel : css.panelBadgeDmg}>
+                  {isSel ? 'SELECTION' : 'DAMAGE'}
+                </span>
+                <button
+                  className={css.panelDelBtn}
+                  title="Delete panel"
+                  onClick={e => { e.stopPropagation(); onDeleteLeaf(leaf.id); }}>
+                  <Trash2 size={13} />
+                </button>
+                <button
+                  className={css.panelRowOpenBtn}
+                  title="Open items"
+                  onClick={e => { e.stopPropagation(); onSelectLeaf(leaf.id); }}>
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Recursive Tree Node (sidebar)
+───────────────────────────────────────────────────────────────── */
+interface RecursiveTreeNodeProps {
+  node: TemplateNode;
+  depth: number;
+  selectedId: string | null;
+  expandedIds: Set<string>;
+  editingNodeId: string | null;
+  onSelect: (id: string) => void;
+  onToggle: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
+  onCopy: (id: string) => void;
+  onAddFolder: (parentId: string) => void;
+  onAddLeaf: (parentId: string, type: BuilderPanelType) => void;
+  setEditingNodeId: (id: string | null) => void;
+}
+
+function RecursiveTreeNode({
+  node, depth, selectedId, expandedIds, editingNodeId,
+  onSelect, onToggle, onRename, onDelete, onCopy, onAddFolder, onAddLeaf, setEditingNodeId,
+}: RecursiveTreeNodeProps) {
+  const isFolder = node.type === 'FOLDER';
+  const isLeaf = node.type === 'LEAF';
+  const isSelected = selectedId === node.id;
+  const isExpanded = expandedIds.has(node.id);
+  const basePad = 22 + depth * 14;
+  const isSel = isLeaf && node.panelType === 'SELECTION';
+
+  return (
+    <div>
+      <div
+        className={`${css.nodeRow} ${isSelected ? css.nodeRowActive : ''}`}
+        onClick={() => onSelect(node.id)}>
+        {/* Chevron — folders only */}
+        {isFolder ? (
+          <button
+            onClick={e => { e.stopPropagation(); onToggle(node.id); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: `7px 4px 7px ${basePad}px`, color: '#9CA3AF', display: 'flex', flexShrink: 0 }}>
+            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          </button>
+        ) : (
+          <span style={{ paddingLeft: basePad + 16, paddingRight: 4, display: 'flex', alignItems: 'center', flexShrink: 0 }} />
+        )}
+
+        {/* Icon */}
+        <span style={{ flexShrink: 0, marginRight: 7, display: 'flex', alignItems: 'center' }}>
+          {isFolder
+            ? (isExpanded ? <FolderOpen size={14} color={isSelected ? '#33AE95' : '#6B7280'} /> : <Folder size={14} color={isSelected ? '#33AE95' : '#6B7280'} />)
+            : isSel
+              ? <CheckCircle2 size={12} color={isSelected ? '#16A34A' : '#9CA3AF'} />
+              : <AlertTriangle size={12} color={isSelected ? '#DC2626' : '#9CA3AF'} />}
+        </span>
+
+        {/* Label */}
+        <SidebarNodeLabel
+          nodeId={node.id} name={node.name} isActive={isSelected}
+          bold={depth === 0} small={depth > 0}
+          editingNodeId={editingNodeId} setEditingNodeId={setEditingNodeId}
+          onRename={name => onRename(node.id, name)}
+        />
+
+        {/* Actions */}
+        <div className={css.nodeActions}>
+          {isFolder && (
+            <NodeActionBtn icon={<Plus size={10} />} title="Add Child" onClick={e => { e.stopPropagation(); onAddFolder(node.id); }} />
+          )}
+          {isFolder && (
+            <NodeActionBtn icon={<Copy size={10} />} title="Copy Folder" onClick={e => { e.stopPropagation(); onCopy(node.id); }} />
+          )}
+          <NodeActionBtn icon={<Edit2 size={10} />} title="Rename" onClick={e => { e.stopPropagation(); setEditingNodeId(node.id); }} />
+          <NodeActionBtn icon={<Trash2 size={10} />} title="Delete" danger onClick={e => { e.stopPropagation(); onDelete(node.id); }} />
+        </div>
+      </div>
+
+      {/* Children — only FOLDER nodes shown in sidebar tree; LEAFs appear as cards in workspace */}
+      {isFolder && isExpanded && node.children?.filter(c => c.type === 'FOLDER').map(child => (
+        <RecursiveTreeNode
+          key={child.id}
+          node={child}
+          depth={depth + 1}
+          selectedId={selectedId}
+          expandedIds={expandedIds}
+          editingNodeId={editingNodeId}
+          onSelect={onSelect}
+          onToggle={onToggle}
+          onRename={onRename}
+          onDelete={onDelete}
+          onCopy={onCopy}
+          onAddFolder={onAddFolder}
+          onAddLeaf={onAddLeaf}
+          setEditingNodeId={setEditingNodeId}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Node Card Grid (Folder workspace view)
+───────────────────────────────────────────────────────────────── */
+function NodeCardGrid({ title, subtitle, emptyMsg, nodes, onSelect, onAddFolder, onAddSelection, onAddDamage }: {
+  title: string; subtitle: string; emptyMsg: string;
+  nodes: TemplateNode[];
+  onSelect: (id: string) => void;
+  onAddFolder: () => void;
+  onAddSelection: () => void;
+  onAddDamage: () => void;
+}) {
+  return (
+    <div className={css.fadeUp}>
+      <div className={css.cgHeader}>
+        <div>
+          <h2 className={css.cgTitle}>{title}</h2>
+          <p className={css.cgSub}>{subtitle}</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {/* <button className={css.cgAddBtn} onClick={onAddFolder}>
+            <Folder size={13} /> Add Group
+          </button> */}
+          <button className={css.cgAddBtn} onClick={onAddSelection}
+            style={{ background: 'linear-gradient(135deg, #29A356, #1e7a3f)' }}>
+            <CheckCircle2 size={13} /> Selection
+          </button>
+          <button className={css.cgAddBtn} onClick={onAddDamage}
+            style={{ background: 'linear-gradient(135deg, #EF4444, #dc2626)' }}>
+            <AlertTriangle size={13} /> Damage
+          </button>
+        </div>
+      </div>
+
+      {nodes.length === 0
+        ? <p className={css.cgEmpty}>{emptyMsg}</p>
+        : (
+          <div className={css.cgGrid}>
+            {nodes.map(node => {
+              const isFolder = node.type === 'FOLDER';
+              const isLeaf = node.type === 'LEAF';
+              const isSel = isLeaf && node.panelType === 'SELECTION';
+              const childCount = isFolder ? (node.children?.length ?? 0) : 0;
+              const itemCount = isFolder ? countItems(node.children ?? []) : (node.items?.length ?? 0);
+              const leafCount = isFolder ? countLeaves(node.children ?? []) : 0;
+
+              return (
+                <button key={node.id} className={css.cgCard} onClick={() => onSelect(node.id)}>
+                  <div className={css.cgCardIcon}>
+                    {isFolder
+                      ? <FolderOpen size={22} color="#33AE95" />
+                      : isSel
+                        ? <CheckCircle2 size={22} color="#29A356" />
+                        : <AlertTriangle size={22} color="#EF4444" />}
+                  </div>
+                  <div className={css.cgCardName}>{node.name}</div>
+                  <div className={css.cgCardMeta}>
+                    {isFolder
+                      ? `${childCount} child${childCount !== 1 ? 'ren' : ''} · ${leafCount} leaf${leafCount !== 1 ? 's' : ''} · ${itemCount} item${itemCount !== 1 ? 's' : ''}`
+                      : `${isSel ? 'Selection' : 'Damage'} · ${itemCount} item${itemCount !== 1 ? 's' : ''}`}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Leaf Editor (item list for a LEAF node)
+───────────────────────────────────────────────────────────────── */
+function LeafEditor({ leaf, parentName, itemStates, setItemStates, onBack, onAddItem, onDeleteItem, onRenameItem, onMoveItemUp, onMoveItemDown, onRenameLeaf, onDeleteLeaf }: {
+  leaf: TemplateNode;
+  parentName: string;
+  itemStates: Record<string, ItemState>;
+  setItemStates: React.Dispatch<React.SetStateAction<Record<string, ItemState>>>;
+  onBack: () => void;
+  onAddItem: () => void;
+  onDeleteItem: (itemId: string) => void;
+  onRenameItem: (itemId: string, label: string) => void;
+  onMoveItemUp: (itemId: string) => void;
+  onMoveItemDown: (itemId: string) => void;
+  onRenameLeaf: (name: string) => void;
+  onDeleteLeaf: () => void;
+}) {
+  const isSel = leaf.panelType === 'SELECTION';
+  const accent = isSel ? '#29A356' : '#EF4444';
+  const accentLight = isSel ? 'rgba(41,163,86,0.08)' : 'rgba(239,68,68,0.06)';
+  const accentBorder = isSel ? 'rgba(41,163,86,0.20)' : 'rgba(239,68,68,0.20)';
+  const items = leaf.items ?? [];
+
+  const [editName, setEditName] = useState(false);
+  const [nameVal, setNameVal] = useState(leaf.name);
+  const [panelPhotos, setPanelPhotos] = useState<string[]>([]);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => setNameVal(leaf.name), [leaf.name]);
+
+  const setItemState = (itemId: string, state: ItemState) =>
+    setItemStates(p => ({ ...p, [itemId]: state }));
+
+  const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const urls = Array.from(e.target.files ?? []).map(f => URL.createObjectURL(f));
+    setPanelPhotos(p => [...p, ...urls]);
+    e.target.value = '';
+  };
+
+  return (
+    <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <button className={css.leafBackBtn} onClick={onBack}>
+        <ArrowLeft size={13} /> Back to {parentName}
+      </button>
+      <div className={css.ieHeader}>
+        <div>
+          <h2 className={css.ieTitle}>{leaf.name}</h2>
+          <p className={css.ieSub}>{isSel ? 'Selection' : 'Damage'} leaf · {items.length} item{items.length !== 1 ? 's' : ''}</p>
+        </div>
+      </div>
+
+      {/* Panel card */}
+      <div className={`${css.panelCard} ${isSel ? css.panelCardHeadSel : css.panelCardHeadDmg}`}>
+
+        {/* Header */}
+        <div className={css.panelHead} style={{ background: accentLight, borderBottom: `1px solid ${accentBorder}` }}>
+          {isSel
+            ? <CheckCircle2 size={15} style={{ color: accent, flexShrink: 0 }} />
+            : <AlertTriangle size={15} style={{ color: accent, flexShrink: 0 }} />}
+          {editName
+            ? <input autoFocus value={nameVal} onChange={e => setNameVal(e.target.value)}
+              onBlur={() => { onRenameLeaf(nameVal || leaf.name); setEditName(false); }}
+              onKeyDown={e => { if (e.key === 'Enter') { onRenameLeaf(nameVal || leaf.name); setEditName(false); } }}
+              className={css.panelHeadNameInput}
+              style={{ borderBottom: `1px solid ${accent}` }} />
+            : <span onDoubleClick={() => { setEditName(true); setNameVal(leaf.name); }}
+              className={css.panelHeadName}>{leaf.name}</span>}
+          <span className={isSel ? css.panelBadgeSel : css.panelBadgeDmg}>
+            {isSel ? 'SELECTION' : 'DAMAGED'}
+          </span>
+          {!isSel && (
+            <>
+              <button className={css.panelCameraBtn} title="Upload photos"
+                onClick={() => photoInputRef.current?.click()}>
+                <Camera size={14} />
+                {panelPhotos.length > 0 && <span className={css.panelCameraCount}>{panelPhotos.length}</span>}
+              </button>
+              <input ref={photoInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePhotoAdd} />
+            </>
+          )}
+          <button onClick={onDeleteLeaf} className={css.panelDelBtn}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+
+        {/* Photo strip */}
+        {!isSel && panelPhotos.length > 0 && (
+          <div className={css.panelPhotoStrip}>
+            {panelPhotos.map((url, idx) => (
+              <div key={idx} className={css.panelPhotoThumb}>
+                <img src={url} alt={`Photo ${idx + 1}`} className={css.panelPhotoImg} />
+                <button className={css.panelPhotoRemove}
+                  onClick={() => setPanelPhotos(p => p.filter((_, i) => i !== idx))}>
+                  <X size={9} />
+                </button>
+              </div>
+            ))}
+            <button className={css.panelPhotoAdd} onClick={() => photoInputRef.current?.click()}>
+              <Camera size={14} /><span>Add</span>
+            </button>
+          </div>
+        )}
+
+        {/* Items */}
+        <div>
+          {items.length === 0 && <p className={css.panelEmpty}>No items yet. Click "Add Item" below.</p>}
+          {items.map((item, idx) => {
+            const state = itemStates[item.id] ?? 'none';
+            return isSel
+              ? <SelectionRow key={item.id} item={item} state={state}
+                onToggle={() => setItemState(item.id, state === 'selected' ? 'none' : 'selected')}
+                onDelete={() => onDeleteItem(item.id)}
+                onRename={l => onRenameItem(item.id, l)}
+                onMoveUp={idx > 0 ? () => onMoveItemUp(item.id) : undefined}
+                onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(item.id) : undefined} />
+              : <DamageRow key={item.id} item={item} state={state}
+                onCorrect={() => setItemState(item.id, state === 'correct' ? 'none' : 'correct')}
+                onDamage={() => setItemState(item.id, state === 'damaged' ? 'none' : 'damaged')}
+                onDelete={() => onDeleteItem(item.id)}
+                onRename={l => onRenameItem(item.id, l)}
+                onMoveUp={idx > 0 ? () => onMoveItemUp(item.id) : undefined}
+                onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(item.id) : undefined} />;
+          })}
+        </div>
+
+        {/* Card footer */}
+        <button onClick={onAddItem}
+          className={`${css.panelFooterBtn} ${isSel ? css.panelFooterBtnSel : css.panelFooterBtnDmg}`}>
+          <Plus size={12} /> Add Item
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Workspace Footer
+───────────────────────────────────────────────────────────────── */
+function WorkspaceFooter({ leafType, onAddItem }: {
+  leafType: string;
+  onAddItem: () => void;
+}) {
+  return (
+    <div className={css.wFooter}>
+      <div className={css.wFooterSpacer} />
+      <button className={`${css.fBtn} ${css.fBtnPrimary}`} onClick={onAddItem}>
+        <Plus size={13} /> Add {leafType === 'SELECTION' ? 'Selection' : 'Damage'} Item
+      </button>
     </div>
   );
 }
@@ -690,13 +1366,16 @@ function SidebarNodeLabel({ nodeId, name, isActive, bold, small, editingNodeId, 
       fontWeight: bold ? 600 : isActive ? 500 : 400,
       color: isActive ? '#298E7A' : '#263B4F',
       paddingBlock: small ? 7 : 8,
+      flex: 1,
     }}>
       {name}
     </span>
   );
 }
 
-function NodeActionBtn({ icon, title, onClick, danger }: { icon: React.ReactNode; title?: string; onClick: (e: React.MouseEvent) => void; danger?: boolean }) {
+function NodeActionBtn({ icon, title, onClick, danger }: {
+  icon: React.ReactNode; title?: string; onClick: (e: React.MouseEvent) => void; danger?: boolean;
+}) {
   return (
     <button onClick={onClick} title={title}
       className={`${css.nodeActionBtn} ${danger ? css.nodeActionBtnDanger : ''}`}>
@@ -706,277 +1385,13 @@ function NodeActionBtn({ icon, title, onClick, danger }: { icon: React.ReactNode
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   Card Grid (Section / Subsection level view)
+   Item Rows (Selection & Damage)
 ───────────────────────────────────────────────────────────────── */
-function CardGrid({ title, subtitle, emptyMsg, items, onAdd, addLabel }: {
-  title: string; subtitle: string; emptyMsg: string;
-  items: { id: string; name: string; meta: string; icon: React.ReactNode; onClick: () => void }[];
-  onAdd: () => void; addLabel: string;
-}) {
-  return (
-    <div className={css.fadeUp}>
-      <div className={css.cgHeader}>
-        <div>
-          <h2 className={css.cgTitle}>{title}</h2>
-          <p className={css.cgSub}>{subtitle}</p>
-        </div>
-        <button className={css.cgAddBtn} onClick={onAdd}>
-          <Plus size={13} /> {addLabel}
-        </button>
-      </div>
-      {items.length === 0
-        ? <p className={css.cgEmpty}>{emptyMsg}</p>
-        : (
-          <div className={css.cgGrid}>
-            {items.map(item => (
-              <button key={item.id} className={css.cgCard} onClick={item.onClick}>
-                <div className={css.cgCardIcon}>{item.icon}</div>
-                <div className={css.cgCardName}>{item.name}</div>
-                <div className={css.cgCardMeta}>{item.meta}</div>
-              </button>
-            ))}
-          </div>
-        )}
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   Inspection Hub (Level 3 workspace — shows panel cards)
-───────────────────────────────────────────────────────────────── */
-function InspectionHub({ tab, onSelectPanel, onAddPanel }: {
-  tab: BuilderTab;
-  onSelectPanel: (panelId: string) => void;
-  onAddPanel: (type: BuilderPanelType) => void;
-}) {
-  return (
-    <div className={css.fadeUp}>
-      <div className={css.ieHeader}>
-        <div>
-          <h2 className={css.ieTitle}>{tab.name}</h2>
-          <p className={css.ieSub}>{tab.panels.length} inspection section{tab.panels.length !== 1 ? 's' : ''}</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <AddPanelBtn type="SELECTION" onClick={() => onAddPanel('SELECTION')} />
-          <AddPanelBtn type="DAMAGE" onClick={() => onAddPanel('DAMAGE')} />
-        </div>
-      </div>
-
-      {tab.panels.length === 0 ? (
-        <div className={css.ieEmpty}>
-          No inspection sections yet.<br />Click "+ Selection Section" or "+ Damaged Section" to add one.
-        </div>
-      ) : (
-        <div className={css.cgGrid}>
-          {tab.panels.map(panel => {
-            const isSel = panel.panelType === 'SELECTION';
-            return (
-              <button key={panel.id} className={css.cgCard} onClick={() => onSelectPanel(panel.id)}>
-                <div className={css.cgCardIcon}>
-                  {isSel
-                    ? <CheckCircle2 size={22} color="#29A356" />
-                    : <AlertTriangle size={22} color="#EF4444" />}
-                </div>
-                <div className={css.cgCardName}>{panel.name}</div>
-                <div className={css.cgCardMeta}>
-                  {isSel ? 'Selection' : 'Damaged'} · {panel.items.length} item{panel.items.length !== 1 ? 's' : ''}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   Panel Editor (Level 4 workspace — items for one panel)
-───────────────────────────────────────────────────────────────── */
-interface PanelEditorProps {
-  panel: BuilderPanel;
-  tab: BuilderTab;
-  itemStates: Record<string, ItemState>;
-  setItemStates: React.Dispatch<React.SetStateAction<Record<string, ItemState>>>;
-  selItemIds: Set<string>;
-  setSelItemIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-  onDelPanel: (id: string) => void;
-  onRenamePanel: (id: string, name: string) => void;
-  onAddItem: (panelId: string) => void;
-  onDelItem: (panelId: string, itemId: string) => void;
-  onRenameItem: (panelId: string, itemId: string, label: string) => void;
-}
-
-function PanelEditor({ panel, tab, itemStates, setItemStates, selItemIds, setSelItemIds, onDelPanel, onRenamePanel, onAddItem, onDelItem, onRenameItem }: PanelEditorProps) {
-  const setItemState = (itemId: string, state: ItemState) =>
-    setItemStates(p => ({ ...p, [itemId]: state }));
-  const isSel = panel.panelType === 'SELECTION';
-
-  return (
-    <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div className={css.ieHeader}>
-        <div>
-          <h2 className={css.ieTitle}>{panel.name}</h2>
-          <p className={css.ieSub}>
-            {isSel ? 'Selection' : 'Damaged'} section · {tab.name} · {panel.items.length} item{panel.items.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-      </div>
-
-      <PanelCard
-        panel={panel} isSel={isSel}
-        itemStates={itemStates} selItemIds={selItemIds} setSelItemIds={setSelItemIds}
-        onRenamePanel={onRenamePanel} onDelPanel={onDelPanel}
-        onAddItem={onAddItem} onDelItem={onDelItem} onRenameItem={onRenameItem}
-        onToggleItem={item => {
-          if (isSel) setItemState(item.id, itemStates[item.id] === 'selected' ? 'none' : 'selected');
-        }}
-        onToggleCorrect={item => setItemState(item.id, itemStates[item.id] === 'correct' ? 'none' : 'correct')}
-        onToggleDamage={item => setItemState(item.id, itemStates[item.id] === 'damaged' ? 'none' : 'damaged')}
-      />
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   Panel Card
-───────────────────────────────────────────────────────────────── */
-interface PanelCardProps {
-  panel: BuilderPanel; isSel: boolean;
-  itemStates: Record<string, ItemState>; selItemIds: Set<string>;
-  setSelItemIds: React.Dispatch<React.SetStateAction<Set<string>>>;
-  onRenamePanel: (id: string, name: string) => void; onDelPanel: (id: string) => void;
-  onAddItem: (panelId: string) => void;
-  onDelItem: (panelId: string, itemId: string) => void;
-  onRenameItem: (panelId: string, itemId: string, label: string) => void;
-  onToggleItem: (item: BuilderItem) => void;
-  onToggleCorrect: (item: BuilderItem) => void;
-  onToggleDamage: (item: BuilderItem) => void;
-}
-
-function PanelCard({ panel, isSel, itemStates, selItemIds, setSelItemIds, onRenamePanel, onDelPanel, onAddItem, onDelItem, onRenameItem, onToggleItem, onToggleCorrect, onToggleDamage }: PanelCardProps) {
-  const [editName, setEditName] = useState(false);
-  const [nameVal, setNameVal] = useState(panel.name);
-  const [panelPhotos, setPanelPhotos] = useState<string[]>([]);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-  useEffect(() => setNameVal(panel.name), [panel.name]);
-
-  const accent = isSel ? '#29A356' : '#EF4444';
-  const accentLight = isSel ? 'rgba(41,163,86,0.08)' : 'rgba(239,68,68,0.06)';
-  const accentBorder = isSel ? 'rgba(41,163,86,0.20)' : 'rgba(239,68,68,0.20)';
-
-  const toggleSel = (itemId: string) =>
-    setSelItemIds(p => { const n = new Set(p); n.has(itemId) ? n.delete(itemId) : n.add(itemId); return n; });
-
-  const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    const urls = files.map(f => URL.createObjectURL(f));
-    setPanelPhotos(p => [...p, ...urls]);
-    e.target.value = '';
-  };
-
-  return (
-    <div className={`${css.panelCard} ${isSel ? css.panelCardHeadSel : css.panelCardHeadDmg}`}>
-
-      {/* Card header */}
-      <div className={css.panelHead} style={{ background: accentLight, borderBottom: `1px solid ${accentBorder}` }}>
-        {isSel
-          ? <CheckCircle2 size={15} style={{ color: accent, flexShrink: 0 }} />
-          : <AlertTriangle size={15} style={{ color: accent, flexShrink: 0 }} />}
-        {editName
-          ? <input autoFocus value={nameVal} onChange={e => setNameVal(e.target.value)}
-            onBlur={() => { onRenamePanel(panel.id, nameVal || panel.name); setEditName(false); }}
-            onKeyDown={e => { if (e.key === 'Enter') { onRenamePanel(panel.id, nameVal || panel.name); setEditName(false); } }}
-            className={css.panelHeadNameInput}
-            style={{ borderBottom: `1px solid ${accent}` }} />
-          : <span onDoubleClick={() => { setEditName(true); setNameVal(panel.name); }}
-            className={css.panelHeadName}>{panel.name}</span>}
-        <span className={isSel ? css.panelBadgeSel : css.panelBadgeDmg}>
-          {isSel ? 'SELECTION' : 'DAMAGED'}
-        </span>
-        {!isSel && (
-          <>
-            <button
-              className={css.panelCameraBtn}
-              title="Upload photos"
-              onClick={() => photoInputRef.current?.click()}>
-              <Camera size={14} />
-              {panelPhotos.length > 0 && (
-                <span className={css.panelCameraCount}>{panelPhotos.length}</span>
-              )}
-            </button>
-            <input
-              ref={photoInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              style={{ display: 'none' }}
-              onChange={handlePhotoAdd}
-            />
-          </>
-        )}
-        <button onClick={() => onDelPanel(panel.id)} className={css.panelDelBtn}>
-          <Trash2 size={13} />
-        </button>
-      </div>
-
-      {/* Photo strip — damage panels only */}
-      {!isSel && panelPhotos.length > 0 && (
-        <div className={css.panelPhotoStrip}>
-          {panelPhotos.map((url, idx) => (
-            <div key={idx} className={css.panelPhotoThumb}>
-              <img src={url} alt={`Photo ${idx + 1}`} className={css.panelPhotoImg} />
-              <button
-                className={css.panelPhotoRemove}
-                onClick={() => setPanelPhotos(p => p.filter((_, i) => i !== idx))}>
-                <X size={9} />
-              </button>
-            </div>
-          ))}
-          <button
-            className={css.panelPhotoAdd}
-            onClick={() => photoInputRef.current?.click()}>
-            <Camera size={14} />
-            <span>Add</span>
-          </button>
-        </div>
-      )}
-
-      {/* Items */}
-      <div>
-        {panel.items.length === 0 && (
-          <p className={css.panelEmpty}>No items yet. Click "Add Item" below.</p>
-        )}
-        {panel.items.map(item => {
-          const state = itemStates[item.id] ?? 'none';
-          return isSel
-            ? <SelectionRow key={item.id} item={item} state={state} checked={selItemIds.has(item.id)}
-              onCheck={() => toggleSel(item.id)} onToggle={() => onToggleItem(item)}
-              onDelete={() => onDelItem(panel.id, item.id)}
-              onRename={l => onRenameItem(panel.id, item.id, l)} />
-            : <DamageRow key={item.id} item={item} state={state} checked={selItemIds.has(item.id)}
-              onCheck={() => toggleSel(item.id)}
-              onCorrect={() => onToggleCorrect(item)} onDamage={() => onToggleDamage(item)}
-              onDelete={() => onDelItem(panel.id, item.id)}
-              onRename={l => onRenameItem(panel.id, item.id, l)} />;
-        })}
-      </div>
-
-      {/* Card footer */}
-      <button onClick={() => onAddItem(panel.id)}
-        className={`${css.panelFooterBtn} ${isSel ? css.panelFooterBtnSel : css.panelFooterBtnDmg}`}>
-        <Plus size={12} /> Add Item
-      </button>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   Item Rows
-───────────────────────────────────────────────────────────────── */
-function SelectionRow({ item, state, checked, onCheck, onToggle, onDelete, onRename }: {
-  item: BuilderItem; state: ItemState; checked: boolean;
-  onCheck: () => void; onToggle: () => void; onDelete: () => void; onRename: (l: string) => void;
+function SelectionRow({ item, state, onToggle, onDelete, onRename, onMoveUp, onMoveDown, onMoveToFolder, onCopyToFolder }: {
+  item: BuilderItem; state: ItemState;
+  onToggle: () => void; onDelete: () => void; onRename: (l: string) => void;
+  onMoveUp?: () => void; onMoveDown?: () => void;
+  onMoveToFolder?: () => void; onCopyToFolder?: () => void;
 }) {
   const [editLabel, setEditLabel] = useState(false);
   const [val, setVal] = useState(item.label);
@@ -984,11 +1399,11 @@ function SelectionRow({ item, state, checked, onCheck, onToggle, onDelete, onRen
   const active = state === 'selected';
 
   return (
-    <div className={`${css.itemRow} ${active ? css.itemRowSelected : ''}`} onClick={onToggle}>
-      <label className="ip-checkbox-label" onClick={e => e.stopPropagation()} style={{ flexShrink: 0 }}>
-        <input type="checkbox" checked={checked} onChange={onCheck} />
+    <div className={`${css.itemRow} ${active ? css.itemRowSelected : ''}`}>
+      <label className={css.itemCheckLabel} onClick={e => e.stopPropagation()} style={{ flexShrink: 0 }}>
+        <input type="checkbox" className={css.itemCheckInput} checked={active} onChange={onToggle} />
+        <span className={`${css.itemCheck} ${active ? css.itemCheckOn : ''}`} />
       </label>
-      <span className={css.itemDot} style={{ background: active ? '#29A356' : '#CFD5DE' }} />
       {editLabel
         ? <input autoFocus value={val} onChange={e => setVal(e.target.value)}
           onBlur={() => { onRename(val || item.label); setEditLabel(false); }}
@@ -1000,8 +1415,25 @@ function SelectionRow({ item, state, checked, onCheck, onToggle, onDelete, onRen
           className={css.itemLabel}
           style={{ color: active ? '#16A34A' : '#263B4F', fontWeight: active ? 500 : 400 }}>
           {item.label}
+          {item.reportName && item.reportName !== item.label && (
+            <span className={css.itemReportAlias} title="PDF report name">{item.reportName}</span>
+          )}
         </span>}
       {active && <span className={css.itemSelBadge}>SELECTED</span>}
+      <div className={css.itemSortBtns}>
+        <button className={css.itemSortBtn} disabled={!onMoveUp} onClick={e => { e.stopPropagation(); onMoveUp?.(); }} title="Move up"><ArrowUp size={11} /></button>
+        <button className={css.itemSortBtn} disabled={!onMoveDown} onClick={e => { e.stopPropagation(); onMoveDown?.(); }} title="Move down"><ArrowDown size={11} /></button>
+      </div>
+      {onMoveToFolder && (
+        <button onClick={e => { e.stopPropagation(); onMoveToFolder(); }} className={css.itemActionBtn} title="Move to folder">
+          <ArrowRight size={11} />
+        </button>
+      )}
+      {onCopyToFolder && (
+        <button onClick={e => { e.stopPropagation(); onCopyToFolder(); }} className={css.itemActionBtn} title="Copy to folder">
+          <Copy size={11} />
+        </button>
+      )}
       <button onClick={e => { e.stopPropagation(); onDelete(); }} className={css.itemDeleteBtn}>
         <Trash2 size={12} />
       </button>
@@ -1009,10 +1441,12 @@ function SelectionRow({ item, state, checked, onCheck, onToggle, onDelete, onRen
   );
 }
 
-function DamageRow({ item, state, checked, onCheck, onCorrect, onDamage, onDelete, onRename }: {
-  item: BuilderItem; state: ItemState; checked: boolean;
-  onCheck: () => void; onCorrect: () => void; onDamage: () => void;
+function DamageRow({ item, state, onCorrect, onDamage, onDelete, onRename, onMoveUp, onMoveDown, onMoveToFolder, onCopyToFolder }: {
+  item: BuilderItem; state: ItemState;
+  onCorrect: () => void; onDamage: () => void;
   onDelete: () => void; onRename: (l: string) => void;
+  onMoveUp?: () => void; onMoveDown?: () => void;
+  onMoveToFolder?: () => void; onCopyToFolder?: () => void;
 }) {
   const [editLabel, setEditLabel] = useState(false);
   const [val, setVal] = useState(item.label);
@@ -1033,9 +1467,6 @@ function DamageRow({ item, state, checked, onCheck, onCorrect, onDamage, onDelet
   return (
     <div style={{ borderBottom: '1px solid #F3F4F6' }}>
       <div className={`${css.itemRow} ${isDamaged ? css.itemRowDamaged : ''} ${isCorrect ? css.itemRowCorrect : ''}`}>
-        <label className="ip-checkbox-label" onClick={e => e.stopPropagation()} style={{ flexShrink: 0 }}>
-          <input type="checkbox" checked={checked} onChange={onCheck} />
-        </label>
         {editLabel
           ? <input autoFocus value={val} onChange={e => setVal(e.target.value)}
             onBlur={() => { onRename(val || item.label); setEditLabel(false); }}
@@ -1044,69 +1475,58 @@ function DamageRow({ item, state, checked, onCheck, onCorrect, onDamage, onDelet
             className={css.itemLabelInput} />
           : <span onDoubleClick={e => { e.stopPropagation(); setEditLabel(true); setVal(item.label); }}
             className={css.itemLabel}>{item.label}</span>}
-        {/* Correct / Damaged / Camera */}
         <button onClick={e => { e.stopPropagation(); onCorrect(); }}
           className={`${css.dmgToggleBtn} ${isCorrect ? css.dmgToggleBtnCorrectOn : css.dmgToggleBtnCorrect}`}>
-          <CheckCircle2 size={11} /> Correct
+          <CheckCircle2 size={13} /> Correct
         </button>
         <button onClick={e => { e.stopPropagation(); onDamage(); }}
           className={`${css.dmgToggleBtn} ${isDamaged ? css.dmgToggleBtnDamageOn : css.dmgToggleBtnDamage}`}>
-          <XCircle size={11} /> Damaged
+          <AlertTriangle size={13} /> Damaged
         </button>
-        <button
-          className={`${css.itemCameraBtn} ${photos.length > 0 ? css.itemCameraBtnActive : ''}`}
-          title="Upload photos"
-          onClick={e => { e.stopPropagation(); itemPhotoRef.current?.click(); }}>
-          <Camera size={12} />
-          {photos.length > 0 && <span className={css.itemCameraCount}>{photos.length}</span>}
+        <button onClick={e => { e.stopPropagation(); itemPhotoRef.current?.click(); }}
+          className={css.dmgCameraBtn} title="Add photo">
+          <Camera size={13} />
+          <input ref={itemPhotoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleItemPhoto} />
         </button>
-        <input ref={itemPhotoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleItemPhoto} />
+        <div className={css.itemSortBtns}>
+          <button className={css.itemSortBtn} disabled={!onMoveUp} onClick={e => { e.stopPropagation(); onMoveUp?.(); }} title="Move up"><ArrowUp size={11} /></button>
+          <button className={css.itemSortBtn} disabled={!onMoveDown} onClick={e => { e.stopPropagation(); onMoveDown?.(); }} title="Move down"><ArrowDown size={11} /></button>
+        </div>
+        {onMoveToFolder && (
+          <button onClick={e => { e.stopPropagation(); onMoveToFolder(); }} className={css.itemActionBtn} title="Move to folder">
+            <ArrowRight size={11} />
+          </button>
+        )}
+        {onCopyToFolder && (
+          <button onClick={e => { e.stopPropagation(); onCopyToFolder(); }} className={css.itemActionBtn} title="Copy to folder">
+            <Copy size={11} />
+          </button>
+        )}
         <button onClick={e => { e.stopPropagation(); onDelete(); }} className={css.itemDeleteBtn}>
           <Trash2 size={12} />
         </button>
       </div>
-
-      {/* Expanded damage fields */}
       {isDamaged && (
-        <div className={`${css.dmgFields} ${css.fadeUp}`}>
-          <div className={css.dmgFieldsRow}>
-            <div style={{ flex: 1, minWidth: 130 }}>
-              <label className={css.dmgFieldLabel}>Severity</label>
-              <select value={severity} onChange={e => setSeverity(e.target.value)} className={css.dmgSelect}>
-                <option value="">Select…</option>
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-                <option value="CRITICAL">Critical</option>
-              </select>
-            </div>
-            <div style={{ flex: 3, minWidth: 200 }}>
-              <label className={css.dmgFieldLabel}>Recommendation</label>
-              <input value={recommendation} onChange={e => setRecommendation(e.target.value)}
-                placeholder="Describe corrective action…"
-                className={css.dmgInput} />
-            </div>
-          </div>
-          <div>
-            <label className={css.dmgFieldLabel}>Photo Evidence</label>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              {photos.map((url, idx) => (
-                <div key={idx} style={{ position: 'relative', width: 54, height: 54 }}>
-                  <img src={url} alt={`Photo ${idx + 1}`}
-                    style={{ width: 54, height: 54, borderRadius: 8, objectFit: 'cover', border: '1px solid rgba(223,69,58,0.25)', display: 'block' }} />
-                  <button onClick={() => setPhotos(p => p.filter((_, i) => i !== idx))}
-                    style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', background: '#DF453A', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                    <X size={10} />
+        <div className={css.itemDamageExpand}>
+          {photos.length > 0 && (
+            <div className={css.panelPhotoStrip} style={{ padding: '8px 16px 0' }}>
+              {photos.map((url, i) => (
+                <div key={i} className={css.panelPhotoThumb}>
+                  <img src={url} alt="" className={css.panelPhotoImg} />
+                  <button className={css.panelPhotoRemove} onClick={() => setPhotos(p => p.filter((_, j) => j !== i))}>
+                    <X size={9} />
                   </button>
                 </div>
               ))}
-              <button onClick={() => itemPhotoRef.current?.click()}
-                style={{ width: 54, height: 54, borderRadius: 8, border: '1px dashed rgba(223,69,58,0.25)', background: 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: '#DF453A', transition: 'background .12s' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(223,69,58,0.10)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                <Camera size={14} /><span className={css.dmgAddLabel}>Add</span>
-              </button>
             </div>
+          )}
+          <div className={css.itemDamageFields}>
+            <select value={severity} onChange={e => setSeverity(e.target.value)} className={css.itemDamageSel}>
+              <option value="">Severity…</option>
+              <option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
+            </select>
+            <input value={recommendation} onChange={e => setRecommendation(e.target.value)}
+              placeholder="Recommendation…" className={css.itemDamageInput} />
           </div>
         </div>
       )}
@@ -1115,83 +1535,185 @@ function DamageRow({ item, state, checked, onCheck, onCorrect, onDamage, onDelet
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   Add Panel Button
+   Search helper
 ───────────────────────────────────────────────────────────────── */
-function AddPanelBtn({ type, onClick }: { type: BuilderPanelType; onClick: () => void }) {
-  const isSel = type === 'SELECTION';
-  return (
-    <button onClick={onClick}
-      className={`${css.addPanelBtn} ${isSel ? css.addPanelBtnSel : css.addPanelBtnDmg}`}>
-      <Plus size={12} /> {isSel ? 'Selection Section' : 'Damaged Section'}
-    </button>
-  );
+function nodeMatchesSearch(node: TemplateNode, q: string): boolean {
+  if (node.name.toLowerCase().includes(q)) return true;
+  if (node.type === 'FOLDER' && node.children?.some(c => nodeMatchesSearch(c, q))) return true;
+  if (node.type === 'LEAF' && node.items?.some(i => i.label.toLowerCase().includes(q))) return true;
+  return false;
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   Workspace Footer — Glassmorphism toolbar
+   Name Validation Modal
 ───────────────────────────────────────────────────────────────── */
-function WorkspaceFooter({ selCount, activePanel, onAddItem, onDeleteSelected, onCopy, onCopyMove }: {
-  selCount: number; activePanel: BuilderPanel;
-  onAddItem: () => void; onDeleteSelected: () => void; onCopy: () => void; onCopyMove: () => void;
+function NameModal({ title, placeholder, onConfirm, onCancel }: {
+  title: string;
+  placeholder: string;
+  onConfirm: (name: string) => void;
+  onCancel: () => void;
 }) {
+  const [val, setVal] = useState('');
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const submit = () => {
+    const trimmed = val.trim();
+    if (!trimmed) return;
+    onConfirm(trimmed);
+  };
+
   return (
-    <div className={css.wFooter}>
-      <FooterBtn icon={<Plus size={13} />} label="Add Item" primary onClick={onAddItem} />
-      <div className={css.wFooterDivider} />
-      <FooterBtn icon={<Trash2 size={13} />} label={selCount > 0 ? `Delete (${selCount})` : 'Delete'} danger onClick={onDeleteSelected} disabled={selCount === 0} />
-      <FooterBtn icon={<Edit2 size={13} />} label="Edit" onClick={() => toast.info('Double-click an item label to rename it.')} />
-      <FooterBtn icon={<Copy size={13} />} label="Copy" onClick={onCopy} disabled={selCount !== 1} />
-      <FooterBtn icon={<MoveRight size={13} />} label="Copy & Move" onClick={onCopyMove} disabled={selCount !== 1} />
-      <div className={css.wFooterSpacer} />
-      <span className={css.wFooterMeta}>
-        {activePanel.items.length} item{activePanel.items.length !== 1 ? 's' : ''} total
-      </span>
+    <div className={css.modalOverlay} onClick={onCancel}>
+      <div className={css.modalBox} onClick={e => e.stopPropagation()}>
+        <h3 className={css.modalTitle}>{title}</h3>
+        <input
+          ref={inputRef}
+          value={val}
+          onChange={e => setVal(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') submit();
+            if (e.key === 'Escape') onCancel();
+          }}
+          placeholder={placeholder}
+          className={css.modalInput}
+        />
+        <div className={css.modalActions}>
+          <button className={css.modalCancelBtn} onClick={onCancel}>Cancel</button>
+          <button className={css.modalConfirmBtn} onClick={submit} disabled={!val.trim()}>
+            Create
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
-function FooterBtn({ icon, label, onClick, primary, danger, disabled }: {
-  icon: React.ReactNode; label: string; onClick: () => void;
-  primary?: boolean; danger?: boolean; disabled?: boolean;
+/* ─────────────────────────────────────────────────────────────────
+   Add Item Modal (RHS — itemName + optional PDF reportName)
+───────────────────────────────────────────────────────────────── */
+function AddItemModal({ existingLabels, onConfirm, onCancel }: {
+  existingLabels: string[];
+  onConfirm: (label: string, reportName: string) => void;
+  onCancel: () => void;
 }) {
+  const [itemName, setItemName] = useState('');
+  const [useCustomReport, setUseCustomReport] = useState(false);
+  const [reportName, setReportName] = useState('');
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const isDuplicate = itemName.trim() !== '' &&
+    existingLabels.some(l => l.trim().toLowerCase() === itemName.trim().toLowerCase());
+  const canSubmit = itemName.trim() !== '' && !isDuplicate;
+
+  const submit = () => {
+    if (!canSubmit) return;
+    const finalReport = useCustomReport && reportName.trim() ? reportName.trim() : itemName.trim();
+    onConfirm(itemName.trim(), finalReport);
+  };
+
   return (
-    <button
-      disabled={disabled}
-      onClick={onClick}
-      className={`${css.fBtn} ${primary ? css.fBtnPrimary : ''} ${danger ? css.fBtnDanger : ''}`}>
-      {icon} {label}
-    </button>
+    <div className={css.modalOverlay} onClick={onCancel}>
+      <div className={css.modalBox} onClick={e => e.stopPropagation()}>
+        <h3 className={css.modalTitle}>Add Item</h3>
+
+        <label className={css.modalFieldLabel}>Item Name <span style={{ color: '#EF4444' }}>*</span></label>
+        <input
+          ref={inputRef}
+          value={itemName}
+          onChange={e => setItemName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
+          placeholder="e.g. Roof Tiles"
+          className={`${css.modalInput} ${isDuplicate ? css.modalInputError : ''}`}
+        />
+        {isDuplicate && <p className={css.modalErrorMsg}>An item with this name already exists.</p>}
+
+        <label className={css.modalCheckboxRow}>
+          <input type="checkbox" checked={useCustomReport}
+            onChange={e => setUseCustomReport(e.target.checked)} className={css.modalCheckbox} />
+          Set a custom name for the PDF report?
+        </label>
+
+        {useCustomReport && (
+          <>
+            <label className={css.modalFieldLabel}>Report Name</label>
+            <input
+              value={reportName}
+              onChange={e => setReportName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
+              placeholder={itemName || 'Display name in PDF'}
+              className={css.modalInput}
+            />
+          </>
+        )}
+
+        <div className={css.modalActions}>
+          <button className={css.modalCancelBtn} onClick={onCancel}>Cancel</button>
+          <button className={css.modalConfirmBtn} onClick={submit} disabled={!canSubmit}>
+            Add Item
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   Copy & Move Modal
+   Move / Copy to Panel Modal
 ───────────────────────────────────────────────────────────────── */
-function CopyMoveModal({ panels, srcPanelId, onMove, onClose }: {
-  panels: BuilderPanel[]; srcPanelId: string;
-  onMove: (dst: string) => void; onClose: () => void;
+function collectLeaves(nodes: TemplateNode[], prefix = ''): { leaf: TemplateNode; path: string }[] {
+  const result: { leaf: TemplateNode; path: string }[] = [];
+  for (const n of nodes) {
+    if (n.type === 'LEAF') result.push({ leaf: n, path: prefix ? `${prefix} › ${n.name}` : n.name });
+    if (n.type === 'FOLDER' && n.children?.length)
+      result.push(...collectLeaves(n.children, prefix ? `${prefix} › ${n.name}` : n.name));
+  }
+  return result;
+}
+
+function MoveCopyModal({ mode, nodes, fromLeafId, onConfirm, onCancel }: {
+  mode: 'move' | 'copy';
+  nodes: TemplateNode[];
+  fromLeafId: string;
+  onConfirm: (toLeafId: string) => void;
+  onCancel: () => void;
 }) {
-  const targets = panels.filter(p => p.id !== srcPanelId);
+  const [selected, setSelected] = useState('');
+  const leaves = collectLeaves(nodes).filter(e => e.leaf.id !== fromLeafId);
+
   return (
-    <div className={css.modalOverlay} onClick={onClose}>
+    <div className={css.modalOverlay} onClick={onCancel}>
       <div className={css.modalBox} onClick={e => e.stopPropagation()}>
-        <h3 className={css.modalTitle}>Copy & Move to…</h3>
-        <p className={css.modalSub}>Choose the destination Inspection Section.</p>
-        {targets.length === 0
-          ? <p className={css.modalEmpty}>No other sections available in this inspection.</p>
-          : targets.map(p => {
-            const isSel = p.panelType === 'SELECTION';
-            return (
-              <button key={p.id} onClick={() => onMove(p.id)} className={css.modalItemBtn}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: isSel ? '#16A34A' : '#DC2626', background: isSel ? 'rgba(41,163,86,0.10)' : 'rgba(239,68,68,0.10)', padding: '2px 6px', borderRadius: 6, flexShrink: 0 }}>
-                  {isSel ? 'SEL' : 'DMG'}
+        <h3 className={css.modalTitle}>{mode === 'move' ? 'Move Item to Panel' : 'Copy Item to Panel'}</h3>
+        <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 12px' }}>Select a target panel.</p>
+
+        {leaves.length === 0 ? (
+          <p style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', padding: '16px 0' }}>
+            No other panels available.
+          </p>
+        ) : (
+          <div className={css.mvPanelList}>
+            {leaves.map(({ leaf, path }) => (
+              <button key={leaf.id}
+                className={`${css.mvPanelItem} ${selected === leaf.id ? css.mvPanelItemActive : ''}`}
+                onClick={() => setSelected(leaf.id)}>
+                <span className={leaf.panelType === 'SELECTION' ? css.mvBadgeSel : css.mvBadgeDmg}>
+                  {leaf.panelType === 'SELECTION' ? 'SEL' : 'DMG'}
                 </span>
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
-                <MoveRight size={14} style={{ color: '#9CA3AF', flexShrink: 0 }} />
+                <span className={css.mvPanelPath}>{path}</span>
               </button>
-            );
-          })}
-        <button onClick={onClose} className={css.modalCancelBtn}>Cancel</button>
+            ))}
+          </div>
+        )}
+
+        <div className={css.modalActions}>
+          <button className={css.modalCancelBtn} onClick={onCancel}>Cancel</button>
+          <button className={css.modalConfirmBtn} onClick={() => onConfirm(selected)} disabled={!selected}>
+            {mode === 'move' ? 'Move Here' : 'Copy Here'}
+          </button>
+        </div>
       </div>
     </div>
   );

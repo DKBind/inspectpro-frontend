@@ -10,6 +10,9 @@ import type {
   InspectionListItem,
   HipStatus,
   DefectSummaryResponse,
+  ChecklistItem,
+  ChecklistStatus,
+  FolderNode,
 } from './models/checklist';
 
 interface ApiResponse<T> {
@@ -144,6 +147,89 @@ export const checklistService = {
     );
     if (!res.status) throw new Error(res.message || 'Failed to add custom result');
     return res.object as InspectionResultResponse;
+  },
+
+  // ─── InspectionChecklist (folder-driven execution) ───────────────────────────
+
+  /** Returns the FOLDER-only tree for a project (left sidebar). */
+  getFolderTree: async (projectId: string): Promise<FolderNode[]> => {
+    const res = await api.get<ApiResponse<FolderNode[]>>(
+      `/projects/${projectId}/checklists/folders`
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to fetch folder tree');
+    return (res.object as FolderNode[]) ?? [];
+  },
+
+  /** Returns all checklist items for a specific folder in a project. */
+  getChecklistsForFolder: async (projectId: string, folderId: string): Promise<ChecklistItem[]> => {
+    const res = await api.get<ApiResponse<ChecklistItem[]>>(
+      `/projects/${projectId}/checklists?folderId=${folderId}`
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to fetch checklists');
+    return (res.object as ChecklistItem[]) ?? [];
+  },
+
+  /** Adds a new checklist item to a folder. */
+  addChecklistItem: async (
+    projectId: string,
+    data: { folderId: string; itemLabel: string; panelType?: string }
+  ): Promise<ChecklistItem> => {
+    const res = await api.post<ApiResponse<ChecklistItem>>(
+      `/projects/${projectId}/checklists`, data
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to add checklist item');
+    return res.object as ChecklistItem;
+  },
+
+  /** Updates status / comment / photos on a checklist item. */
+  updateChecklistItem: async (
+    id: string,
+    data: { status?: ChecklistStatus; comment?: string; photos?: string[]; itemLabel?: string }
+  ): Promise<ChecklistItem> => {
+    const res = await api.patch<ApiResponse<ChecklistItem>>(`/checklists/${id}`, data);
+    if (!res.status) throw new Error(res.message || 'Failed to update checklist item');
+    return res.object as ChecklistItem;
+  },
+
+  /** Soft-deletes a checklist item. */
+  deleteChecklistItem: async (id: string): Promise<void> => {
+    const res = await api.delete<ApiResponse<null>>(`/checklists/${id}`);
+    if (!res.status) throw new Error(res.message || 'Failed to delete checklist item');
+  },
+
+  /** Moves item one position up within its folder. */
+  moveChecklistUp: async (id: string): Promise<void> => {
+    const res = await api.patch<ApiResponse<null>>(`/checklists/${id}/move-up`, {});
+    if (!res.status) throw new Error(res.message || 'Failed to move item up');
+  },
+
+  /** Moves item one position down within its folder. */
+  moveChecklistDown: async (id: string): Promise<void> => {
+    const res = await api.patch<ApiResponse<null>>(`/checklists/${id}/move-down`, {});
+    if (!res.status) throw new Error(res.message || 'Failed to move item down');
+  },
+
+  /** Reassigns a checklist item to a different folder. */
+  moveChecklistToFolder: async (id: string, targetFolderId: string): Promise<ChecklistItem> => {
+    const res = await api.patch<ApiResponse<ChecklistItem>>(
+      `/checklists/${id}/move-to-folder`, { targetFolderId }
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to move item to folder');
+    return res.object as ChecklistItem;
+  },
+
+  /** Deep-copies a folder and all its checklist items into a new parent folder. */
+  copyFolder: async (
+    projectId: string,
+    folderId: string,
+    targetParentFolderId?: string
+  ): Promise<FolderNode> => {
+    const res = await api.post<ApiResponse<FolderNode>>(
+      `/projects/${projectId}/folders/${folderId}/copy-folder`,
+      { targetParentFolderId: targetParentFolderId ?? null }
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to copy folder');
+    return res.object as FolderNode;
   },
 
   // ─── Defect Summary Report ───────────────────────────────────────────────────
