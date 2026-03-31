@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
   Plus, Trash2, ChevronRight, ChevronDown, Search, X,
   Loader2, ArrowLeft, Save, FilePlus2, Edit2,
-  AlertTriangle, Camera, CheckCircle2,
+  AlertTriangle, CheckCircle2,
   FolderOpen, Folder, LayoutTemplate, Copy, ArrowUp, ArrowDown, ArrowRight,
 } from 'lucide-react';
 import { checklistService } from '@/services/checklistService';
@@ -204,15 +204,15 @@ export default function TemplateBuilder() {
   // Which panel row is "focused" (selected in Level 1 for toolbar actions)
   const [focusedLeafId, setFocusedLeafId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['__root__']));
+  const [globalOveralls, setGlobalOveralls] = useState<string[]>(['Satisfactory', 'Marginal', 'Poor', 'Safety', 'None-N/A']);
+  const [overallsModalOpen, setOverallsModalOpen] = useState(false);
   const [changes, setChanges] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!isNew);
   const [treeSearch, setTreeSearch] = useState('');
   const [itemStates, setItemStates] = useState<Record<string, ItemState>>({});
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
-  const [addPanelOpen, setAddPanelOpen] = useState(false);
-  const [addNodeType, setAddNodeType] = useState<'FOLDER' | 'LEAF'>('FOLDER');
-  const [addLeafPanelType, setAddLeafPanelType] = useState<BuilderPanelType>('SELECTION');
+  const [copyState, setCopyState] = useState<string | null>(null);
 
   // Name-validation modal state
   const [nameModal, setNameModal] = useState<{
@@ -241,7 +241,7 @@ export default function TemplateBuilder() {
 
   /* load */
   useEffect(() => {
-    if (isNew) { setLoading(false); return; }
+    if (isNew) { setGlobalOveralls(['Satisfactory', 'Marginal', 'Poor', 'Safety', 'None-N/A']); setLoading(false); return; }
     setLoading(true);
     checklistService.getTemplate(id!).then((tpl: TemplateResponse) => {
       setTitle(tpl.title || '');
@@ -252,6 +252,7 @@ export default function TemplateBuilder() {
         ? tpl.nodes
         : sectionsToNodes(tpl.sections ?? []);
       setNodes(loaded);
+      setGlobalOveralls(tpl.globalOveralls ?? ['Satisfactory', 'Marginal', 'Poor', 'Safety', 'None-N/A']);
       if (loaded.length > 0) {
         setExpandedIds(new Set(['__root__', loaded[0].id]));
       }
@@ -267,14 +268,18 @@ export default function TemplateBuilder() {
 
   /* ── Node CRUD ── */
   const addRootFolder = (name?: string) => {
+    if (nodes.filter(n => n.type === 'FOLDER').length >= 1) {
+      toast.error('Only one main root section is allowed.');
+      return;
+    }
     const node = emptyFolder(name ?? `Section ${nodes.length + 1}`);
     dirty(p => [...p, node]);
     setSelectedId(node.id);
     setExpandedIds(p => new Set([...p, '__root__', node.id]));
   };
 
-  const addRootLeaf = (type: BuilderPanelType, name?: string) => {
-    const node = emptyLeaf(name ?? `${type === 'SELECTION' ? 'Selection' : 'Damage'} ${nodes.length + 1}`, type);
+  const addRootLeaf = (type: BuilderPanelType, name?: string, reportName?: string) => {
+    const node = { ...emptyLeaf(name ?? `${type === 'SELECTION' ? 'Selection' : 'Damage'} ${nodes.length + 1}`, type), reportName };
     dirty(p => [...p, node]);
     setSelectedId(null); // root LEAFs not shown in workspace; stay at root view
   };
@@ -288,10 +293,10 @@ export default function TemplateBuilder() {
     setExpandedIds(p => new Set([...p, parentId, child.id]));
   };
 
-  const addChildLeaf = (parentId: string, type: BuilderPanelType, name?: string) => {
+  const addChildLeaf = (parentId: string, type: BuilderPanelType, name?: string, reportName?: string) => {
     const parent = findNode(nodes, parentId);
     const leafCount = (parent?.children ?? []).filter(c => c.type === 'LEAF').length;
-    const child = emptyLeaf(name ?? `${type === 'SELECTION' ? 'Selection' : 'Damage'} ${leafCount + 1}`, type);
+    const child = { ...emptyLeaf(name ?? `${type === 'SELECTION' ? 'Selection' : 'Damage'} ${leafCount + 1}`, type), reportName };
     dirty(p => addChildTo(p, parentId, child));
     setSelectedId(parentId);   // stay in parent folder so checklist view refreshes
     setExpandedIds(p => new Set([...p, parentId]));
@@ -322,18 +327,11 @@ export default function TemplateBuilder() {
     })));
   };
 
-  const handleSmartAdd = () => {
-    const target = selectedId ? findNode(nodes, selectedId) : null;
-    const parentId = target?.type === 'FOLDER' ? selectedId : null;
-    setAddPanelOpen(false);
-    setNameModal({ type: addNodeType, leafType: addLeafPanelType, parentId });
-  };
-
   const openModal = (type: 'FOLDER' | 'LEAF', leafType: BuilderPanelType, parentId: string | null) => {
     setNameModal({ type, leafType, parentId });
   };
 
-  const handleNameModalConfirm = (name: string) => {
+  const handleNameModalConfirm = (name: string, reportName?: string) => {
     if (!nameModal) return;
     const { type, leafType, parentId } = nameModal;
 
@@ -346,22 +344,32 @@ export default function TemplateBuilder() {
       if (parentId) addChildFolder(parentId, name);
       else addRootFolder(name);
     } else {
-      if (parentId) addChildLeaf(parentId, leafType, name);
-      else addRootLeaf(leafType, name);
+      if (parentId) addChildLeaf(parentId, leafType, name, reportName);
+      else addRootLeaf(leafType, name, reportName);
     }
     setNameModal(null);
   };
 
   /* ── Copy folder ── */
   const copyFolder = (nodeId: string) => {
+    setCopyState(nodeId);
+  };
+
+  const executeCopyFolder = (nodeId: string, newName: string) => {
     const node = findNode(nodes, nodeId);
     if (!node) return;
     const path = findPath(nodes, nodeId);
     const parentId = path && path.length > 1 ? path[path.length - 2].id : null;
-    const copy = deepCloneNode(node, `Copy of ${node.name}`);
+    const copy = deepCloneNode(node, newName);
     if (parentId) dirty(p => addChildTo(p, parentId, copy));
-    else dirty(p => [...p, copy]);
-    toast.success(`"${node.name}" copied.`);
+    else {
+      if (nodes.filter(n => n.type === 'FOLDER').length >= 1) {
+        toast.error('Cannot copy root folder as only one is allowed.');
+        return;
+      }
+      dirty(p => [...p, copy]);
+    }
+    toast.success(`"${node.name}" copied to "${newName}".`);
   };
 
   /* ── Item sort ── */
@@ -458,6 +466,7 @@ export default function TemplateBuilder() {
         description: description.trim() || undefined,
         scope: searchParams.get('scope') || 'ORGANISATION',
         nodes: nodes as any[],
+        globalOveralls,
         sections: [],
       };
       if (isNew || !templateIdRef.current) {
@@ -506,8 +515,19 @@ export default function TemplateBuilder() {
         <NameModal
           title={nameModal.type === 'FOLDER' ? 'New Folder' : `New ${nameModal.leafType === 'SELECTION' ? 'Selection' : 'Damage'} Panel`}
           placeholder={nameModal.type === 'FOLDER' ? 'e.g. Exterior' : 'e.g. Roof Inspection'}
+          showReportName={nameModal.type === 'LEAF'}
           onConfirm={handleNameModalConfirm}
           onCancel={() => setNameModal(null)}
+        />
+      )}
+
+      {/* ═══ COPY MODAL ═══ */}
+      {copyState && (
+        <NameModal
+          title="Copy Section"
+          placeholder="New Name"
+          onConfirm={(name) => { executeCopyFolder(copyState, name); setCopyState(null); }}
+          onCancel={() => setCopyState(null)}
         />
       )}
 
@@ -538,6 +558,15 @@ export default function TemplateBuilder() {
         />
       )}
 
+      {/* ═══ OVERALLS MODAL ═══ */}
+      {overallsModalOpen && (
+        <OverallsModal
+          initialOveralls={globalOveralls}
+          onConfirm={(list) => { setGlobalOveralls(list); setChanges(c => c + 1); setOverallsModalOpen(false); }}
+          onCancel={() => setOverallsModalOpen(false)}
+        />
+      )}
+
       {/* ═══ TOP NAV BAR ═══ */}
       <header className={css.header}>
         <button className={css.backBtn} onClick={() => navigate('/templates')}>
@@ -565,8 +594,9 @@ export default function TemplateBuilder() {
           <LayoutTemplate size={22} color="#33AE95" />
         </div>
         <div className={css.titleCardBody}>
-          <div className={css.titleCardMeta}>
+          <div className={css.titleCardMeta} style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
             <span className={css.titleCardBadge}>{isNew ? 'New Template' : 'Editing'}</span>
+            <button onClick={() => setOverallsModalOpen(true)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid #E2E8F0', borderRadius: 4, padding: '4px 8px', fontSize: 11, cursor: 'pointer', color: '#64748B' }}>Configure Global Ratings</button>
           </div>
           <input
             autoFocus={isNew} value={title}
@@ -594,7 +624,6 @@ export default function TemplateBuilder() {
               <FolderOpen size={14} color="#33AE95" />
             </div>
             <span className={css.sidebarHeadTitle}>Template Menu</span>
-            <NodeActionBtn icon={<Plus size={11} />} title="Add Section" onClick={() => openModal('FOLDER', 'SELECTION', null)} />
           </div>
 
           {/* Search */}
@@ -641,47 +670,17 @@ export default function TemplateBuilder() {
 
           {/* Sidebar footer */}
           <div className={css.sidebarFooter}>
-            {addPanelOpen ? (
-              <div className={css.addPanel}>
-                <p className={css.addPanelLabel}>
-                  {selectedId && findNode(nodes, selectedId)?.type === 'FOLDER'
-                    ? `Inside "${findNode(nodes, selectedId)!.name}"`
-                    : 'Add to root'}
-                </p>
-                <div className={css.addPanelRow}>
-                  <button className={`${css.addTypeBtn} ${addNodeType === 'FOLDER' ? css.addTypeBtnActive : ''}`}
-                    onClick={() => setAddNodeType('FOLDER')}>
-                    <Folder size={12} /> Folder
-                  </button>
-                  {selectedId && findNode(nodes, selectedId)?.type === 'FOLDER' && (
-                    <button className={`${css.addTypeBtn} ${addNodeType === 'LEAF' ? css.addTypeBtnActive : ''}`}
-                      onClick={() => setAddNodeType('LEAF')}>
-                      <CheckCircle2 size={12} /> Item
-                    </button>
-                  )}
-                </div>
-                {addNodeType === 'LEAF' && (
-                  <div className={css.addPanelRow}>
-                    <button className={`${css.addTypeBtn} ${addLeafPanelType === 'SELECTION' ? css.addTypeBtnSel : ''}`}
-                      onClick={() => setAddLeafPanelType('SELECTION')}>
-                      <CheckCircle2 size={12} /> Selection
-                    </button>
-                    <button className={`${css.addTypeBtn} ${addLeafPanelType === 'DAMAGE' ? css.addTypeBtnDmg : ''}`}
-                      onClick={() => setAddLeafPanelType('DAMAGE')}>
-                      <AlertTriangle size={12} /> Damage
-                    </button>
-                  </div>
-                )}
-                <div className={css.addPanelActions}>
-                  <button className={css.addPanelCancelBtn} onClick={() => setAddPanelOpen(false)}>Cancel</button>
-                  <button className={css.addPanelConfirmBtn} onClick={handleSmartAdd}>Add</button>
-                </div>
-              </div>
-            ) : (
-              <button className={css.sidebarAddBtn} onClick={() => setAddPanelOpen(true)}>
-                <Plus size={13} /> Add New
-              </button>
-            )}
+            <button className={css.sidebarAddBtn} onClick={() => {
+              const rootNodes = nodes.filter(n => n.type === 'FOLDER');
+              if (rootNodes.length === 0) {
+                openModal('FOLDER', 'SELECTION', null);
+              } else {
+                const parentId = selectedId && findNode(nodes, selectedId)?.type === 'FOLDER' ? selectedId : rootNodes[0].id;
+                openModal('FOLDER', 'SELECTION', parentId);
+              }
+            }}>
+              <Plus size={13} /> Add New
+            </button>
           </div>
         </nav>
 
@@ -703,7 +702,7 @@ export default function TemplateBuilder() {
             )}
             <button className={`${css.bcBtn} ${selectedId === null ? css.bcActive : css.bcLink}`}
               onClick={() => { setSelectedId(null); setSelectedLeafId(null); }}>
-              <FolderOpen size={13} /> Template Menu
+              <FolderOpen size={13} /> Inspection Checklist
             </button>
             {breadcrumb.map((crumb, i) => {
               const isLast = i === breadcrumb.length - 1;
@@ -786,11 +785,7 @@ export default function TemplateBuilder() {
                 onMoveItemDown={(leafId, itemId) => moveItemDown(leafId, itemId)}
                 onMoveItem={(leafId, itemId) => setMoveCopyModal({ itemId, fromLeafId: leafId, mode: 'move' })}
                 onCopyItem={(leafId, itemId) => setMoveCopyModal({ itemId, fromLeafId: leafId, mode: 'copy' })}
-                onAddLeaf={(panelType) => openModal('LEAF', panelType, selectedNode.id)}
                 onDeleteLeaf={(leafId) => deleteNode(leafId)}
-                onMoveLeafUp={moveLeafUp}
-                onMoveLeafDown={moveLeafDown}
-                onCopyLeaf={copyLeaf}
               />
             )}
 
@@ -907,6 +902,7 @@ function FolderChecklistView({
           </span>
         </div>
 
+
         {/* Items list */}
         <div className={`${css.panelCard} ${isSel ? css.panelCardHeadSel : css.panelCardHeadDmg}`}>
           {items.length === 0 && (
@@ -916,22 +912,22 @@ function FolderChecklistView({
             const state = itemStates[item.id] ?? 'none';
             return isSel
               ? <SelectionRow key={item.id} item={item} state={state}
-                  onToggle={() => setItemStates(p => ({ ...p, [item.id]: state === 'selected' ? 'none' : 'selected' }))}
-                  onDelete={() => onDeleteItem(leaf.id, item.id)}
-                  onRename={l => onRenameItem(leaf.id, item.id, l)}
-                  onMoveUp={idx > 0 ? () => onMoveItemUp(leaf.id, item.id) : undefined}
-                  onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(leaf.id, item.id) : undefined}
-                  onMoveToFolder={() => onMoveItem(leaf.id, item.id)}
-                  onCopyToFolder={() => onCopyItem(leaf.id, item.id)} />
+                onToggle={() => setItemStates(p => ({ ...p, [item.id]: state === 'selected' ? 'none' : 'selected' }))}
+                onDelete={() => onDeleteItem(leaf.id, item.id)}
+                onRename={l => onRenameItem(leaf.id, item.id, l)}
+                onMoveUp={idx > 0 ? () => onMoveItemUp(leaf.id, item.id) : undefined}
+                onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(leaf.id, item.id) : undefined}
+                onMoveToFolder={() => onMoveItem(leaf.id, item.id)}
+                onCopyToFolder={() => onCopyItem(leaf.id, item.id)} />
               : <DamageRow key={item.id} item={item} state={state}
-                  onCorrect={() => setItemStates(p => ({ ...p, [item.id]: state === 'correct' ? 'none' : 'correct' }))}
-                  onDamage={() => setItemStates(p => ({ ...p, [item.id]: state === 'damaged' ? 'none' : 'damaged' }))}
-                  onDelete={() => onDeleteItem(leaf.id, item.id)}
-                  onRename={l => onRenameItem(leaf.id, item.id, l)}
-                  onMoveUp={idx > 0 ? () => onMoveItemUp(leaf.id, item.id) : undefined}
-                  onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(leaf.id, item.id) : undefined}
-                  onMoveToFolder={() => onMoveItem(leaf.id, item.id)}
-                  onCopyToFolder={() => onCopyItem(leaf.id, item.id)} />;
+                onCorrect={() => setItemStates(p => ({ ...p, [item.id]: state === 'correct' ? 'none' : 'correct' }))}
+                onDamage={() => setItemStates(p => ({ ...p, [item.id]: state === 'damaged' ? 'none' : 'damaged' }))}
+                onDelete={() => onDeleteItem(leaf.id, item.id)}
+                onRename={l => onRenameItem(leaf.id, item.id, l)}
+                onMoveUp={idx > 0 ? () => onMoveItemUp(leaf.id, item.id) : undefined}
+                onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(leaf.id, item.id) : undefined}
+                onMoveToFolder={() => onMoveItem(leaf.id, item.id)}
+                onCopyToFolder={() => onCopyItem(leaf.id, item.id)} />;
           })}
           <button onClick={() => onAddItem(leaf.id)}
             className={`${css.panelFooterBtn} ${isSel ? css.panelFooterBtnSel : css.panelFooterBtnDmg}`}>
@@ -964,7 +960,7 @@ function FolderChecklistView({
 
       {/* Panel rows */}
       <div className={css.panelRowList}>
-        {leaves.map((leaf, idx) => {
+        {leaves.map((leaf) => {
           const isSel = leaf.panelType === 'SELECTION';
           const accent = isSel ? '#29A356' : '#EF4444';
           const accentLight = isSel ? 'rgba(41,163,86,0.07)' : 'rgba(239,68,68,0.05)';
@@ -1087,7 +1083,7 @@ function RecursiveTreeNode({
           {isFolder && (
             <NodeActionBtn icon={<Plus size={10} />} title="Add Child" onClick={e => { e.stopPropagation(); onAddFolder(node.id); }} />
           )}
-          {isFolder && (
+          {isFolder && depth > 0 && (
             <NodeActionBtn icon={<Copy size={10} />} title="Copy Folder" onClick={e => { e.stopPropagation(); onCopy(node.id); }} />
           )}
           <NodeActionBtn icon={<Edit2 size={10} />} title="Rename" onClick={e => { e.stopPropagation(); setEditingNodeId(node.id); }} />
@@ -1212,18 +1208,10 @@ function LeafEditor({ leaf, parentName, itemStates, setItemStates, onBack, onAdd
 
   const [editName, setEditName] = useState(false);
   const [nameVal, setNameVal] = useState(leaf.name);
-  const [panelPhotos, setPanelPhotos] = useState<string[]>([]);
-  const photoInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => setNameVal(leaf.name), [leaf.name]);
 
   const setItemState = (itemId: string, state: ItemState) =>
     setItemStates(p => ({ ...p, [itemId]: state }));
-
-  const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const urls = Array.from(e.target.files ?? []).map(f => URL.createObjectURL(f));
-    setPanelPhotos(p => [...p, ...urls]);
-    e.target.value = '';
-  };
 
   return (
     <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -1256,38 +1244,10 @@ function LeafEditor({ leaf, parentName, itemStates, setItemStates, onBack, onAdd
           <span className={isSel ? css.panelBadgeSel : css.panelBadgeDmg}>
             {isSel ? 'SELECTION' : 'DAMAGED'}
           </span>
-          {!isSel && (
-            <>
-              <button className={css.panelCameraBtn} title="Upload photos"
-                onClick={() => photoInputRef.current?.click()}>
-                <Camera size={14} />
-                {panelPhotos.length > 0 && <span className={css.panelCameraCount}>{panelPhotos.length}</span>}
-              </button>
-              <input ref={photoInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePhotoAdd} />
-            </>
-          )}
           <button onClick={onDeleteLeaf} className={css.panelDelBtn}>
             <Trash2 size={13} />
           </button>
         </div>
-
-        {/* Photo strip */}
-        {!isSel && panelPhotos.length > 0 && (
-          <div className={css.panelPhotoStrip}>
-            {panelPhotos.map((url, idx) => (
-              <div key={idx} className={css.panelPhotoThumb}>
-                <img src={url} alt={`Photo ${idx + 1}`} className={css.panelPhotoImg} />
-                <button className={css.panelPhotoRemove}
-                  onClick={() => setPanelPhotos(p => p.filter((_, i) => i !== idx))}>
-                  <X size={9} />
-                </button>
-              </div>
-            ))}
-            <button className={css.panelPhotoAdd} onClick={() => photoInputRef.current?.click()}>
-              <Camera size={14} /><span>Add</span>
-            </button>
-          </div>
-        )}
 
         {/* Items */}
         <div>
@@ -1387,7 +1347,7 @@ function NodeActionBtn({ icon, title, onClick, danger }: {
 /* ─────────────────────────────────────────────────────────────────
    Item Rows (Selection & Damage)
 ───────────────────────────────────────────────────────────────── */
-function SelectionRow({ item, state, onToggle, onDelete, onRename, onMoveUp, onMoveDown, onMoveToFolder, onCopyToFolder }: {
+function SelectionRow({ item, state: _state, onToggle: _onToggle, onDelete, onRename, onMoveUp, onMoveDown, onMoveToFolder, onCopyToFolder }: {
   item: BuilderItem; state: ItemState;
   onToggle: () => void; onDelete: () => void; onRename: (l: string) => void;
   onMoveUp?: () => void; onMoveDown?: () => void;
@@ -1396,14 +1356,9 @@ function SelectionRow({ item, state, onToggle, onDelete, onRename, onMoveUp, onM
   const [editLabel, setEditLabel] = useState(false);
   const [val, setVal] = useState(item.label);
   useEffect(() => setVal(item.label), [item.label]);
-  const active = state === 'selected';
 
   return (
-    <div className={`${css.itemRow} ${active ? css.itemRowSelected : ''}`}>
-      <label className={css.itemCheckLabel} onClick={e => e.stopPropagation()} style={{ flexShrink: 0 }}>
-        <input type="checkbox" className={css.itemCheckInput} checked={active} onChange={onToggle} />
-        <span className={`${css.itemCheck} ${active ? css.itemCheckOn : ''}`} />
-      </label>
+    <div className={css.itemRow}>
       {editLabel
         ? <input autoFocus value={val} onChange={e => setVal(e.target.value)}
           onBlur={() => { onRename(val || item.label); setEditLabel(false); }}
@@ -1413,30 +1368,31 @@ function SelectionRow({ item, state, onToggle, onDelete, onRename, onMoveUp, onM
           style={{ borderBottom: '1px solid #29A356' }} />
         : <span onDoubleClick={e => { e.stopPropagation(); setEditLabel(true); setVal(item.label); }}
           className={css.itemLabel}
-          style={{ color: active ? '#16A34A' : '#263B4F', fontWeight: active ? 500 : 400 }}>
+          style={{ color: '#263B4F', fontWeight: 400 }}>
           {item.label}
           {item.reportName && item.reportName !== item.label && (
             <span className={css.itemReportAlias} title="PDF report name">{item.reportName}</span>
           )}
         </span>}
-      {active && <span className={css.itemSelBadge}>SELECTED</span>}
-      <div className={css.itemSortBtns}>
-        <button className={css.itemSortBtn} disabled={!onMoveUp} onClick={e => { e.stopPropagation(); onMoveUp?.(); }} title="Move up"><ArrowUp size={11} /></button>
-        <button className={css.itemSortBtn} disabled={!onMoveDown} onClick={e => { e.stopPropagation(); onMoveDown?.(); }} title="Move down"><ArrowDown size={11} /></button>
+      <div className={css.itemActionsGroup}>
+        <div className={css.itemSortBtns}>
+          <button className={css.itemSortBtn} disabled={!onMoveUp} onClick={e => { e.stopPropagation(); onMoveUp?.(); }} title="Move up"><ArrowUp size={12} /></button>
+          <button className={css.itemSortBtn} disabled={!onMoveDown} onClick={e => { e.stopPropagation(); onMoveDown?.(); }} title="Move down"><ArrowDown size={12} /></button>
+        </div>
+        {onMoveToFolder && (
+          <button onClick={e => { e.stopPropagation(); onMoveToFolder(); }} className={css.itemActionBtn} title="Move to folder">
+            <ArrowRight size={14} />
+          </button>
+        )}
+        {onCopyToFolder && (
+          <button onClick={e => { e.stopPropagation(); onCopyToFolder(); }} className={css.itemActionBtn} title="Copy to folder">
+            <Copy size={13} />
+          </button>
+        )}
+        <button onClick={e => { e.stopPropagation(); onDelete(); }} className={css.itemDeleteBtn} title="Delete">
+          <Trash2 size={13} />
+        </button>
       </div>
-      {onMoveToFolder && (
-        <button onClick={e => { e.stopPropagation(); onMoveToFolder(); }} className={css.itemActionBtn} title="Move to folder">
-          <ArrowRight size={11} />
-        </button>
-      )}
-      {onCopyToFolder && (
-        <button onClick={e => { e.stopPropagation(); onCopyToFolder(); }} className={css.itemActionBtn} title="Copy to folder">
-          <Copy size={11} />
-        </button>
-      )}
-      <button onClick={e => { e.stopPropagation(); onDelete(); }} className={css.itemDeleteBtn}>
-        <Trash2 size={12} />
-      </button>
     </div>
   );
 }
@@ -1450,23 +1406,11 @@ function DamageRow({ item, state, onCorrect, onDamage, onDelete, onRename, onMov
 }) {
   const [editLabel, setEditLabel] = useState(false);
   const [val, setVal] = useState(item.label);
-  const [severity, setSeverity] = useState('');
-  const [recommendation, setRecommendation] = useState('');
-  const [photos, setPhotos] = useState<string[]>([]);
-  const itemPhotoRef = useRef<HTMLInputElement>(null);
   useEffect(() => setVal(item.label), [item.label]);
-  const isDamaged = state === 'damaged';
-  const isCorrect = state === 'correct';
-
-  const handleItemPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const urls = Array.from(e.target.files ?? []).map(f => URL.createObjectURL(f));
-    setPhotos(p => [...p, ...urls]);
-    e.target.value = '';
-  };
 
   return (
     <div style={{ borderBottom: '1px solid #F3F4F6' }}>
-      <div className={`${css.itemRow} ${isDamaged ? css.itemRowDamaged : ''} ${isCorrect ? css.itemRowCorrect : ''}`}>
+      <div className={css.itemRow}>
         {editLabel
           ? <input autoFocus value={val} onChange={e => setVal(e.target.value)}
             onBlur={() => { onRename(val || item.label); setEditLabel(false); }}
@@ -1475,61 +1419,26 @@ function DamageRow({ item, state, onCorrect, onDamage, onDelete, onRename, onMov
             className={css.itemLabelInput} />
           : <span onDoubleClick={e => { e.stopPropagation(); setEditLabel(true); setVal(item.label); }}
             className={css.itemLabel}>{item.label}</span>}
-        <button onClick={e => { e.stopPropagation(); onCorrect(); }}
-          className={`${css.dmgToggleBtn} ${isCorrect ? css.dmgToggleBtnCorrectOn : css.dmgToggleBtnCorrect}`}>
-          <CheckCircle2 size={13} /> Correct
-        </button>
-        <button onClick={e => { e.stopPropagation(); onDamage(); }}
-          className={`${css.dmgToggleBtn} ${isDamaged ? css.dmgToggleBtnDamageOn : css.dmgToggleBtnDamage}`}>
-          <AlertTriangle size={13} /> Damaged
-        </button>
-        <button onClick={e => { e.stopPropagation(); itemPhotoRef.current?.click(); }}
-          className={css.dmgCameraBtn} title="Add photo">
-          <Camera size={13} />
-          <input ref={itemPhotoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleItemPhoto} />
-        </button>
-        <div className={css.itemSortBtns}>
-          <button className={css.itemSortBtn} disabled={!onMoveUp} onClick={e => { e.stopPropagation(); onMoveUp?.(); }} title="Move up"><ArrowUp size={11} /></button>
-          <button className={css.itemSortBtn} disabled={!onMoveDown} onClick={e => { e.stopPropagation(); onMoveDown?.(); }} title="Move down"><ArrowDown size={11} /></button>
-        </div>
-        {onMoveToFolder && (
-          <button onClick={e => { e.stopPropagation(); onMoveToFolder(); }} className={css.itemActionBtn} title="Move to folder">
-            <ArrowRight size={11} />
-          </button>
-        )}
-        {onCopyToFolder && (
-          <button onClick={e => { e.stopPropagation(); onCopyToFolder(); }} className={css.itemActionBtn} title="Copy to folder">
-            <Copy size={11} />
-          </button>
-        )}
-        <button onClick={e => { e.stopPropagation(); onDelete(); }} className={css.itemDeleteBtn}>
-          <Trash2 size={12} />
-        </button>
-      </div>
-      {isDamaged && (
-        <div className={css.itemDamageExpand}>
-          {photos.length > 0 && (
-            <div className={css.panelPhotoStrip} style={{ padding: '8px 16px 0' }}>
-              {photos.map((url, i) => (
-                <div key={i} className={css.panelPhotoThumb}>
-                  <img src={url} alt="" className={css.panelPhotoImg} />
-                  <button className={css.panelPhotoRemove} onClick={() => setPhotos(p => p.filter((_, j) => j !== i))}>
-                    <X size={9} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className={css.itemDamageFields}>
-            <select value={severity} onChange={e => setSeverity(e.target.value)} className={css.itemDamageSel}>
-              <option value="">Severity…</option>
-              <option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
-            </select>
-            <input value={recommendation} onChange={e => setRecommendation(e.target.value)}
-              placeholder="Recommendation…" className={css.itemDamageInput} />
+        <div className={css.itemActionsGroup}>
+          <div className={css.itemSortBtns}>
+            <button className={css.itemSortBtn} disabled={!onMoveUp} onClick={e => { e.stopPropagation(); onMoveUp?.(); }} title="Move up"><ArrowUp size={12} /></button>
+            <button className={css.itemSortBtn} disabled={!onMoveDown} onClick={e => { e.stopPropagation(); onMoveDown?.(); }} title="Move down"><ArrowDown size={12} /></button>
           </div>
+          {onMoveToFolder && (
+            <button onClick={e => { e.stopPropagation(); onMoveToFolder(); }} className={css.itemActionBtn} title="Move to folder">
+              <ArrowRight size={14} />
+            </button>
+          )}
+          {onCopyToFolder && (
+            <button onClick={e => { e.stopPropagation(); onCopyToFolder(); }} className={css.itemActionBtn} title="Copy to folder">
+              <Copy size={13} />
+            </button>
+          )}
+          <button onClick={e => { e.stopPropagation(); onDelete(); }} className={css.itemDeleteBtn} title="Delete">
+            <Trash2 size={13} />
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -1547,13 +1456,66 @@ function nodeMatchesSearch(node: TemplateNode, q: string): boolean {
 /* ─────────────────────────────────────────────────────────────────
    Name Validation Modal
 ───────────────────────────────────────────────────────────────── */
-function NameModal({ title, placeholder, onConfirm, onCancel }: {
+function OverallsModal({ initialOveralls, onConfirm, onCancel }: {
+  initialOveralls: string[];
+  onConfirm: (list: string[]) => void;
+  onCancel: () => void;
+}) {
+  const [list, setList] = useState([...initialOveralls]);
+  const [val, setVal] = useState('');
+  
+  const add = () => {
+    const trimmed = val.trim();
+    if (trimmed && !list.includes(trimmed)) {
+      setList([...list, trimmed]);
+      setVal('');
+    }
+  };
+
+  return (
+    <div className={css.modalOverlay} onClick={onCancel}>
+      <div className={css.modalBox} onClick={e => e.stopPropagation()} style={{ width: 400 }}>
+        <h3 className={css.modalTitle}>Global Damage Ratings</h3>
+        <p style={{ fontSize: 13, color: '#64748B', margin: 0, marginTop: -8 }}>
+          Configure the scale used at the top of every Damage panel.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8, maxHeight: 200, overflowY: 'auto' }}>
+          {list.map((item, idx) => (
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F8FAFC', padding: '6px 12px', borderRadius: 6, border: '1px solid #E2E8F0' }}>
+              <span style={{ flex: 1, fontSize: 13, color: '#374151', fontWeight: 500 }}>{item}</span>
+              <button onClick={() => setList(list.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 4 }}>
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+          {list.length === 0 && <p style={{ fontSize: 13, color: '#9CA3AF' }}>No ratings configured.</p>}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <input value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add(); }} placeholder="Add new rating..." className={css.modalInput} style={{ flex: 1 }} />
+          <button onClick={add} disabled={!val.trim() || list.includes(val.trim())} style={{ background: '#33AE95', color: 'white', border: 'none', borderRadius: 8, padding: '0 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add</button>
+        </div>
+
+        <div className={css.modalActions} style={{ marginTop: 16 }}>
+          <button className={css.modalCancelBtn} onClick={onCancel}>Cancel</button>
+          <button className={css.modalConfirmBtn} onClick={() => onConfirm(list)}>Save Changes</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NameModal({ title, placeholder, showReportName, onConfirm, onCancel }: {
   title: string;
   placeholder: string;
-  onConfirm: (name: string) => void;
+  showReportName?: boolean;
+  onConfirm: (name: string, reportName?: string) => void;
   onCancel: () => void;
 }) {
   const [val, setVal] = useState('');
+  const [useCustomReport, setUseCustomReport] = useState(false);
+  const [reportName, setReportName] = useState('');
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -1561,7 +1523,8 @@ function NameModal({ title, placeholder, onConfirm, onCancel }: {
   const submit = () => {
     const trimmed = val.trim();
     if (!trimmed) return;
-    onConfirm(trimmed);
+    const finalReport = useCustomReport && reportName.trim() ? reportName.trim() : trimmed;
+    onConfirm(trimmed, showReportName ? finalReport : undefined);
   };
 
   return (
@@ -1579,6 +1542,25 @@ function NameModal({ title, placeholder, onConfirm, onCancel }: {
           placeholder={placeholder}
           className={css.modalInput}
         />
+        {showReportName && (
+          <>
+            <label className={css.modalCheckboxRow} style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
+              <input type="checkbox" checked={useCustomReport}
+                onChange={e => setUseCustomReport(e.target.checked)} className={css.modalCheckbox} />
+              Set a custom name for the PDF report?
+            </label>
+            {useCustomReport && (
+              <input
+                value={reportName}
+                onChange={e => setReportName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
+                placeholder={val || 'Display name in PDF'}
+                className={css.modalInput}
+                style={{ marginTop: 8 }}
+              />
+            )}
+          </>
+        )}
         <div className={css.modalActions}>
           <button className={css.modalCancelBtn} onClick={onCancel}>Cancel</button>
           <button className={css.modalConfirmBtn} onClick={submit} disabled={!val.trim()}>
@@ -1599,8 +1581,6 @@ function AddItemModal({ existingLabels, onConfirm, onCancel }: {
   onCancel: () => void;
 }) {
   const [itemName, setItemName] = useState('');
-  const [useCustomReport, setUseCustomReport] = useState(false);
-  const [reportName, setReportName] = useState('');
   const inputRef = React.useRef<HTMLInputElement>(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -1610,8 +1590,7 @@ function AddItemModal({ existingLabels, onConfirm, onCancel }: {
 
   const submit = () => {
     if (!canSubmit) return;
-    const finalReport = useCustomReport && reportName.trim() ? reportName.trim() : itemName.trim();
-    onConfirm(itemName.trim(), finalReport);
+    onConfirm(itemName.trim(), itemName.trim());
   };
 
   return (
@@ -1629,25 +1608,6 @@ function AddItemModal({ existingLabels, onConfirm, onCancel }: {
           className={`${css.modalInput} ${isDuplicate ? css.modalInputError : ''}`}
         />
         {isDuplicate && <p className={css.modalErrorMsg}>An item with this name already exists.</p>}
-
-        <label className={css.modalCheckboxRow}>
-          <input type="checkbox" checked={useCustomReport}
-            onChange={e => setUseCustomReport(e.target.checked)} className={css.modalCheckbox} />
-          Set a custom name for the PDF report?
-        </label>
-
-        {useCustomReport && (
-          <>
-            <label className={css.modalFieldLabel}>Report Name</label>
-            <input
-              value={reportName}
-              onChange={e => setReportName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
-              placeholder={itemName || 'Display name in PDF'}
-              className={css.modalInput}
-            />
-          </>
-        )}
 
         <div className={css.modalActions}>
           <button className={css.modalCancelBtn} onClick={onCancel}>Cancel</button>

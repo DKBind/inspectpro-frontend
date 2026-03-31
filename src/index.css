@@ -473,7 +473,7 @@
 
 /* ── Left sidebar — matches TemplateBuilder .sidebar ─────────────── */
 .ie-nav {
-  width: 268px; flex-shrink: 0;
+  width: 310px; flex-shrink: 0;
   background: white;
   border: 1px solid #E5E7EB;
   border-radius: 14px;
@@ -637,13 +637,13 @@
   font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.6px; color: #263B4F; flex: 1;
 }
-.ie-panel-progress-wrap { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.ie-panel-progress-wrap { display: flex; align-items: stretch; gap: 8px; flex-shrink: 0; width: 100%; flex-direction: column; }
 .ie-panel-progress-text { font-size: 11px; color: #9CA3AF; }
 .ie-panel-progress-bar {
-  width: 80px; height: 5px; background: #F3F4F6; border-radius: 3px; overflow: hidden;
+  width: 100%; height: 6px; background: #F1F5F9; border-radius: 4px; overflow: hidden;
 }
 .ie-panel-progress-fill {
-  height: 100%; border-radius: 3px;
+  height: 100%; border-radius: 4px;
   background: linear-gradient(90deg, #33AE95, #298E7A);
   transition: width 0.4s ease;
 }
@@ -652,13 +652,14 @@
 /* ── Result row ──────────────────────────────────────────────────── */
 .ie-result-row {
   display: flex; align-items: flex-start; gap: 16px;
-  padding: 14px 18px; border-bottom: 1px solid #F3F4F6;
+  padding: 16px 20px; border-bottom: 1px solid #F1F5F9;
   transition: background 0.12s;
+  border-left: 3px solid transparent;
 }
 .ie-result-row:last-of-type { border-bottom: none; }
 .ie-result-row:hover  { background: #FAFAFA; }
-.ie-row-correct { background: rgba(34,197,94,0.025) !important; }
-.ie-row-damaged { background: rgba(239,68,68,0.025) !important; border-left: 3px solid #ef4444; }
+.ie-row-correct { background: rgba(34,197,94,0.02) !important; border-left: 3px solid #22c55e; }
+.ie-row-damaged { background: rgba(239,68,68,0.02) !important; border-left: 3px solid #ef4444; }
 
 .ie-result-body    { flex: 1; min-width: 0; }
 .ie-result-label-row { margin-bottom: 5px; }
@@ -676,12 +677,11 @@
 
 /* ── Inline defect expansion ─────────────────────────────────────── */
 .ie-defect-expand {
-  margin-top: 12px; padding: 14px 16px;
-  background: #FFFBFB;
-  border: 1px solid rgba(239,68,68,0.18);
-  border-left: 3px solid #ef4444;
-  border-radius: 10px;
-  display: flex; flex-direction: column; gap: 12px;
+  margin-top: 14px; padding: 16px 18px;
+  background: rgba(239,68,68,0.03);
+  border: 1px solid rgba(239,68,68,0.15);
+  border-radius: 12px;
+  display: flex; flex-direction: column; gap: 14px;
 }
 .ie-photo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ie-photo-btn {
@@ -875,9 +875,15 @@
 .ie-spinner-sm { animation: ie-spin 0.8s linear infinite; }
 @keyframes ie-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+/* ── Action Toolbar Icons ───────────────────────────────────────── */
+.ie-icon-mock { transition: all 0.2s ease; opacity: 0.7; }
+.ie-icon-mock:hover { opacity: 1; color: #33AE95; transform: scale(1.1); }
+button.ie-icon-mock { background: none; border: none; padding: 4px; display: inline-flex; cursor: pointer; border-radius: 4px; }
+button.ie-icon-mock:hover { background: #F1F5F9; }
+
 /* ── Responsive ──────────────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .ie-nav     { width: 220px; }
+@media (max-width: 1000px) {
+  .ie-nav     { width: 260px; }
 }
 @media (max-width: 768px) {
   .ie-body    { padding: 12px 14px; gap: 12px; }

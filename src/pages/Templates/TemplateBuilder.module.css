@@ -690,9 +690,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 0 0 0;
-  border-top: 1px solid #F1F5F9;
-  margin-top: 188px;
+  padding: 12px 20px;
+  border-top: 1px solid #E5E7EB;
+  background: #FAFAFA;
+  flex-shrink: 0;
   flex-wrap: wrap;
 }
 
@@ -1169,19 +1170,28 @@
 }
 
 .itemDeleteBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #D1D5DB;
-  padding: 3px;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-disabled);
+  border-radius: 8px;
+  cursor: pointer;
   flex-shrink: 0;
-  border-radius: 4px;
-  transition: color 0.12s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--ip-shadow-xs);
+  padding: 0;
 }
 
 .itemDeleteBtn:hover {
-  color: #EF4444;
+  background: var(--ip-red-light);
+  border-color: var(--ip-red-border);
+  color: var(--ip-red);
+  box-shadow: 0 4px 6px -1px rgba(223, 69, 58, 0.1), 0 2px 4px -1px rgba(223, 69, 58, 0.06);
+  transform: translateY(-1px);
 }
 
 /* Item-level camera button */
@@ -1248,25 +1258,25 @@
 .dmgToggleBtnCorrect {
   border: 1px solid #E5E7EB;
   background: transparent;
-  color: #9CA3AF;
+  color: #64748B;
 }
 
 .dmgToggleBtnCorrectOn {
-  border: 1px solid rgba(41, 163, 86, 0.4);
-  background: rgba(41, 163, 86, 0.09);
-  color: #16A34A;
+  border: 1px solid var(--ip-green-border);
+  background: var(--ip-green-light);
+  color: var(--ip-green);
 }
 
 .dmgToggleBtnDamage {
   border: 1px solid #E5E7EB;
   background: transparent;
-  color: #9CA3AF;
+  color: #64748B;
 }
 
 .dmgToggleBtnDamageOn {
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.09);
-  color: #DC2626;
+  border: 1px solid var(--ip-red-border);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
 }
 
 /* Damage expanded fields */
@@ -1877,6 +1887,7 @@
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 
 .modalCancelBtn:hover {
@@ -1896,6 +1907,10 @@
   cursor: pointer;
   font-family: inherit;
   transition: opacity 0.15s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .modalConfirmBtn:hover {
@@ -1908,10 +1923,20 @@
 }
 
 /* ── Item Sort Buttons ───────────────────────────────────────────────────── */
+.itemActionsGroup {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
 .itemSortBtns {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  border-radius: 8px;
   flex-shrink: 0;
 }
 
@@ -1919,24 +1944,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 14px;
+  width: 22px;
+  height: 10px;
   border: none;
   background: none;
-  color: #9CA3AF;
+  color: var(--ip-text-disabled);
   cursor: pointer;
   padding: 0;
-  border-radius: 3px;
-  transition: color 0.12s, background 0.12s;
+  border-radius: 4px;
+  transition: all 0.15s;
 }
 
 .itemSortBtn:hover:not(:disabled) {
-  color: #33AE95;
-  background: rgba(51, 174, 149, 0.08);
+  background: var(--ip-green-light);
+  color: var(--ip-green);
 }
 
 .itemSortBtn:disabled {
-  opacity: 0.25;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
@@ -2059,20 +2084,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: none;
-  color: #9CA3AF;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-disabled);
+  border-radius: 8px;
   cursor: pointer;
-  border-radius: 4px;
   flex-shrink: 0;
-  transition: color 0.12s, background 0.12s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--ip-shadow-xs);
+  padding: 0;
 }
 
 .itemActionBtn:hover {
-  color: #33AE95;
-  background: rgba(51, 174, 149, 0.08);
+  background: var(--ip-green-light);
+  border-color: var(--ip-green);
+  color: var(--ip-green);
+  box-shadow: 0 4px 6px -1px rgba(41, 163, 86, 0.1), 0 2px 4px -1px rgba(41, 163, 86, 0.06);
+  transform: translateY(-1px);
 }
 
 /* ── Report name alias badge ─────────────────────────────────────────────── */

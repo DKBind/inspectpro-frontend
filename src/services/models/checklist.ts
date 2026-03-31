@@ -9,6 +9,8 @@ export type TemplateNodeType = 'FOLDER' | 'LEAF';
 export interface TemplateNode {
   id: string;
   name: string;
+  /** Alias shown in PDF reports. Defaults to name when not set. */
+  reportName?: string;
   type: TemplateNodeType;
   /** "SELECTION" | "DAMAGE" — only meaningful when type = LEAF */
   panelType?: BuilderPanelType;
@@ -44,6 +46,8 @@ export interface BuilderItem {
 export interface BuilderPanel {
   id: string;
   name: string;
+  /** Alias shown in PDF reports. */
+  reportName?: string;
   panelType: BuilderPanelType;
   items: BuilderItem[];
 }
@@ -101,6 +105,7 @@ export interface TemplateResponse {
   organisationName?: string;
   /** New recursive tree — populated for templates saved in the new format */
   nodes?: TemplateNode[];
+  globalOveralls?: string[];
   sections: SectionInfo[];
   sectionCount: number;
   fields: FieldInfo[];             // legacy
@@ -118,6 +123,7 @@ export interface TemplateRequest {
   projectId?: string;
   /** New recursive node tree — takes precedence over sections when present */
   nodes?: TemplateNode[];
+  globalOveralls?: string[];
   sections?: any[];
   fields?: {
     fieldTitle: string;
