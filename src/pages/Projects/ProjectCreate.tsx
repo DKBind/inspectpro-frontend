@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,9 +8,12 @@ import {
   ArrowLeft, FolderOpen, ClipboardList, MapPin, Calendar,
   IndianRupee, Loader2, Users, Building2, Navigation,
   Banknote, PlusCircle, Pencil, Trash2, ChevronDown,
+  Globe, Search, Layers, X,
 } from 'lucide-react';
 
 import { projectService } from '@/services/projectService';
+import { checklistService } from '@/services/checklistService';
+import type { TemplateResponse } from '@/services/models/checklist';
 import { customerService } from '@/services/customerService';
 import { userService } from '@/services/userService';
 import { organisationService } from '@/services/organisationService';
@@ -46,7 +49,7 @@ const schema = z.object({
   contractorId: z.string().min(1, 'Contractor is required'),
   propertyTypeId: z.string().min(1, 'Property type is required'),
   description: z.string().max(250, 'Max 250 characters').optional(),
-  addressLine1: z.string().max(250, 'Max 250 characters').optional(),
+  addressLine1: z.string().min(1, 'Address is required').max(250, 'Max 250 characters'),
   addressLine2: z.string().max(250, 'Max 250 characters').optional(),
   street: z.string().max(250, 'Max 250 characters').optional(),
   city: z.string().max(250, 'Max 250 characters').optional(),
@@ -75,7 +78,6 @@ const EMPTY: FormValues = {
   totalBudget: '', contractValue: '',
 };
 
-const DESC_MAX = 300;
 
 const ProjectCreate = () => {
   const navigate = useNavigate();
@@ -100,6 +102,14 @@ const ProjectCreate = () => {
   const [customFields, setCustomFields] = useState<Array<{ label: string; value: string }>>([]);
   const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [tplError, setTplError] = useState('');
+
+  // ── Template picker state ────────────────────────────────────────────────
+  const [pickerTemplates, setPickerTemplates] = useState<TemplateResponse[]>([]);
+  const [selectedTpl, setSelectedTpl] = useState<TemplateResponse | null>(null);
+  const [tplSearch, setTplSearch] = useState('');
+  const [tplDropdownOpen, setTplDropdownOpen] = useState(false);
+  const tplDropdownRef = useRef<HTMLDivElement>(null);
 
   const {
     register, handleSubmit, watch, setValue, control,
@@ -112,14 +122,26 @@ const ProjectCreate = () => {
 
   const selectedPropertyTypeId = watch('propertyTypeId');
   const selectedOrgId = watch('organisationId'); // final target UUID (org or franchise)
-  // const descriptionVal = watch('description') ?? '';
   const selectedPropertyType = propertyTypes.find(pt => String(pt.id) === selectedPropertyTypeId);
   const specFields: SpecField[] = parseSpecFields(selectedPropertyType?.specTemplate);
 
 
+  // ── Close template dropdown on outside click ────────────────────────────
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (tplDropdownRef.current && !tplDropdownRef.current.contains(e.target as Node))
+        setTplDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   // ── Fetch on mount ──────────────────────────────────────────────────────
   useEffect(() => {
     propertyTypeService.listPropertyTypes().then(setPropertyTypes).catch(() => { });
+    checklistService.getPickerTemplates()
+      .then(tpls => setPickerTemplates(tpls.filter(t => t.id !== null && t.scope !== 'SCRATCH')))
+      .catch(() => { });
 
     // Load top-level orgs for super admin org/franchise picker
     if (isSuperAdmin) {
@@ -174,7 +196,7 @@ const ProjectCreate = () => {
 
     customerService.listCustomers(selectedOrgId, 0, 500)
       .then(d => {
-        const items = d.content ?? (Array.isArray(d) ? d as any[] : []);
+        const items = d.content ?? (Array.isArray(d) ? (d as CustomerResponse[]) : []);
         if (items.length > 0) setClients(items);
       })
       .catch(() => { });
@@ -229,9 +251,27 @@ const ProjectCreate = () => {
   }));
   const topLevelOrgOptions = topLevelOrgs.map(o => ({ value: o.uuid, label: o.name }));
   const franchiseOptions = franchises.map(o => ({ value: o.uuid, label: o.name }));
+  const filteredTpls = tplSearch.trim()
+    ? pickerTemplates.filter(t => t.title.toLowerCase().includes(tplSearch.toLowerCase()))
+    : pickerTemplates;
+  const tplTotalItems = (selectedTpl?.sections ?? []).reduce((s, sec) => s + (sec.items?.length ?? 0), 0);
 
   // ── Submit ───────────────────────────────────────────────────────────────
   const onSubmit = async (data: FormValues) => {
+    // Validate template selection
+    if (!selectedTpl) {
+      setTplError('Please select an inspection template');
+      return;
+    }
+    setTplError('');
+
+    // Validate all spec fields are filled
+    const missingSpecs = specFields.filter(f => !specValues[f.label]?.trim());
+    if (missingSpecs.length > 0) {
+      toast.error(`Please fill in all specifications: ${missingSpecs.map(f => f.label).join(', ')}`);
+      return;
+    }
+
     setSubmitting(true);
 
     const specs: Record<string, string> = {};
@@ -263,6 +303,7 @@ const ProjectCreate = () => {
       latitude: data.latitude ? parseFloat(data.latitude) : undefined,
       longitude: data.longitude ? parseFloat(data.longitude) : undefined,
       startDatePlanned: data.startDatePlanned || undefined,
+
       startDateActual: data.startDateActual || undefined,
       estimatedCompletionDate: data.estimatedCompletionDate || undefined,
       actualCompletionDate: data.actualCompletionDate || undefined,
@@ -272,10 +313,17 @@ const ProjectCreate = () => {
 
     try {
       const created = await projectService.createProject(payload);
-      toast.success('Project created!');
-      navigate(`/projects/${created.id}`);
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to create project');
+      try {
+        const cloned = await checklistService.cloneTemplateToProject(selectedTpl.id!, created.id!);
+        toast.success('Project created! Customize your template, then create the inspection.');
+        navigate(`/templates/${cloned.projectTemplateId}/builder?back=/projects/${created.id}`);
+      } catch {
+        toast.success('Project created!');
+        toast.error('Template assignment failed — assign it from the project page');
+        navigate(`/projects/${created.id}`);
+      }
+    } catch (e: unknown) {
+      toast.error((e as Error).message || 'Failed to create project');
     } finally {
       setSubmitting(false);
     }
@@ -294,7 +342,7 @@ const ProjectCreate = () => {
       {/* Page header — hero card matching ProjectDetail style */}
       <div className={styles.pageHeader}>
         <div className={styles.pageHeaderIcon}>
-          <FolderOpen size={26} color="#3B82F6" />
+          <FolderOpen size={26} color="#33AE95" />
         </div>
         <div className={styles.pageHeaderText}>
           <h1>New Project</h1>
@@ -308,7 +356,7 @@ const ProjectCreate = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit, () => toast.error('Please fix the errors.'))}>
+      <form onSubmit={handleSubmit(onSubmit)}>
         <div className={styles.body}>
 
           {/* ── Two-column area ─────────────────────────────────────────── */}
@@ -360,7 +408,6 @@ const ProjectCreate = () => {
                             placeholder="Select organisation…"
                             searchable
                             searchPlaceholder="Search organisations…"
-                            error={errors.organisationId?.message}
                           />
                         )}
                       />
@@ -417,7 +464,6 @@ const ProjectCreate = () => {
                             placeholder={franchises.length === 0 ? 'No franchises found' : 'Select franchise…'}
                             searchable
                             searchPlaceholder="Search franchises…"
-                            error={errors.organisationId?.message}
                           />
                         )}
                       />
@@ -439,7 +485,7 @@ const ProjectCreate = () => {
                         rows={3}
                         placeholder="Brief description of the project…"
                         {...register('description')}
-                        maxLength={DESC_MAX}
+                        maxLength={300}
                         className={styles.descTextarea}
                       />
                       {/* <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
@@ -481,7 +527,6 @@ const ProjectCreate = () => {
                           placeholder="Select property type…"
                           searchable
                           searchPlaceholder="Search types…"
-                          error={errors.propertyTypeId?.message}
                         />
                       )}
                     />
@@ -513,7 +558,6 @@ const ProjectCreate = () => {
                           placeholder={clients.length === 0 ? 'No clients yet' : 'Select a client…'}
                           searchable
                           searchPlaceholder="Search clients…"
-                          error={errors.clientId?.message}
                         />
                       )}
                     />
@@ -531,7 +575,6 @@ const ProjectCreate = () => {
                           placeholder={managerUsers.length === 0 ? 'No managers in org' : 'Select manager…'}
                           searchable
                           searchPlaceholder="Search managers…"
-                          error={errors.managerId?.message}
                         />
                       )}
                     />
@@ -549,7 +592,6 @@ const ProjectCreate = () => {
                           placeholder={qaUsers.length === 0 ? 'No QA users in org' : 'Select QA…'}
                           searchable
                           searchPlaceholder="Search QA…"
-                          error={errors.qaId?.message}
                         />
                       )}
                     />
@@ -567,7 +609,6 @@ const ProjectCreate = () => {
                           placeholder={inspectorUsers.length === 0 ? 'No inspectors in org' : 'Select inspector…'}
                           searchable
                           searchPlaceholder="Search inspectors…"
-                          error={errors.inspectorId?.message}
                         />
                       )}
                     />
@@ -585,7 +626,6 @@ const ProjectCreate = () => {
                           placeholder={contractorUsers.length === 0 ? 'No contractors in org' : 'Select contractor…'}
                           searchable
                           searchPlaceholder="Search contractors…"
-                          error={errors.contractorId?.message}
                         />
                       )}
                     />
@@ -621,7 +661,7 @@ const ProjectCreate = () => {
                       const opts = f.type === 'boolean' ? ['Yes', 'No'] : (f.options ?? []);
                       const isSelect = f.type === 'dropdown' || f.type === 'boolean';
                       return (
-                        <Fld key={f.label} label={f.label} required={f.required}>
+                        <Fld key={f.label} label={f.label} required>
                           {isSelect ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -730,8 +770,8 @@ const ProjectCreate = () => {
               </div>
               <div className={styles.sectionBody}>
                 <div className={styles.grid2}>
-                  <Fld label="Address Line 1">
-                    <Input placeholder="Flat / Building no." {...register('addressLine1')} className={inputCls(false)} />
+                  <Fld label="Address Line 1" required error={errors.addressLine1?.message}>
+                    <Input placeholder="Flat / Building no." {...register('addressLine1')} className={inputCls(!!errors.addressLine1)} />
                   </Fld>
                   <Fld label="Address Line 2">
                     <Input placeholder="Area / Colony" {...register('addressLine2')} className={inputCls(false)} />
@@ -819,6 +859,97 @@ const ProjectCreate = () => {
               </div>
             </div>
 
+            {/* Inspection Template (required) */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionHead}>
+                <span className={styles.sectionIcon}><ClipboardList size={13} color="#33AE95" /></span>
+                <span className={styles.sectionTitle}>
+                  Inspection Template <span style={{ color: '#EF4444', marginLeft: 2 }}>*</span>
+                </span>
+              </div>
+              <div className={styles.sectionBody}>
+                <p className={styles.tplPickerHint}>
+                  Select a master template to assign it when the project is created.
+                  A unique project copy will be created — the master stays unchanged.
+                </p>
+
+                {/* Searchable dropdown */}
+                <div className={styles.tplDropdownWrap} ref={tplDropdownRef}>
+                  <div className={styles.tplDropdownTrigger} onClick={() => setTplDropdownOpen(o => !o)}>
+                    <Search size={13} className={styles.tplSearchIcon} />
+                    <input
+                      className={styles.tplSearchInput}
+                      placeholder={selectedTpl ? selectedTpl.title : 'Search templates…'}
+                      value={tplSearch}
+                      onChange={e => { setTplSearch(e.target.value); setTplDropdownOpen(true); setSelectedTpl(null); }}
+                      onFocus={() => setTplDropdownOpen(true)}
+                    />
+                    {selectedTpl ? (
+                      <button
+                        type="button"
+                        className={styles.tplClearBtn}
+                        onClick={e => { e.stopPropagation(); setSelectedTpl(null); setTplSearch(''); }}
+                        title="Clear selection"
+                      >
+                        <X size={12} />
+                      </button>
+                    ) : (
+                      <ChevronDown size={13} className={`${styles.tplChevron} ${tplDropdownOpen ? styles.tplChevronOpen : ''}`} />
+                    )}
+                  </div>
+                  {tplDropdownOpen && (
+                    <div className={styles.tplDropdown}>
+                      {filteredTpls.length === 0 ? (
+                        <div className={styles.tplDropdownEmpty}>No templates found</div>
+                      ) : filteredTpls.map(t => (
+                        <button key={t.id} type="button" className={styles.tplDropdownItem} onClick={() => {
+                          setSelectedTpl(t); setTplSearch(''); setTplDropdownOpen(false); setTplError('');
+                        }}>
+                          <Globe size={12} style={{ flexShrink: 0, color: '#9CA3AF' }} />
+                          <span className={styles.tplDropdownName}>{t.title}</span>
+                          <span className={styles.tplDropdownScope}>{t.scope}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {tplError && (
+                  <p style={{ margin: 0, fontSize: 12, color: '#EF4444' }}>{tplError}</p>
+                )}
+
+                {/* Preview card */}
+                {selectedTpl && (
+                  <div className={styles.tplPreviewCard}>
+                    <div className={styles.tplPreviewRow}>
+                      <div className={styles.tplPreviewIcon}><Globe size={15} color="#33AE95" /></div>
+                      <div>
+                        <p className={styles.tplPreviewTitle}>{selectedTpl.title}</p>
+                        {selectedTpl.description && <p className={styles.tplPreviewDesc}>{selectedTpl.description}</p>}
+                      </div>
+                    </div>
+                    <div className={styles.tplPreviewStats}>
+                      <span><Layers size={11} />{selectedTpl.sectionCount} sections</span>
+                      <span><ClipboardList size={11} />{tplTotalItems} items</span>
+                      <span><Globe size={11} />{selectedTpl.scope}</span>
+                    </div>
+                    <div className={styles.tplPreviewAction}>
+                      <button
+                        type="submit"
+                        className={styles.tplMapBtn}
+                        disabled={submitting}
+                      >
+                        {submitting ? (
+                          <><Loader2 size={13} className={styles.spin} /> Mapping…</>
+                        ) : (
+                          <><ClipboardList size={13} /> Map Standard Template</>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -830,11 +961,11 @@ const ProjectCreate = () => {
           <button type="submit" className={styles.saveBtn} disabled={submitting}>
             {submitting ? (
               <>
-                <Loader2 size={14} className={styles.spin} /> Creating…
+                <Loader2 size={14} className={styles.spin} /> {selectedTpl ? 'Creating & Assigning…' : 'Creating…'}
               </>
             ) : (
               <>
-                <FolderOpen size={14} /> Create Project
+                <FolderOpen size={14} /> {selectedTpl ? 'Create Project & Assign Template' : 'Create Project'}
               </>
             )}
           </button>

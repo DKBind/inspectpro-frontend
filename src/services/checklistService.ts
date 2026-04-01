@@ -7,8 +7,12 @@ import type {
   SnapshotResponse,
   InspectionWithResultsResponse,
   InspectionResultResponse,
+  InspectionListItem,
   HipStatus,
   DefectSummaryResponse,
+  ChecklistItem,
+  ChecklistStatus,
+  FolderNode,
 } from './models/checklist';
 
 interface ApiResponse<T> {
@@ -84,6 +88,23 @@ export const checklistService = {
     return res.object as SnapshotResponse;
   },
 
+  /**
+   * Deep-copies a master template into a PROJECT-scoped, editable copy linked to the project.
+   * Does NOT create an Inspection — the user customises the copy first in the builder.
+   * Returns { projectTemplateId, title }.
+   */
+  cloneTemplateToProject: async (
+    templateId: string,
+    projectId: string
+  ): Promise<{ projectTemplateId: string; title: string }> => {
+    const res = await api.post<ApiResponse<{ projectTemplateId: string; title: string }>>(
+      `/templates/${templateId}/clone-to-project?projectId=${projectId}`,
+      {}
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to clone template to project');
+    return res.object as { projectTemplateId: string; title: string };
+  },
+
   importTemplate: async (templateId: string, projectId: string): Promise<SnapshotResponse> => {
     const res = await api.post<ApiResponse<SnapshotResponse>>(
       `/templates/${templateId}/import?projectId=${projectId}`,
@@ -91,6 +112,15 @@ export const checklistService = {
     );
     if (!res.status) throw new Error(res.message || 'Failed to import template');
     return res.object as SnapshotResponse;
+  },
+
+  // ─── Inspection List (Inspector Dashboard) ──────────────────────────────────
+
+  /** Returns all inspections for the caller's organisation with project/client/progress data. */
+  listAllInspections: async (): Promise<InspectionListItem[]> => {
+    const res = await api.get<ApiResponse<InspectionListItem[]>>('/inspections');
+    if (!res.status) throw new Error(res.message || 'Failed to fetch inspections');
+    return (res.object as InspectionListItem[]) ?? [];
   },
 
   // ─── Inspection Execution ────────────────────────────────────────────────────
@@ -104,10 +134,10 @@ export const checklistService = {
     return res.object as InspectionWithResultsResponse;
   },
 
-  /** Update a single result row (status + comments). */
+  /** Update a single result row (status + comments + severity). */
   updateInspectionResult: async (
-    resultId: number,
-    data: { responseValue: HipStatus; comments?: string; photoUrl?: string }
+    resultId: number | string,
+    data: { responseValue?: HipStatus | string; comments?: string; severity?: string; photoUrl?: string }
   ): Promise<InspectionResultResponse> => {
     const res = await api.patch<ApiResponse<InspectionResultResponse>>(
       `/inspection-results/${resultId}`,
@@ -115,6 +145,108 @@ export const checklistService = {
     );
     if (!res.status) throw new Error(res.message || 'Failed to update result');
     return res.object as InspectionResultResponse;
+  },
+
+  /** Mark an inspection as COMPLETED (all results already saved individually). */
+  completeInspection: async (inspectionId: string): Promise<void> => {
+    const res = await api.patch<ApiResponse<null>>(`/inspections/${inspectionId}/complete`, {});
+    if (!res.status) throw new Error(res.message || 'Failed to complete inspection');
+  },
+
+  /** Add a custom row to an in-progress inspection. */
+  addCustomResult: async (
+    inspectionId: string,
+    data: { itemLabel: string; sectionName?: string; logicType?: string }
+  ): Promise<InspectionResultResponse> => {
+    const res = await api.post<ApiResponse<InspectionResultResponse>>(
+      `/inspections/${inspectionId}/results`,
+      data
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to add custom result');
+    return res.object as InspectionResultResponse;
+  },
+
+  // ─── InspectionChecklist (folder-driven execution) ───────────────────────────
+
+  /** Returns the FOLDER-only tree for a project (left sidebar). */
+  getFolderTree: async (projectId: string): Promise<FolderNode[]> => {
+    const res = await api.get<ApiResponse<FolderNode[]>>(
+      `/projects/${projectId}/checklists/folders`
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to fetch folder tree');
+    return (res.object as FolderNode[]) ?? [];
+  },
+
+  /** Returns all checklist items for a specific folder in a project. */
+  getChecklistsForFolder: async (projectId: string, folderId: string): Promise<ChecklistItem[]> => {
+    const res = await api.get<ApiResponse<ChecklistItem[]>>(
+      `/projects/${projectId}/checklists?folderId=${folderId}`
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to fetch checklists');
+    return (res.object as ChecklistItem[]) ?? [];
+  },
+
+  /** Adds a new checklist item to a folder. */
+  addChecklistItem: async (
+    projectId: string,
+    data: { folderId: string; itemLabel: string; panelType?: string }
+  ): Promise<ChecklistItem> => {
+    const res = await api.post<ApiResponse<ChecklistItem>>(
+      `/projects/${projectId}/checklists`, data
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to add checklist item');
+    return res.object as ChecklistItem;
+  },
+
+  /** Updates status / comment / photos on a checklist item. */
+  updateChecklistItem: async (
+    id: string,
+    data: { status?: ChecklistStatus; comment?: string; photos?: string[]; itemLabel?: string }
+  ): Promise<ChecklistItem> => {
+    const res = await api.patch<ApiResponse<ChecklistItem>>(`/checklists/${id}`, data);
+    if (!res.status) throw new Error(res.message || 'Failed to update checklist item');
+    return res.object as ChecklistItem;
+  },
+
+  /** Soft-deletes a checklist item. */
+  deleteChecklistItem: async (id: string): Promise<void> => {
+    const res = await api.delete<ApiResponse<null>>(`/checklists/${id}`);
+    if (!res.status) throw new Error(res.message || 'Failed to delete checklist item');
+  },
+
+  /** Moves item one position up within its folder. */
+  moveChecklistUp: async (id: string): Promise<void> => {
+    const res = await api.patch<ApiResponse<null>>(`/checklists/${id}/move-up`, {});
+    if (!res.status) throw new Error(res.message || 'Failed to move item up');
+  },
+
+  /** Moves item one position down within its folder. */
+  moveChecklistDown: async (id: string): Promise<void> => {
+    const res = await api.patch<ApiResponse<null>>(`/checklists/${id}/move-down`, {});
+    if (!res.status) throw new Error(res.message || 'Failed to move item down');
+  },
+
+  /** Reassigns a checklist item to a different folder. */
+  moveChecklistToFolder: async (id: string, targetFolderId: string): Promise<ChecklistItem> => {
+    const res = await api.patch<ApiResponse<ChecklistItem>>(
+      `/checklists/${id}/move-to-folder`, { targetFolderId }
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to move item to folder');
+    return res.object as ChecklistItem;
+  },
+
+  /** Deep-copies a folder and all its checklist items into a new parent folder. */
+  copyFolder: async (
+    projectId: string,
+    folderId: string,
+    targetParentFolderId?: string
+  ): Promise<FolderNode> => {
+    const res = await api.post<ApiResponse<FolderNode>>(
+      `/projects/${projectId}/folders/${folderId}/copy-folder`,
+      { targetParentFolderId: targetParentFolderId ?? null }
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to copy folder');
+    return res.object as FolderNode;
   },
 
   // ─── Defect Summary Report ───────────────────────────────────────────────────

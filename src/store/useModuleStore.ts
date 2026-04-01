@@ -34,7 +34,7 @@ export const useModuleStore = create<ModuleState>()(
     {
       name: 'module-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ accessModules: state.accessModules }),
+      partialize: (state) => ({ modules: state.modules, accessModules: state.accessModules }),
     }
   )
 );

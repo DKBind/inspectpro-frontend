@@ -132,6 +132,18 @@
   color: var(--ip-sidebar-text-active);
 }
 
+.navItemLocked {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.lockIcon {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--ip-text-muted);
+}
+
 .navItemActive::before {
   content: '';
   position: absolute;

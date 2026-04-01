@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { toast } from 'sonner';
 import {
   GitBranch, Globe, Mail, Sparkles, User, FileText, MapPin,
-  ChevronDown, Calendar, Crown, Building2,
+  ChevronDown, Calendar, Crown, Building2, Plus, Pencil, Trash2, Info,
 } from 'lucide-react';
 
 import { organisationService } from '@/services/organisationService';
@@ -24,6 +24,15 @@ import { Button } from '@/components/shared-ui/Button/button';
 import { Input } from '@/components/shared-ui/Input/input';
 import { Label } from '@/components/shared-ui/Label/label';
 import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
+
+// ─── Extra Info row type (local state only) ────────────────────────────────────
+
+interface ExtraRow {
+  id: string;
+  label: string;
+  value: string;
+  saved: boolean;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -55,25 +64,43 @@ function planBadgeStyle(planName?: string): string {
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const schema = z.object({
+  // Franchise Details
   name: z.string().min(2, 'Franchise name must be at least 2 characters'),
-  email: z.string().min(1, 'Contact email is required').email({ error: 'Please enter a valid email' }),
-  parentOrgId: z.string().min(1, 'Parent organisation is required'),
-  subscriptionId: z.string().min(1, 'Subscription plan is required'),
-  subscriptionStartDate: z.string().optional(),
-  domain: z.string().optional(),
+  email: z.string().min(1, 'Franchise email is required').email('Please enter a valid email address'),
   phoneNumber: z
     .string()
     .optional()
     .refine((v) => !v || /^[0-9]{10}$/.test(v), 'Phone number must be exactly 10 digits'),
-  contactedPersonName: z.string().optional(),
+  domain: z.string().optional(),
+
+  // Parent & Subscription
+  parentOrgId: z.string().min(1, 'Parent organisation is required'),
+  subscriptionId: z.string().min(1, 'Subscription plan is required'),
+  subscriptionStartDate: z.string().optional(),
+
+  // Primary Contact (→ becomes franchise admin)
+  contactedPersonName: z.string().min(1, 'Primary contact name is required'),
   contactedPersonEmail: z
     .string()
-    .min(1, 'Contact person email is required')
-    .email({ error: 'Enter a valid email address' }),
+    .min(1, 'Primary contact email is required')
+    .email('Enter a valid email address'),
   contactedPersonPhoneNumber: z
     .string()
-    .min(1, 'Contact person phone is required')
+    .min(1, 'Primary contact phone is required')
     .refine((v) => /^[0-9]{10}$/.test(v), 'Phone number must be exactly 10 digits'),
+
+  // Alternate Contact (optional)
+  altContactPersonName: z.string().optional(),
+  altContactPersonEmail: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Enter a valid email address'),
+  altContactPersonPhoneNumber: z
+    .string()
+    .optional()
+    .refine((v) => !v || /^[0-9]{10}$/.test(v), 'Phone number must be exactly 10 digits'),
+
+  // Business Identifiers
   gstin: z
     .string()
     .optional()
@@ -86,6 +113,8 @@ const schema = z.object({
     .string()
     .optional()
     .refine((v) => !v || /^[A-Z]{4}[0-9]{5}[A-Z]$/i.test(v), 'Invalid TAN format (e.g. ABCD12345E)'),
+
+  // Address
   address: z.object({
     addressLine1: z.string().min(1, 'Address Line 1 is required').max(250, 'Max 250 characters'),
     addressLine2: z.string().max(250, 'Max 250 characters').optional(),
@@ -100,9 +129,10 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const EMPTY: FormValues = {
-  name: '', email: '', parentOrgId: '', subscriptionId: '', subscriptionStartDate: '',
-  domain: '', phoneNumber: '',
+  name: '', email: '', phoneNumber: '', domain: '',
+  parentOrgId: '', subscriptionId: '', subscriptionStartDate: '',
   contactedPersonName: '', contactedPersonEmail: '', contactedPersonPhoneNumber: '',
+  altContactPersonName: '', altContactPersonEmail: '', altContactPersonPhoneNumber: '',
   gstin: '', pan: '', tan: '',
   address: { addressLine1: '', addressLine2: '', street: '', district: '', state: '', country: '', pincode: '' },
 };
@@ -126,6 +156,7 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
   const [parentOrgs, setParentOrgs] = useState<OrganisationResponse[]>([]);
   const [plans, setPlans] = useState<SubscriptionResponse[]>([]);
   const [plansLoading, setPlansLoading] = useState(false);
+  const [extraRows, setExtraRows] = useState<ExtraRow[]>([]);
   const isEditMode = !!editOrg;
 
   const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY });
@@ -135,9 +166,12 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
   const { field: emailField } = useController({ name: 'email', control });
   const { field: domainField } = useController({ name: 'domain', control });
   const { field: phoneField } = useController({ name: 'phoneNumber', control });
-  const { field: contactPersonField } = useController({ name: 'contactedPersonName', control });
-  const { field: contactPersonEmailField } = useController({ name: 'contactedPersonEmail', control });
-  const { field: contactPersonPhoneField } = useController({ name: 'contactedPersonPhoneNumber', control });
+  const { field: cpNameField } = useController({ name: 'contactedPersonName', control });
+  const { field: cpEmailField } = useController({ name: 'contactedPersonEmail', control });
+  const { field: cpPhoneField } = useController({ name: 'contactedPersonPhoneNumber', control });
+  const { field: altNameField } = useController({ name: 'altContactPersonName', control });
+  const { field: altEmailField } = useController({ name: 'altContactPersonEmail', control });
+  const { field: altPhoneField } = useController({ name: 'altContactPersonPhoneNumber', control });
   const { field: gstinField } = useController({ name: 'gstin', control });
   const { field: panField } = useController({ name: 'pan', control });
   const { field: tanField } = useController({ name: 'tan', control });
@@ -188,14 +222,17 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
       reset({
         name: editOrg.name ?? '',
         email: editOrg.email ?? '',
+        phoneNumber: editOrg.phoneNumber ?? '',
+        domain: editOrg.domain ?? '',
         parentOrgId: editOrg.parentOrgId ?? '',
         subscriptionId: '',
         subscriptionStartDate: '',
-        domain: editOrg.domain ?? '',
-        phoneNumber: editOrg.phoneNumber ?? '',
         contactedPersonName: editOrg.contactedPersonName ?? '',
         contactedPersonEmail: editOrg.contactedPersonEmail ?? '',
         contactedPersonPhoneNumber: editOrg.contactedPersonPhoneNumber ?? '',
+        altContactPersonName: editOrg.altContactPersonName ?? '',
+        altContactPersonEmail: editOrg.altContactPersonEmail ?? '',
+        altContactPersonPhoneNumber: editOrg.altContactPersonPhoneNumber ?? '',
         gstin: editOrg.gstin ?? '',
         pan: editOrg.pan ?? '',
         tan: editOrg.tan ?? '',
@@ -209,18 +246,72 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
           pincode: editOrg.address?.pincode ?? '',
         },
       });
+      // Parse saved extraInfo
+      try {
+        const parsed = editOrg.extraInfo ? JSON.parse(editOrg.extraInfo) : [];
+        setExtraRows(
+          (parsed as { label: string; value: string }[]).map((r, i) => ({
+            id: `${i}`, label: r.label, value: r.value, saved: true,
+          }))
+        );
+      } catch {
+        setExtraRows([]);
+      }
     } else if (open && !editOrg) {
       reset({ ...EMPTY, parentOrgId: !isSuperAdmin && authUser?.orgId ? authUser.orgId : '' });
+      setExtraRows([]);
     }
   }, [open, editOrg, reset]);
 
-  const handleClose = () => { reset(EMPTY); onOpenChange(false); };
+  const handleClose = () => {
+    reset(EMPTY);
+    setExtraRows([]);
+    onOpenChange(false);
+  };
+
+  // ─── Extra Info CRUD ──────────────────────────────────────────────────────
+
+  const addExtraRow = () => {
+    setExtraRows((prev) => [...prev, { id: crypto.randomUUID(), label: '', value: '', saved: false }]);
+  };
+
+  const updateRow = (id: string, field: 'label' | 'value', val: string) => {
+    setExtraRows((prev) => prev.map((r) => r.id === id ? { ...r, [field]: val } : r));
+  };
+
+  const saveRow = (id: string) => {
+    const row = extraRows.find((r) => r.id === id);
+    if (!row?.label.trim()) { toast.error('Label is required'); return; }
+    setExtraRows((prev) => prev.map((r) => r.id === id ? { ...r, saved: true } : r));
+  };
+
+  const editRow = (id: string) => {
+    setExtraRows((prev) => prev.map((r) => r.id === id ? { ...r, saved: false } : r));
+  };
+
+  const deleteRow = (id: string) => {
+    setExtraRows((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  // ─── Submit ───────────────────────────────────────────────────────────────
 
   const onSubmit = async (data: FormValues) => {
     if (!isEditMode && data.subscriptionId && !data.subscriptionStartDate) {
       methods.setError('subscriptionStartDate', { type: 'manual', message: 'Start date is required' });
       return;
     }
+
+    // Ensure all extra rows are saved
+    const unsaved = extraRows.filter((r) => !r.saved);
+    if (unsaved.length > 0) {
+      toast.error('Please save all extra information rows before submitting.');
+      return;
+    }
+
+    const extraInfoJson = extraRows.length > 0
+      ? JSON.stringify(extraRows.map(({ label, value }) => ({ label, value })))
+      : undefined;
+
     setIsSubmitting(true);
     const clean = (v?: string) => (v?.trim() ? v.trim() : undefined);
     const addr = data.address;
@@ -238,23 +329,39 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
     try {
       if (isEditMode && editOrg) {
         await organisationService.updateOrganisation(editOrg.uuid, {
-          name: data.name, email: data.email,
-          domain: clean(data.domain), phoneNumber: clean(data.phoneNumber),
+          name: data.name,
+          email: data.email,
+          domain: clean(data.domain),
+          phoneNumber: clean(data.phoneNumber),
           contactedPersonName: clean(data.contactedPersonName),
-          contactedPersonEmail: data.contactedPersonEmail,
-          contactedPersonPhoneNumber: data.contactedPersonPhoneNumber,
-          gstin: clean(data.gstin), pan: clean(data.pan), tan: clean(data.tan),
+          contactedPersonEmail: clean(data.contactedPersonEmail),
+          contactedPersonPhoneNumber: clean(data.contactedPersonPhoneNumber),
+          altContactPersonName: clean(data.altContactPersonName),
+          altContactPersonEmail: clean(data.altContactPersonEmail),
+          altContactPersonPhoneNumber: clean(data.altContactPersonPhoneNumber),
+          extraInfo: extraInfoJson,
+          gstin: clean(data.gstin),
+          pan: clean(data.pan),
+          tan: clean(data.tan),
           address: hasAddress ? cleanAddr : undefined,
         });
         toast.success('Franchise updated!', { description: `${data.name} has been updated.` });
       } else {
         await organisationService.createOrganisation({
-          name: data.name, email: data.email,
-          domain: clean(data.domain), phoneNumber: clean(data.phoneNumber),
+          name: data.name,
+          email: data.email,
+          domain: clean(data.domain),
+          phoneNumber: clean(data.phoneNumber),
           contactedPersonName: clean(data.contactedPersonName),
-          contactedPersonEmail: data.contactedPersonEmail,
-          contactedPersonPhoneNumber: data.contactedPersonPhoneNumber,
-          gstin: clean(data.gstin), pan: clean(data.pan), tan: clean(data.tan),
+          contactedPersonEmail: clean(data.contactedPersonEmail),
+          contactedPersonPhoneNumber: clean(data.contactedPersonPhoneNumber),
+          altContactPersonName: clean(data.altContactPersonName),
+          altContactPersonEmail: clean(data.altContactPersonEmail),
+          altContactPersonPhoneNumber: clean(data.altContactPersonPhoneNumber),
+          extraInfo: extraInfoJson,
+          gstin: clean(data.gstin),
+          pan: clean(data.pan),
+          tan: clean(data.tan),
           parentOrgId: data.parentOrgId,
           subscriptionId: data.subscriptionId,
           subscriptionStartDate: data.subscriptionStartDate
@@ -424,7 +531,7 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
                         <Input placeholder="Branch Name" {...nameField} className={inputCls(!!errors.name)} />
                       </IcoInput>
                     </Fld>
-                    <Fld label="Contact Email" required error={errors.email?.message}>
+                    <Fld label="Franchise Email" required error={errors.email?.message}>
                       <IcoInput icon={<Mail size={15} />}>
                         <Input type="email" placeholder="branch@acme.com" {...emailField} className={inputCls(!!errors.email)} />
                       </IcoInput>
@@ -437,20 +544,83 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
                         <Input placeholder="https://branch.acme.com" {...domainField} className={inputCls(!!errors.domain)} />
                       </IcoInput>
                     </Fld>
-                    <Fld label="Contact Person Name" error={errors.contactedPersonName?.message}>
+                  </div>
+                </div>
+              </Sec>
+
+              {/* Primary Contact */}
+              <Sec icon={<User size={13} />} label="Primary Contact">
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5 space-y-3">
+                  <div className="flex items-center gap-2 text-xs text-[#33AE95] font-medium bg-[#33AE95]/8 border border-[#33AE95]/20 rounded-lg px-3 py-2">
+                    <Info size={13} />
+                    This contact person will become the Admin for this franchise.
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Fld label="Full Name" required error={errors.contactedPersonName?.message}>
                       <IcoInput icon={<User size={15} />}>
-                        <Input placeholder="John Doe" {...contactPersonField} className={inputCls(!!errors.contactedPersonName)} />
+                        <Input placeholder="John Doe" {...cpNameField} className={inputCls(!!errors.contactedPersonName)} />
                       </IcoInput>
                     </Fld>
-                    <Fld label="Contact Person Email" required error={(errors as any).contactedPersonEmail?.message}>
+                    <Fld label="Email (Admin Login)" required error={errors.contactedPersonEmail?.message}>
                       <IcoInput icon={<Mail size={15} />}>
-                        <Input type="email" placeholder="john@acme.com" {...contactPersonEmailField} className={inputCls(!!(errors as any).contactedPersonEmail)} />
+                        <Input type="email" placeholder="john@acme.com" {...cpEmailField} className={inputCls(!!errors.contactedPersonEmail)} />
                       </IcoInput>
                     </Fld>
-                    <Fld label="Contact Person Phone" required error={(errors as any).contactedPersonPhoneNumber?.message}>
-                      <PhoneInput field={contactPersonPhoneField} hasError={!!(errors as any).contactedPersonPhoneNumber} />
+                    <Fld label="Phone" required error={errors.contactedPersonPhoneNumber?.message}>
+                      <PhoneInput field={cpPhoneField} hasError={!!errors.contactedPersonPhoneNumber} />
                     </Fld>
                   </div>
+                </div>
+              </Sec>
+
+              {/* Alternate Contact */}
+              <Sec icon={<User size={13} />} label="Alternate Contact">
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
+                  <p className="text-xs text-[#6B7280] mb-3">Optional secondary point of contact.</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Fld label="Full Name" error={(errors as any).altContactPersonName?.message}>
+                      <IcoInput icon={<User size={15} />}>
+                        <Input placeholder="Jane Doe" {...altNameField} className={inputCls(!!(errors as any).altContactPersonName)} />
+                      </IcoInput>
+                    </Fld>
+                    <Fld label="Email" error={(errors as any).altContactPersonEmail?.message}>
+                      <IcoInput icon={<Mail size={15} />}>
+                        <Input type="email" placeholder="jane@acme.com" {...altEmailField} className={inputCls(!!(errors as any).altContactPersonEmail)} />
+                      </IcoInput>
+                    </Fld>
+                    <Fld label="Phone" error={(errors as any).altContactPersonPhoneNumber?.message}>
+                      <PhoneInput field={altPhoneField} hasError={!!(errors as any).altContactPersonPhoneNumber} />
+                    </Fld>
+                  </div>
+                </div>
+              </Sec>
+
+              {/* Extra Information */}
+              <Sec icon={<Info size={13} />} label="Extra Information">
+                <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5 space-y-3">
+                  {extraRows.length > 0 && (
+                    <div className="space-y-2">
+                      {extraRows.map((row) => (
+                        <ExtraInfoRow
+                          key={row.id}
+                          row={row}
+                          onLabelChange={(v) => updateRow(row.id, 'label', v)}
+                          onValueChange={(v) => updateRow(row.id, 'value', v)}
+                          onSave={() => saveRow(row.id)}
+                          onEdit={() => editRow(row.id)}
+                          onDelete={() => deleteRow(row.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={addExtraRow}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-[#33AE95]/50 text-[#33AE95] text-sm font-medium hover:bg-[#33AE95]/8 transition-colors"
+                  >
+                    <Plus size={14} />
+                    Add Question
+                  </button>
                 </div>
               </Sec>
 
@@ -526,6 +696,65 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
         </FormProvider>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── Extra Info Row ────────────────────────────────────────────────────────────
+
+function ExtraInfoRow({
+  row, onLabelChange, onValueChange, onSave, onEdit, onDelete,
+}: {
+  row: ExtraRow;
+  onLabelChange: (v: string) => void;
+  onValueChange: (v: string) => void;
+  onSave: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const inputBase = 'h-9 rounded-md border border-[#E5E7EB] px-3 text-sm text-[#263B4F] bg-white focus:outline-none focus:ring-1 focus:ring-[#33AE95]/30 focus:border-[#33AE95] placeholder:text-[#9CA3AF]';
+
+  if (row.saved) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3 py-2">
+        <span className="text-xs font-semibold text-[#263B4F] min-w-[120px] shrink-0">{row.label}</span>
+        <span className="text-xs text-[#4B5563] flex-1 border-l border-[#E5E7EB] pl-3">{row.value || '—'}</span>
+        <button type="button" onClick={onEdit}
+          className="p-1 rounded text-[#6B7280] hover:text-[#263B4F] hover:bg-[#F3F4F6] transition-colors" title="Edit">
+          <Pencil size={13} />
+        </button>
+        <button type="button" onClick={onDelete}
+          className="p-1 rounded text-[#6B7280] hover:text-[#DF453A] hover:bg-[#DF453A]/8 transition-colors" title="Delete">
+          <Trash2 size={13} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="text"
+        value={row.label}
+        onChange={(e) => onLabelChange(e.target.value)}
+        placeholder="Label (e.g. Landmark)"
+        className={`${inputBase} w-40 shrink-0`}
+      />
+      <input
+        type="text"
+        value={row.value}
+        onChange={(e) => onValueChange(e.target.value)}
+        placeholder="Value"
+        className={`${inputBase} flex-1`}
+      />
+      <button type="button" onClick={onSave}
+        className="shrink-0 px-3 h-9 rounded-md bg-[#33AE95] text-white text-xs font-medium hover:bg-[#2a9a84] transition-colors">
+        Save
+      </button>
+      <button type="button" onClick={onDelete}
+        className="shrink-0 p-2 rounded-md text-[#6B7280] hover:text-[#DF453A] hover:bg-[#DF453A]/8 transition-colors" title="Delete">
+        <Trash2 size={14} />
+      </button>
+    </div>
   );
 }
 

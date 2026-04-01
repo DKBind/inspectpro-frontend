@@ -148,14 +148,6 @@ const Organisation = () => {
     <div className={styles.page}>
       {/* Header */}
       <div className={styles.pageHeader}>
-        <div>
-          <h1 className={styles.pageTitle}>Organisations</h1>
-          <p className={styles.pageSubtitle}>Manage all organisations, subscriptions, and team configurations.</p>
-        </div>
-        <button className={styles.createBtn} onClick={openCreate}>
-          <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
-          Create Organisation
-        </button>
       </div>
 
       {/* Table Panel */}
@@ -166,8 +158,12 @@ const Organisation = () => {
             All Organisations
             {/* {!loading && <span className={styles.countBadge}>{totalItems}</span>} */}
           </h3>
-          <button className={styles.refreshBtn} onClick={() => fetchOrganisations(currentPage, pageSize)} title="Refresh">
+          {/* <button className={styles.refreshBtn} onClick={() => fetchOrganisations(currentPage, pageSize)} title="Refresh">
             <RefreshCw style={{ width: 14, height: 14 }} />
+          </button> */}
+          <button className={styles.createBtn} onClick={openCreate}>
+            <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
+            Create Organisation
           </button>
         </div>
 
@@ -220,31 +216,31 @@ const Organisation = () => {
                       <td className={styles.mutedCell}>
                         {org.email
                           ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <Mail size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
-                              {org.email}
-                            </span>
+                            <Mail size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+                            {org.email}
+                          </span>
                           : <span style={{ color: '#D1D5DB' }}>—</span>}
                       </td>
                       <td className={styles.mutedCell}>
                         <div>{org.contactedPersonName ?? '—'}</div>
-                        {org.contactedPersonEmail && (
+                        {/* {org.contactedPersonEmail && (
                           <div className={styles.orgMeta} style={{ marginTop: 2 }}>{org.contactedPersonEmail}</div>
-                        )}
+                        )} */}
                       </td>
                       <td className={styles.mutedCell}>
                         {org.phoneNumber
                           ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <Phone size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
-                              {org.phoneNumber}
-                            </span>
+                            <Phone size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+                            {org.phoneNumber}
+                          </span>
                           : <span style={{ color: '#D1D5DB' }}>—</span>}
                       </td>
                       <td className={styles.mutedCell}>
                         {org.gstin
                           ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: 'rgba(99,102,241,0.08)', color: '#6366f1', border: '1px solid rgba(99,102,241,0.2)', fontFamily: 'monospace', letterSpacing: '0.03em' }}>
-                              <Hash size={10} />
-                              {org.gstin}
-                            </span>
+                            <Hash size={10} />
+                            {org.gstin}
+                          </span>
                           : <span style={{ color: '#D1D5DB' }}>—</span>}
                       </td>
                       <td>

@@ -191,21 +191,21 @@ const UsersRoles = () => {
 
   // Hierarchical org display for user table rows
   const renderOrgBadge = (u: UserResponse) => {
-    if (!u.orgId) return <span style={{ color: '#9CA3AF', fontSize: 13 }}>InspectPro Internal</span>;
+    if (!u.orgId) return <span style={{ color: '#263B4F', fontSize: 13 }}>InspectPro Internal</span>;
     const org = allOrgs.find(o => o.uuid === u.orgId);
-    if (!org) return <span style={{ fontSize: 13, color: '#6B7280' }}>{u.orgName ?? '—'}</span>;
+    if (!org) return <span style={{ fontSize: 13, color: '#263B4F' }}>{u.orgName ?? '—'}</span>;
     if (org.parentOrgId) {
       const parent = allOrgs.find(o => o.uuid === org.parentOrgId);
       const parentName = parent?.name ?? org.parentOrgName ?? '?';
       return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: 13, color: '#6B7280' }}>{parentName}</span>
-          <span style={{ color: '#9CA3AF', fontSize: 12 }}>›</span>
-          <span style={{ fontSize: 13, color: '#6B7280' }}>{org.name}</span>
+          <span style={{ fontSize: 13, color: '#263B4F' }}>{parentName}</span>
+          <span style={{ color: '#263B4F', fontSize: 12 }}>›</span>
+          <span style={{ fontSize: 13, color: '#263B4F' }}>{org.name}</span>
         </div>
       );
     }
-    return <span style={{ fontSize: 13, color: '#6B7280' }}>{org.name}</span>;
+    return <span style={{ fontSize: 13, color: '#263B4F' }}>{org.name}</span>;
   };
 
   // ── Fetch users ───────────────────────────────────────────────────────────
@@ -219,7 +219,8 @@ const UsersRoles = () => {
       ]);
       setUsers(userData.users);
       setTotal(userData.total);
-      setRoles(rolesData);
+      const seen = new Set<number>();
+      setRoles(rolesData.filter((r) => { if (seen.has(r.roleId)) return false; seen.add(r.roleId); return true; }));
       const fetchedOrgs = orgsData.content ?? [];
       setAllOrgs(fetchedOrgs);
       // Load org admin's franchises if applicable
@@ -1431,10 +1432,12 @@ const UsersRoles = () => {
                         <span className={selectedRole ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>{selectedRole ? selectedRole.name : '— Select —'}</span>
                         <ChevronDown className="h-4 w-4 opacity-50 ml-2 shrink-0" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999]" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
-                        {roles.map((r) => (
-                          <DropdownMenuItem key={r.roleId} onSelect={() => setValue('roleId', String(r.roleId), { shouldValidate: true })} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">{r.name}</DropdownMenuItem>
-                        ))}
+                      <DropdownMenuContent className="bg-white border-[#E5E7EB] text-[#263B4F] z-[9999] p-0 overflow-hidden" style={{ width: 'var(--radix-dropdown-menu-trigger-width)' }}>
+                        <div style={{ maxHeight: '200px', overflowY: 'auto', padding: '4px' }}>
+                          {roles.map((r) => (
+                            <DropdownMenuItem key={r.roleId} onSelect={() => setValue('roleId', String(r.roleId), { shouldValidate: true })} className="cursor-pointer focus:bg-[#F3F4F6] focus:text-[#263B4F] py-2.5">{r.name}</DropdownMenuItem>
+                          ))}
+                        </div>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </Fld>

@@ -356,13 +356,9 @@ const Clients = () => {
 
       {/* Header */}
       <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Clients</h1>
-          {/* <p className={styles.subtitle}>{totalItems} client{totalItems !== 1 ? 's' : ''} total</p> */}
-        </div>
-        <button className={styles.createBtn} onClick={openCreate}>
+        {/* <button className={styles.createBtn} onClick={openCreate}>
           <Plus style={{ width: 15, height: 15 }} /> Add Client
-        </button>
+        </button> */}
       </div>
 
       {/* Table panel */}
@@ -372,8 +368,8 @@ const Clients = () => {
             <Users style={{ width: 16, height: 16, color: '#33AE95' }} />
             All Clients
           </div>
-          <button className={styles.refreshBtn} onClick={() => fetchClients(currentPage)} title="Refresh">
-            <RefreshCw style={{ width: 14, height: 14 }} />
+          <button className={styles.createBtn} onClick={openCreate}>
+            <Plus style={{ width: 15, height: 15 }} /> Add Client
           </button>
         </div>
 

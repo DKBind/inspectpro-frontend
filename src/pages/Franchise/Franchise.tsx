@@ -104,14 +104,13 @@ const Franchise = () => {
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
-        <div>
+        {/* <div>
           <h1 className={styles.pageTitle}>Franchises</h1>
-          {/* <p className={styles.pageSubtitle}>Manage franchise branches linked to their parent organisations.</p> */}
-        </div>
-        <button className={styles.createBtn} onClick={openCreate}>
+        </div> */}
+        {/* <button className={styles.createBtn} onClick={openCreate}>
           <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
           Create Franchise
-        </button>
+        </button> */}
       </div>
 
       <div className={styles.panel}>
@@ -120,9 +119,11 @@ const Franchise = () => {
             <GitBranch style={{ display: 'inline', width: 16, height: 16, marginRight: 8, verticalAlign: 'middle' }} />
             All Franchises
           </h3>
-          <button className={styles.refreshBtn} onClick={() => fetchFranchises(currentPage, pageSize)} title="Refresh">
-            <RefreshCw style={{ width: 14, height: 14 }} />
+          <button className={styles.createBtn} onClick={openCreate}>
+            <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
+            Create Franchise
           </button>
+
         </div>
 
         <div className={styles.panelBody}>

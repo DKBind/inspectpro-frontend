@@ -45,8 +45,8 @@ const Pagination = ({
     return pages;
   };
 
-  if (totalPages <= 1) return null;
-
+  // Hide entirely if single page AND no page-size selector
+  if (totalPages <= 1 && !onPageSizeChange) return null;
 
   return (
     <div className={styles.paginationWrapper}>
@@ -77,61 +77,62 @@ const Pagination = ({
         )}
       </div>
 
-      {/* Right Side: Navigation Controls */}
-      <div className={styles.controls}>
-        <button
-          className={styles.pageBtn}
-          onClick={() => onPageChange(1)}
-          disabled={currentPage === 1}
-          title="First page"
-        >
-          <ChevronsLeft />
-        </button>
+      {/* Right Side: Navigation Controls — only shown when there are multiple pages */}
+      {totalPages > 1 && (
+        <div className={styles.controls}>
+          <button
+            className={styles.pageBtn}
+            onClick={() => onPageChange(1)}
+            disabled={currentPage === 1}
+            title="First page"
+          >
+            <ChevronsLeft />
+          </button>
 
-        <button
-          className={styles.pageBtn}
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          title="Previous page"
-        >
-          <ChevronLeft />
-        </button>
+          <button
+            className={styles.pageBtn}
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            title="Previous page"
+          >
+            <ChevronLeft />
+          </button>
 
-        {getPageNumbers().map((page, idx) =>
-          page === 'ellipsis' ? (
-            <span key={`ellipsis-${idx}`} className={styles.ellipsis}>
-              …
-            </span>
-          ) : (
-            <button
-              key={page}
-              className={`${styles.pageBtn} ${page === currentPage ? styles.pageBtnActive : ''
-                }`}
-              onClick={() => onPageChange(page)}
-            >
-              {page}
-            </button>
-          )
-        )}
+          {getPageNumbers().map((page, idx) =>
+            page === 'ellipsis' ? (
+              <span key={`ellipsis-${idx}`} className={styles.ellipsis}>
+                …
+              </span>
+            ) : (
+              <button
+                key={page}
+                className={`${styles.pageBtn} ${page === currentPage ? styles.pageBtnActive : ''}`}
+                onClick={() => onPageChange(page)}
+              >
+                {page}
+              </button>
+            )
+          )}
 
-        <button
-          className={styles.pageBtn}
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          title="Next page"
-        >
-          <ChevronRight />
-        </button>
+          <button
+            className={styles.pageBtn}
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            title="Next page"
+          >
+            <ChevronRight />
+          </button>
 
-        <button
-          className={styles.pageBtn}
-          onClick={() => onPageChange(totalPages)}
-          disabled={currentPage === totalPages}
-          title="Last page"
-        >
-          <ChevronsRight />
-        </button>
-      </div>
+          <button
+            className={styles.pageBtn}
+            onClick={() => onPageChange(totalPages)}
+            disabled={currentPage === totalPages}
+            title="Last page"
+          >
+            <ChevronsRight />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

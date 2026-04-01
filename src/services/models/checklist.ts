@@ -2,6 +2,74 @@
 
 export type TemplateScope = 'GLOBAL' | 'ORGANISATION' | 'PROJECT' | 'SCRATCH';
 
+// ─── Recursive Template Node (new unlimited-depth tree) ───────────────────────
+
+export type TemplateNodeType = 'FOLDER' | 'LEAF';
+
+export interface TemplateNode {
+  id: string;
+  name: string;
+  /** Alias shown in PDF reports. Defaults to name when not set. */
+  reportName?: string;
+  type: TemplateNodeType;
+  /** "SELECTION" | "DAMAGE" — only meaningful when type = LEAF */
+  panelType?: BuilderPanelType;
+  /** Inspection items — LEAF only */
+  items?: BuilderItem[];
+  /** Child nodes — FOLDER only (self-referential, unlimited depth) */
+  children?: TemplateNode[];
+}
+
+// ─── Template Builder Types ───────────────────────────────────────────────────
+
+export type BuilderResponseType = 'DROPDOWN' | 'RADIO' | 'TEXT' | 'CHECKBOX' | 'NUMBER' | 'PHOTO' | 'PASS_FAIL';
+export type BuilderPanelType = 'SELECTION' | 'DAMAGE';
+
+export interface BuilderConditionalRule {
+  itemId: string;
+  operator: 'EQUALS' | 'NOT_EQUALS';
+  value: string;
+}
+
+export interface BuilderItem {
+  id: string;
+  label: string;
+  /** Alias shown in PDF reports. Defaults to label when not set. */
+  reportName?: string;
+  responseType: BuilderResponseType;
+  options: string[];
+  commonComments: string[];
+  required: boolean;
+  conditionalLogic: BuilderConditionalRule | null;
+}
+
+export interface BuilderPanel {
+  id: string;
+  name: string;
+  /** Alias shown in PDF reports. */
+  reportName?: string;
+  panelType: BuilderPanelType;
+  items: BuilderItem[];
+}
+
+export interface BuilderTab {
+  id: string;
+  name: string;
+  panels: BuilderPanel[];
+}
+
+export interface BuilderSubSection {
+  id: string;
+  name: string;
+  tabs: BuilderTab[];
+}
+
+export interface BuilderSection {
+  id: string;
+  name: string;
+  subSections: BuilderSubSection[];
+}
+
 // ─── HIP Hierarchy ───────────────────────────────────────────────────────────
 
 export interface ItemInfo {
@@ -35,11 +103,15 @@ export interface TemplateResponse {
   projectName?: string;
   organisationId?: string;
   organisationName?: string;
+  /** New recursive tree — populated for templates saved in the new format */
+  nodes?: TemplateNode[];
+  globalOveralls?: string[];
   sections: SectionInfo[];
   sectionCount: number;
   fields: FieldInfo[];             // legacy
   fieldCount: number;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface TemplateRequest {
@@ -49,20 +121,42 @@ export interface TemplateRequest {
   isGlobal?: boolean;              // legacy
   isLocked?: boolean;
   projectId?: string;
-  sections?: {
-    sectionName: string;
-    items: {
-      label: string;
-      responseType?: string;
-      options?: string[];
-      commonComments?: string[];
-    }[];
-  }[];
-  fields?: {                       // legacy
+  /** New recursive node tree — takes precedence over sections when present */
+  nodes?: TemplateNode[];
+  globalOveralls?: string[];
+  sections?: any[];
+  fields?: {
     fieldTitle: string;
     fieldDescription?: string;
     fieldType: 'INPUT' | 'CHECKBOX';
   }[];
+}
+
+// ─── Inspection List (Inspector Dashboard) ───────────────────────────────────
+
+export interface InspectionListItem {
+  id: string;
+  status: 'DRAFT' | 'COMPLETED' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+  createdAt?: string;
+
+  projectId: string;
+  projectName: string;
+  projectStatus?: string;
+  address?: string;
+
+  clientId?: string;
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+
+  organisationId?: string;
+  organisationName?: string;
+
+  templateId?: string;
+  templateTitle?: string;
+
+  totalResults: number;
+  answeredResults: number;
 }
 
 // ─── Snapshot (Clone & Initialise) ───────────────────────────────────────────
@@ -70,20 +164,51 @@ export interface TemplateRequest {
 export interface SnapshotResponse {
   inspectionId: string;
   snapshotTemplateId: string;
-  totalRows: number;
+  totalRows?: number;
+  totalChecklists?: number;
+}
+
+// ─── Inspection Checklist (folder-driven execution model) ─────────────────────
+
+export type ChecklistStatus = 'CORRECT' | 'DAMAGED' | 'N/A';
+
+export interface ChecklistItem {
+  id: string;
+  itemLabel: string;
+  panelType: 'SELECTION' | 'DAMAGE';
+  status?: ChecklistStatus;
+  comment?: string;
+  photos?: string[];
+  sortOrder: number;
+  isCustom: boolean;
+  folderId?: string;
+  folderName?: string;
+  templateNodeId?: string;
+}
+
+export interface FolderNode {
+  id: string;
+  name: string;
+  type: 'FOLDER';
+  parentId?: string;
+  children?: FolderNode[];
 }
 
 // ─── Inspection Execution ─────────────────────────────────────────────────────
 
 export type HipStatus = 'ACCEPTABLE' | 'DEFECTIVE' | 'MARGINAL' | 'NOT_INSPECTED';
 
+import type { InspectionImageUploadResponse } from '../inspectionImageService';
+
 export interface InspectionResultResponse {
-  id: number;
+  id: number | string;
   sectionName: string;
   itemLabel: string;
+  logicType?: 'SELECTION' | 'DAMAGE'; // from TemplateBuilder panelType; null for legacy items
   responseValue?: HipStatus;
   comments?: string;
   photoUrl?: string;
+  images?: InspectionImageUploadResponse[];
   isCustom: boolean;
   defectId?: string;
   severity?: string;       // LOW | MEDIUM | HIGH | CRITICAL
@@ -96,7 +221,7 @@ export interface InspectionWithResultsResponse {
   projectName?: string;
   templateId: string;
   templateTitle?: string;
-  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
   notes?: string;
   results: InspectionResultResponse[];
   createdAt?: string;

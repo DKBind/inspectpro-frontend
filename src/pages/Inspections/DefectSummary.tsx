@@ -1,114 +1,82 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, RefreshCw, AlertTriangle, CheckCircle2,
-  Layers, FileText, AlertOctagon, Printer,
+  Layers, FileText, AlertOctagon, Printer, Calendar, 
+  ClipboardList, Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { checklistService } from '@/services/checklistService';
 import type { DefectSummaryResponse, DefectItem } from '@/services/models/checklist';
+import styles from './DefectSummary.module.css';
 
 // ─── Severity meta ────────────────────────────────────────────────────────────
 const SEV_META: Record<string, { bg: string; color: string; border: string }> = {
-  LOW:      { bg: 'rgba(34,197,94,0.08)',   color: '#16a34a', border: 'rgba(34,197,94,0.25)'  },
-  MEDIUM:   { bg: 'rgba(245,158,11,0.08)',  color: '#b45309', border: 'rgba(245,158,11,0.3)'  },
-  HIGH:     { bg: 'rgba(239,68,68,0.08)',   color: '#dc2626', border: 'rgba(239,68,68,0.28)'  },
-  CRITICAL: { bg: 'rgba(127,29,29,0.12)',   color: '#991b1b', border: 'rgba(239,68,68,0.5)'   },
+  LOW:      { bg: '#F0FDF4', color: '#16A34A', border: '#DCFCE7' },
+  MEDIUM:   { bg: '#FFFBEB', color: '#B45309', border: '#FEF3C7' },
+  HIGH:     { bg: '#FEF2F2', color: '#DC2626', border: '#FEE2E2' },
+  CRITICAL: { bg: '#FEF2F2', color: '#991B1B', border: '#FCA5A5' },
 };
 
-const STATUS_META: Record<string, { bg: string; color: string }> = {
-  OPEN:        { bg: 'rgba(239,68,68,0.08)',   color: '#dc2626' },
-  IN_PROGRESS: { bg: 'rgba(245,158,11,0.08)',  color: '#b45309' },
-  RESOLVED:    { bg: 'rgba(34,197,94,0.08)',   color: '#16a34a' },
-  VERIFIED:    { bg: 'rgba(59,130,246,0.08)',  color: '#2563EB' },
+const STATUS_META: Record<string, { bg: string; color: string; border: string }> = {
+  OPEN:        { bg: '#FEF2F2', color: '#EF4444', border: '#FEE2E2' },
+  IN_PROGRESS: { bg: '#EFF6FF', color: '#2563EB', border: '#DBEAFE' },
+  RESOLVED:    { bg: '#F0FDF4', color: '#16A34A', border: '#DCFCE7' },
+  VERIFIED:    { bg: '#F5F3FF', color: '#7C3AED', border: '#EDE9FE' },
 };
 
-function SevBadge({ sev }: { sev?: string }) {
-  if (!sev) return null;
-  const m = SEV_META[sev] ?? SEV_META.MEDIUM;
+function Badge({ label, type, value }: { label: string; type: 'sev' | 'status'; value: string }) {
+  const meta = type === 'sev' 
+    ? (SEV_META[value] ?? SEV_META.MEDIUM)
+    : (STATUS_META[value] ?? STATUS_META.OPEN);
+    
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '3px 9px', borderRadius: 20,
-      background: m.bg, color: m.color, border: `1px solid ${m.border}`,
-      fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+    <span className={styles.badge} style={{ 
+      background: meta.bg, 
+      color: meta.color, 
+      border: `1px solid ${meta.border}` 
     }}>
-      {sev}
-    </span>
-  );
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  if (!status) return null;
-  const m = STATUS_META[status] ?? STATUS_META.OPEN;
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '3px 9px', borderRadius: 20,
-      background: m.bg, color: m.color,
-      fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-    }}>
-      {status?.replace('_', ' ')}
+      {label}
     </span>
   );
 }
 
 function DefectCard({ defect }: { defect: DefectItem }) {
   return (
-    <div style={{
-      display: 'flex', gap: 14, padding: '14px 20px',
-      borderBottom: '1px solid #F9FAFB', alignItems: 'flex-start',
-    }}>
-      {/* Left icon */}
-      <div style={{
-        width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-        background: 'rgba(239,68,68,0.08)', color: '#dc2626',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <AlertTriangle size={15} />
+    <div className={styles.defectItem}>
+      <div className={styles.defectTypeIcon}>
+        <AlertTriangle size={18} />
       </div>
 
-      {/* Body */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 5 }}>
-          <p style={{ fontSize: 13.5, fontWeight: 600, color: '#263B4F', margin: 0 }}>
-            {defect.itemLabel}
-          </p>
-          {defect.isCustom && (
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10,
-              background: '#EEF2FF', color: '#4338ca',
-            }}>CUSTOM</span>
-          )}
-          <SevBadge sev={defect.severity} />
-          <StatusBadge status={defect.defectStatus} />
+      <div className={styles.defectBody}>
+        <div className={styles.defectHeader}>
+          <h4 className={styles.defectLabel}>{defect.itemLabel}</h4>
+          {defect.isCustom && <span className={styles.customBadge}>Custom</span>}
+          <Badge label={defect.severity || 'Medium'} type="sev" value={defect.severity || 'MEDIUM'} />
+          <Badge label={(defect.defectStatus || 'Open').replace('_', ' ')} type="status" value={defect.defectStatus || 'OPEN'} />
         </div>
 
         {defect.resolutionNotes && (
-          <div style={{
-            display: 'flex', gap: 7, alignItems: 'flex-start',
-            padding: '8px 12px', borderRadius: 8,
-            background: '#FAFAFA', border: '1px solid #F0F0F0', marginTop: 6,
-          }}>
-            <FileText size={12} style={{ color: '#9CA3AF', flexShrink: 0, marginTop: 1 }} />
-            <p style={{ fontSize: 12.5, color: '#374151', margin: 0, lineHeight: 1.5 }}>
-              {defect.resolutionNotes}
-            </p>
+          <div className={styles.noteBlock}>
+            <Info size={14} style={{ color: '#94A3B8', flexShrink: 0, marginTop: 2 }} />
+            <p className={styles.noteText}>{defect.resolutionNotes}</p>
           </div>
         )}
 
         {defect.comments && (
-          <p style={{ fontSize: 12, color: '#6B7280', margin: '6px 0 0', lineHeight: 1.5 }}>
-            <em>Inspector note:</em> {defect.comments}
-          </p>
+          <div className={styles.inspectorNote}>
+            <FileText size={12} />
+            <span>Inspector note: {defect.comments}</span>
+          </div>
         )}
 
         {defect.photoUrl && (
           <img
             src={defect.photoUrl}
-            alt="Defect photo"
-            style={{ marginTop: 8, maxWidth: 220, borderRadius: 8, border: '1px solid #E5E7EB' }}
+            alt="Defect"
+            className={styles.defectImage}
+            onClick={() => window.open(defect.photoUrl, '_blank')}
           />
         )}
       </div>
@@ -116,7 +84,6 @@ function DefectCard({ defect }: { defect: DefectItem }) {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function DefectSummary() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -139,22 +106,23 @@ export default function DefectSummary() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handlePrint = () => window.print();
-
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 80, color: '#9CA3AF' }}>
-        <RefreshCw size={26} style={{ color: '#33AE95', marginBottom: 12, animation: 'spin 0.8s linear infinite' }} />
-        <p style={{ fontSize: 13 }}>Loading defect summary…</p>
+      <div className={styles.loading}>
+        <RefreshCw size={32} className={styles.spinner} />
+        <p>Generating defect report…</p>
       </div>
     );
   }
 
   if (!report) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 80, color: '#9CA3AF' }}>
-        <AlertOctagon size={26} style={{ marginBottom: 12, color: '#D1D5DB' }} />
-        <p style={{ fontSize: 14, color: '#6B7280' }}>No report available.</p>
+      <div className={styles.loading}>
+        <AlertOctagon size={40} style={{ color: '#CBD5E1', marginBottom: 16 }} />
+        <p>No report found for this project.</p>
+        <button className={styles.backBtn} onClick={() => navigate(-1)} style={{ marginTop: 12 }}>
+          <ArrowLeft size={14} /> Go Back
+        </button>
       </div>
     );
   }
@@ -165,152 +133,95 @@ export default function DefectSummary() {
     .filter((d) => d.severity === 'CRITICAL' || d.severity === 'HIGH').length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 22, gap: 16 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#263B4F', margin: '0 0 4px' }}>
-            Defect Summary Report
-          </h1>
-          <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>
-            {report.projectName} — auto-generated from all DEFECTIVE inspection results
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            onClick={() => navigate(-1)}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', borderRadius: 9,
-              border: '1px solid #E5E7EB', background: 'white',
-              fontSize: 13, fontWeight: 600, color: '#6B7280', cursor: 'pointer',
-            }}
-          >
-            <ArrowLeft size={14} /> Back
-          </button>
-          <button
-            onClick={handlePrint}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              padding: '9px 18px', borderRadius: 10, border: 'none',
-              background: '#33AE95', color: 'white',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(51,174,149,0.3)',
-            }}
-          >
-            <Printer size={14} /> Print Report
-          </button>
+    <div className={styles.page}>
+      {/* ── Hero Section ────────────────────────────────────────────── */}
+      <div className={styles.hero}>
+        <div className={styles.heroContent}>
+          <div className={styles.heroLeft}>
+            <h1 className={styles.heroTitle}>Defect Summary Report</h1>
+            <p className={styles.heroProject}>
+              <ClipboardList size={14} /> {report.projectName}
+            </p>
+          </div>
+          <div className={styles.heroActions}>
+            <button className={styles.backBtn} onClick={() => navigate(-1)}>
+              <ArrowLeft size={14} /> Back
+            </button>
+            <button className={styles.printBtn} onClick={() => window.print()}>
+              <Printer size={14} /> Print Report
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Stats row */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+      {/* ── Stats Row ───────────────────────────────────────────────── */}
+      <div className={styles.statsGrid}>
         {[
           {
             label: 'Total Defects',
             value: report.totalDefects,
-            bg: 'rgba(239,68,68,0.06)',
-            border: 'rgba(239,68,68,0.2)',
-            color: '#dc2626',
             icon: <AlertTriangle size={18} />,
+            color: '#EF4444',
+            bg: '#FEF2F2'
           },
           {
-            label: 'Sections Affected',
+            label: 'Affected Areas',
             value: sectionEntries.length,
-            bg: 'rgba(245,158,11,0.06)',
-            border: 'rgba(245,158,11,0.2)',
-            color: '#b45309',
             icon: <Layers size={18} />,
+            color: '#F59E0B',
+            bg: '#FFFBEB'
           },
           {
-            label: 'High / Critical',
+            label: 'High Priority',
             value: criticalCount,
-            bg: 'rgba(127,29,29,0.06)',
-            border: 'rgba(239,68,68,0.3)',
-            color: '#991b1b',
             icon: <AlertOctagon size={18} />,
+            color: '#991B1B',
+            bg: '#FEF2F2'
           },
           {
-            label: 'Items Inspected',
-            value: '—',
-            bg: 'rgba(51,174,149,0.06)',
-            border: 'rgba(51,174,149,0.2)',
+            label: 'Generation Date',
+            value: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }),
+            icon: <Calendar size={18} />,
             color: '#33AE95',
-            icon: <CheckCircle2 size={18} />,
-          },
-        ].map((stat) => (
-          <div key={stat.label} style={{
-            flex: 1, minWidth: 150,
-            padding: '14px 18px', borderRadius: 14,
-            background: stat.bg, border: `1px solid ${stat.border}`,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, color: stat.color }}>
-              {stat.icon}
-              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {stat.label}
-              </span>
+            bg: '#F0FDF9'
+          }
+        ].map((s) => (
+          <div key={s.label} className={styles.statCard}>
+            <div className={styles.statHeader}>
+              <div className={styles.statIcon} style={{ background: s.bg, color: s.color }}>
+                {s.icon}
+              </div>
+              <span className={styles.statLabel}>{s.label}</span>
             </div>
-            <p style={{ fontSize: 26, fontWeight: 800, color: stat.color, margin: 0 }}>
-              {stat.value}
-            </p>
+            <p className={styles.statValue}>{s.value}</p>
           </div>
         ))}
       </div>
 
-      {/* No defects */}
+      {/* ── Main Content ────────────────────────────────────────────── */}
       {report.totalDefects === 0 ? (
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          padding: '70px 24px', background: 'white', borderRadius: 14,
-          border: '1px solid #E5E7EB', color: '#9CA3AF',
-        }}>
-          <CheckCircle2 size={42} style={{ color: '#22c55e', marginBottom: 14 }} />
-          <p style={{ fontSize: 16, fontWeight: 700, color: '#374151', margin: '0 0 6px' }}>
-            No defects recorded
-          </p>
-          <p style={{ fontSize: 13, margin: 0 }}>
-            All inspection items for this project passed without defects.
-          </p>
+        <div className={styles.sectionCard} style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <CheckCircle2 size={48} style={{ color: '#22C55E', marginBottom: 16 }} />
+          <h3 className={styles.heroTitle}>All Clear</h3>
+          <p className={styles.heroProject}>No defects were recorded during this inspection.</p>
         </div>
       ) : (
-        /* Section cards */
-        sectionEntries.map(([sectionName, defects]) => (
-          <div key={sectionName} style={{
-            background: 'white', border: '1px solid #E5E7EB', borderRadius: 14,
-            overflow: 'hidden', marginBottom: 14,
-            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-          }}>
-            {/* Section header */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '13px 20px', background: '#FAFAFA',
-              borderBottom: '1px solid #F0F0F0',
-            }}>
-              <div style={{
-                width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                background: 'rgba(239,68,68,0.1)', color: '#dc2626',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Layers size={15} />
+        sectionEntries.map(([name, defects]) => (
+          <div key={name} className={styles.sectionCard}>
+            <div className={styles.sectionHead}>
+              <div className={styles.sectionIcon}>
+                <Layers size={16} />
               </div>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#263B4F', flex: 1 }}>
-                {sectionName}
-              </span>
-              <span style={{
-                fontSize: 11.5, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-                background: 'rgba(239,68,68,0.08)', color: '#dc2626',
-                border: '1px solid rgba(239,68,68,0.2)',
-              }}>
-                {defects.length} defect{defects.length !== 1 ? 's' : ''}
+              <h3 className={styles.sectionTitle}>{name}</h3>
+              <span className={styles.defectCount}>
+                {defects.length} {defects.length === 1 ? 'Defect' : 'Defects'}
               </span>
             </div>
-
-            {/* Defect rows */}
-            {defects.map((d, i) => (
-              <React.Fragment key={d.resultId ?? i}>
-                <DefectCard defect={d} />
-              </React.Fragment>
-            ))}
+            <div className={styles.sectionBody}>
+              {defects.map((d, i) => (
+                <DefectCard key={d.resultId ?? i} defect={d} />
+              ))}
+            </div>
           </div>
         ))
       )}

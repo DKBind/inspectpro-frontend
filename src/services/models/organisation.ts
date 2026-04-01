@@ -35,14 +35,18 @@ export interface OrganisationCreateRequest {
   name: string;
   email: string;
   domain?: string;
-  subscriptionId?: string;  // UUID of existing global subscription plan; not required for franchises
-  parentOrgId?: string;     // If set, creates a franchise under this organisation
-  subscriptionStartDate?: string;  // ISO datetime string e.g. "2024-01-01T00:00:00"
-  subscriptionEndDate?: string;    // ISO datetime string e.g. "2025-01-01T00:00:00"
+  subscriptionId?: string;
+  parentOrgId?: string;
+  subscriptionStartDate?: string;
+  subscriptionEndDate?: string;
   phoneNumber?: string;
   contactedPersonName?: string;
   contactedPersonEmail?: string;
   contactedPersonPhoneNumber?: string;
+  altContactPersonName?: string;
+  altContactPersonEmail?: string;
+  altContactPersonPhoneNumber?: string;
+  extraInfo?: string;
   gstin?: string;
   pan?: string;
   tan?: string;
@@ -59,6 +63,10 @@ export interface OrganisationUpdateRequest {
   contactedPersonName?: string;
   contactedPersonEmail?: string;
   contactedPersonPhoneNumber?: string;
+  altContactPersonName?: string;
+  altContactPersonEmail?: string;
+  altContactPersonPhoneNumber?: string;
+  extraInfo?: string;
   gstin?: string;
   pan?: string;
   tan?: string;
@@ -79,6 +87,10 @@ export interface OrganisationResponse {
   contactedPersonName?: string;
   contactedPersonEmail?: string;
   contactedPersonPhoneNumber?: string;
+  altContactPersonName?: string;
+  altContactPersonEmail?: string;
+  altContactPersonPhoneNumber?: string;
+  extraInfo?: string;
   gstin?: string;
   pan?: string;
   tan?: string;
