@@ -569,9 +569,23 @@ export default function TemplateBuilder() {
 
       {/* ═══ TOP NAV BAR ═══ */}
       <header className={css.header}>
-        <button className={css.backBtn} onClick={() => navigate('/templates')}>
-          <ArrowLeft size={14} /> Templates
-        </button>
+        {(() => {
+          const backTo = searchParams.get('back');
+          if (backTo) {
+            // Came from project creation — go back to the project page
+            const label = backTo.startsWith('/projects/') ? 'Back to Project' : 'Back';
+            return (
+              <button className={css.backBtn} onClick={() => navigate(backTo)}>
+                <ArrowLeft size={14} /> {label}
+              </button>
+            );
+          }
+          return (
+            <button className={css.backBtn} onClick={() => navigate('/templates')}>
+              <ArrowLeft size={14} /> Templates
+            </button>
+          );
+        })()}
         <span className={css.headerSep}>/</span>
         <span className={css.headerTitle}>{isNew ? 'New Template' : title || 'Edit Template'}</span>
         {/* {changes > 0 && (

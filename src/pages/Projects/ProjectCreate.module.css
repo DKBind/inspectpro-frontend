@@ -44,7 +44,7 @@
   border-radius: 14px;
   background: white;
   border: 1px solid #E2E8F0;
-  border-top: 4px solid #3B82F6;
+  border-top: 4px solid #33AE95;
   box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
@@ -52,7 +52,7 @@
   width: 52px;
   height: 52px;
   border-radius: 14px;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(51, 174, 149, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -88,16 +88,16 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.03em;
-  background: rgba(59, 130, 246, 0.08);
-  color: #2563EB;
-  border: 1.5px solid rgba(59, 130, 246, 0.25);
+  background: rgba(51, 174, 149, 0.08);
+  color: #33AE95;
+  border: 1.5px solid rgba(51, 174, 149, 0.25);
 }
 
 .planningDot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #3B82F6;
+  background: #33AE95;
   flex-shrink: 0;
 }
 
@@ -448,7 +448,7 @@
 
 .forToggleBtnActive {
   background: white;
-  color: #2563EB;
+  color: #33AE95;
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0,0,0,0.07);
 }
@@ -490,17 +490,17 @@
   padding: 9px 28px;
   border-radius: 9px;
   border: none;
-  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  background: linear-gradient(135deg, #33AE95, #2a9a84);
   color: white;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+  box-shadow: 0 4px 12px rgba(51, 174, 149, 0.35);
   transition: all 0.15s;
 }
 
 .saveBtn:hover:not(:disabled) {
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.45);
+  box-shadow: 0 6px 16px rgba(51, 174, 149, 0.45);
   transform: translateY(-1px);
 }
 
@@ -713,4 +713,34 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
+}
+
+.tplPreviewAction {
+  padding: 10px 14px;
+  border-top: 1px solid rgba(51, 174, 149, 0.15);
+}
+
+.tplMapBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  background: linear-gradient(135deg, #33AE95, #1e8e78);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.tplMapBtn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.tplMapBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

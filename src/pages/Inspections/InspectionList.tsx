@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ClipboardCheck, RefreshCw, AlertTriangle, MapPin,
-  User, Building2, FileText, Rocket, CheckCircle2,
-  ChevronRight, Clock,
+  RefreshCw, MapPin,
+  User, Calendar, Rocket,
+  ChevronRight, Building2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { checklistService } from '@/services/checklistService';
 import type { InspectionListItem } from '@/services/models/checklist';
 import styles from './InspectionList.module.css';
+import Pagination from '@/components/shared-ui/Pagination/Pagination';
 
 type Filter = 'all' | 'pending' | 'completed';
 
@@ -17,6 +18,9 @@ export default function InspectionList() {
   const [inspections, setInspections] = useState<InspectionListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
 
   useEffect(() => {
     (async () => {
@@ -31,11 +35,22 @@ export default function InspectionList() {
     })();
   }, []);
 
-  const filtered = inspections.filter((i) => {
-    if (filter === 'pending') return i.status === 'DRAFT';
-    if (filter === 'completed') return i.status === 'COMPLETED' || i.status === 'SUBMITTED';
-    return true;
-  });
+  const filtered = useMemo(() => {
+    return inspections.filter((i) => {
+      if (filter === 'pending') return i.status === 'DRAFT';
+      if (filter === 'completed') return i.status === 'COMPLETED' || i.status === 'SUBMITTED';
+      return true;
+    });
+  }, [inspections, filter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
+
+  const paginatedInspections = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
 
   const pendingCount = inspections.filter((i) => i.status === 'DRAFT').length;
   const completedCount = inspections.filter(
@@ -57,30 +72,18 @@ export default function InspectionList() {
 
   return (
     <div className={styles.page}>
-      {/* ── Page Header ───────────────────────────────────────────────── */}
-      <div className={styles.pageHeader}>
-        <div className={styles.pageHeaderLeft}>
-          <div className={styles.pageIcon}>
-            <ClipboardCheck size={20} />
-          </div>
-          <div>
-            <h1 className={styles.pageTitle}>Inspections</h1>
-            <p className={styles.pageSubtitle}>
-              {inspections.length} total · {pendingCount} pending · {completedCount} completed
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Filter Tabs ───────────────────────────────────────────────── */}
-      <div className={styles.filterRow}>
+      {/* ── Tab Bar ───────────────────────────────────────────────────── */}
+      <div className={styles.tabBar}>
         {(['all', 'pending', 'completed'] as Filter[]).map((f) => (
           <button
             key={f}
-            className={`${styles.filterBtn} ${filter === f ? styles.filterBtnActive : ''}`}
+            className={`${styles.tab} ${filter === f ? styles.tabActive : ''}`}
             onClick={() => setFilter(f)}
           >
-            {f === 'all' ? `All (${inspections.length})` : f === 'pending' ? `Pending (${pendingCount})` : `Completed (${completedCount})`}
+            {f === 'all' ? 'All' : f === 'pending' ? 'Pending' : 'Completed'}
+            <span className={styles.tabCount}>
+              {f === 'all' ? inspections.length : f === 'pending' ? pendingCount : completedCount}
+            </span>
           </button>
         ))}
       </div>
@@ -88,13 +91,12 @@ export default function InspectionList() {
       {/* ── Empty State ───────────────────────────────────────────────── */}
       {filtered.length === 0 && (
         <div className={styles.emptyState}>
-          <ClipboardCheck size={40} style={{ color: '#D1D5DB', marginBottom: 14 }} />
           <p className={styles.emptyTitle}>
             {filter === 'all' ? 'No inspections assigned yet' : `No ${filter} inspections`}
           </p>
           <p className={styles.emptyDesc}>
             {filter === 'all'
-              ? 'Once an organisation assigns a template to a project, it will appear here.'
+              ? 'Once a project has an assigned template, inspections will appear here.'
               : `Switch to "All" to see every inspection.`}
           </p>
         </div>
@@ -102,131 +104,124 @@ export default function InspectionList() {
 
       {/* ── Inspection Cards ──────────────────────────────────────────── */}
       <div className={styles.grid}>
-        {filtered.map((item) => {
-          const pct = item.totalResults > 0
-            ? Math.round((item.answeredResults / item.totalResults) * 100)
-            : 0;
+        {paginatedInspections.map((item) => {
+          const pct =
+            item.totalResults > 0
+              ? Math.round((item.answeredResults / item.totalResults) * 100)
+              : 0;
           const isComplete = item.status === 'COMPLETED' || item.status === 'SUBMITTED';
           const isDraft = item.status === 'DRAFT';
+          const isInProgress = isDraft && pct > 0;
+          const badgeClass = isComplete
+            ? styles.statusComplete
+            : isInProgress
+            ? styles.statusInProgress
+            : styles.statusNotStarted;
+          const badgeLabel = isComplete ? 'Completed' : isInProgress ? 'In Progress' : 'Not Started';
 
           return (
-            <div key={item.id} className={`${styles.card} ${isComplete ? styles.cardComplete : ''}`}>
-              {/* Status badge */}
-              <div className={styles.cardTop}>
-                <span className={`${styles.statusBadge} ${isComplete ? styles.statusComplete : styles.statusPending}`}>
-                  {isComplete
-                    ? <><CheckCircle2 size={11} /> Completed</>
-                    : <><Clock size={11} /> Pending</>}
-                </span>
-                {item.createdAt && (
-                  <span className={styles.cardDate}>
-                    {new Date(item.createdAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+            <div key={item.id} className={styles.card}>
+              <div className={styles.cardStrip} />
+
+              <div className={styles.cardContent}>
+                {/* Project name + status badge */}
+                <div className={styles.cardHeader}>
+                  <h3 className={styles.cardTitle}>{item.projectName}</h3>
+                  <span className={`${styles.statusBadge} ${badgeClass}`}>
+                    {badgeLabel}
                   </span>
-                )}
-              </div>
-
-              {/* Project name */}
-              <div className={styles.projectName}>{item.projectName}</div>
-
-              {/* Address */}
-              {item.address && (
-                <div className={styles.addressRow}>
-                  <MapPin size={13} className={styles.metaIcon} />
-                  <span>{item.address}</span>
                 </div>
-              )}
 
-              <div className={styles.divider} />
-
-              {/* Meta grid: client, org, template */}
-              <div className={styles.metaGrid}>
-                {item.clientName && (
-                  <div className={styles.metaRow}>
-                    <User size={13} className={styles.metaIcon} />
-                    <div>
-                      <span className={styles.metaLabel}>Client</span>
-                      <span className={styles.metaValue}>{item.clientName}</span>
-                      {item.clientEmail && (
-                        <span className={styles.metaSecondary}>{item.clientEmail}</span>
-                      )}
-                    </div>
+                {/* Address */}
+                {item.address && (
+                  <div className={styles.addressRow}>
+                    <MapPin size={11} style={{ flexShrink: 0 }} />
+                    <span>{item.address}</span>
                   </div>
                 )}
 
+                {/* Organisation */}
                 {item.organisationName && (
-                  <div className={styles.metaRow}>
-                    <Building2 size={13} className={styles.metaIcon} />
-                    <div>
-                      <span className={styles.metaLabel}>Organisation</span>
-                      <span className={styles.metaValue}>{item.organisationName}</span>
-                    </div>
+                  <div className={styles.addressRow}>
+                    <Building2 size={11} style={{ flexShrink: 0, color: '#33AE95' }} />
+                    <span>{item.organisationName}</span>
                   </div>
                 )}
 
-                {item.templateTitle && (
-                  <div className={styles.metaRow}>
-                    <FileText size={13} className={styles.metaIcon} />
-                    <div>
-                      <span className={styles.metaLabel}>Template</span>
-                      <span className={styles.metaValue}>{item.templateTitle}</span>
+                {/* Client + Date */}
+                <div className={styles.cardMeta}>
+                  {item.clientName && (
+                    <div className={styles.infoRow}>
+                      <User size={11} style={{ color: '#33AE95', flexShrink: 0 }} />
+                      <span>{item.clientName}</span>
                     </div>
+                  )}
+                  {item.createdAt && (
+                    <div className={styles.infoRow}>
+                      <Calendar size={11} style={{ color: '#94A3B8', flexShrink: 0 }} />
+                      <span>
+                        {new Date(item.createdAt).toLocaleDateString('en-AU', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Progress bar */}
+                <div className={styles.progressWrap}>
+                  <div className={styles.progressBar}>
+                    <div
+                      className={styles.progressFill}
+                      style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #33AE95, #2a9a84)' }}
+                    />
                   </div>
-                )}
-              </div>
-
-              <div className={styles.divider} />
-
-              {/* Progress bar */}
-              <div className={styles.progressWrap}>
-                <div className={styles.progressInfo}>
-                  <span className={styles.progressLabel}>
-                    {item.answeredResults}/{item.totalResults} items answered
-                  </span>
                   <span className={styles.progressPct}>{pct}%</span>
                 </div>
-                <div className={styles.progressBar}>
-                  <div
-                    className={styles.progressFill}
-                    style={{
-                      width: `${pct}%`,
-                      background: isComplete
-                        ? 'linear-gradient(90deg, #22c55e, #16a34a)'
-                        : pct > 0
-                        ? 'linear-gradient(90deg, #33AE95, #2a9a84)'
-                        : undefined,
-                    }}
-                  />
-                </div>
-              </div>
 
-              {/* Action button */}
-              <div className={styles.cardFooter}>
-                {isComplete ? (
-                  <button
-                    className={styles.viewBtn}
-                    onClick={() => handleStart(item)}
-                  >
-                    <ChevronRight size={14} /> View Results
-                  </button>
-                ) : isDraft && item.totalResults === 0 ? (
-                  <button className={styles.startBtn} disabled>
-                    <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                    Preparing…
-                  </button>
-                ) : (
-                  <button
-                    className={styles.startBtn}
-                    onClick={() => handleStart(item)}
-                  >
-                    <Rocket size={14} />
-                    {pct > 0 ? 'Continue Inspection' : 'Start Inspection'}
-                  </button>
-                )}
+                {/* Action button */}
+                <div className={styles.cardFooter}>
+                  {isComplete ? (
+                    <button className={styles.viewResultsBtn} onClick={() => handleStart(item)}>
+                      View Results <ChevronRight size={14} />
+                    </button>
+                  ) : isDraft && item.totalResults === 0 ? (
+                    <button className={styles.startBtn} disabled>
+                      <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                      Preparing…
+                    </button>
+                  ) : (
+                    <button className={styles.startBtn} onClick={() => handleStart(item)}>
+                      <Rocket size={14} />
+                      {pct > 0 ? 'Continue' : 'Start'} Inspection
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* ── Pagination ────────────────────────────────────────────────── */}
+      {filtered.length > 0 && (
+        <div className={styles.paginationRow}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filtered.length / pageSize)}
+            totalItems={filtered.length}
+            pageSize={pageSize}
+            onPageChange={(p) => setCurrentPage(p)}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setCurrentPage(1);
+            }}
+            pageSizeOptions={[6, 12, 24]}
+          />
+        </div>
+      )}
     </div>
   );
 }

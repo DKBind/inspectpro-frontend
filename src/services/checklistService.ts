@@ -88,6 +88,23 @@ export const checklistService = {
     return res.object as SnapshotResponse;
   },
 
+  /**
+   * Deep-copies a master template into a PROJECT-scoped, editable copy linked to the project.
+   * Does NOT create an Inspection — the user customises the copy first in the builder.
+   * Returns { projectTemplateId, title }.
+   */
+  cloneTemplateToProject: async (
+    templateId: string,
+    projectId: string
+  ): Promise<{ projectTemplateId: string; title: string }> => {
+    const res = await api.post<ApiResponse<{ projectTemplateId: string; title: string }>>(
+      `/templates/${templateId}/clone-to-project?projectId=${projectId}`,
+      {}
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to clone template to project');
+    return res.object as { projectTemplateId: string; title: string };
+  },
+
   importTemplate: async (templateId: string, projectId: string): Promise<SnapshotResponse> => {
     const res = await api.post<ApiResponse<SnapshotResponse>>(
       `/templates/${templateId}/import?projectId=${projectId}`,
@@ -117,10 +134,10 @@ export const checklistService = {
     return res.object as InspectionWithResultsResponse;
   },
 
-  /** Update a single result row (status + comments). */
+  /** Update a single result row (status + comments + severity). */
   updateInspectionResult: async (
-    resultId: number,
-    data: { responseValue: HipStatus; comments?: string; photoUrl?: string }
+    resultId: number | string,
+    data: { responseValue?: HipStatus | string; comments?: string; severity?: string; photoUrl?: string }
   ): Promise<InspectionResultResponse> => {
     const res = await api.patch<ApiResponse<InspectionResultResponse>>(
       `/inspection-results/${resultId}`,

@@ -49,10 +49,30 @@ const Login = () => {
 
       setAccessLoading(true);
       try {
-        await Promise.all([
-          moduleService.getMyAccess(data.userId).then(setAccessModules),
-          data.orgId ? moduleService.getMyModules(data.orgId).then(setModules) : Promise.resolve(),
-        ]);
+        if (data.superAdmin) {
+          // Super admin gets access to ALL modules fetched from the DB.
+          const allModules = await moduleService.listModules();
+          const orgModules = allModules
+            .filter((m) => m.active)
+            .map((m) => ({
+              moduleId: m.id,
+              name: m.name,
+              route: m.route ?? '',
+              icon: m.icon ?? '',
+              category: m.category ?? 'Other',
+            }));
+          const accessModules = orgModules.map((m) => ({
+            ...m,
+            permissions: ['READ', 'CREATE', 'UPDATE', 'DELETE'],
+          }));
+          setModules(orgModules);
+          setAccessModules(accessModules);
+        } else {
+          await Promise.all([
+            moduleService.getMyAccess(data.userId).then(setAccessModules),
+            data.orgId ? moduleService.getMyModules(data.orgId).then(setModules) : Promise.resolve(),
+          ]);
+        }
       } catch { /* non-fatal */ } finally {
         setAccessLoading(false);
       }

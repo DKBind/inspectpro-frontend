@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,14 +8,17 @@ import {
   ArrowLeft, FolderOpen, ClipboardList, MapPin, Calendar,
   IndianRupee, Loader2, Users, Building2, Navigation,
   Banknote, PlusCircle, Pencil, Trash2, ChevronDown, AlertTriangle,
+  Globe, Search, Layers, X, CheckCircle2, RefreshCw,
 } from 'lucide-react';
 
 import { projectService } from '@/services/projectService';
+import { checklistService } from '@/services/checklistService';
 import { customerService } from '@/services/customerService';
 import { userService } from '@/services/userService';
 import type { ProjectResponse, ProjectAssignmentInput } from '@/services/models/project';
 import type { CustomerResponse } from '@/services/models/customer';
 import type { UserResponse } from '@/services/models/user';
+import type { TemplateResponse } from '@/services/models/checklist';
 import { useAuthStore } from '@/store/useAuthStore';
 import { propertyTypeService, parseSpecFields } from '@/services/propertyTypeService';
 import type { PropertyTypeResponse, SpecField } from '@/services/propertyTypeService';
@@ -85,7 +88,7 @@ const EMPTY: FormValues = {
 const ProjectEdit = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  useAuthStore(); // keep store subscription without unused var
 
   const [project, setProject] = useState<ProjectResponse | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
@@ -103,8 +106,19 @@ const ProjectEdit = () => {
   const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // ── Template state ───────────────────────────────────────────────────────
+  const [pickerTemplates, setPickerTemplates] = useState<TemplateResponse[]>([]);
+  const [projectTemplate, setProjectTemplate] = useState<TemplateResponse | null>(null);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [selectedTpl, setSelectedTpl] = useState<TemplateResponse | null>(null);
+  const [tplSearch, setTplSearch] = useState('');
+  const [tplDropdownOpen, setTplDropdownOpen] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const tplDropdownRef = useRef<HTMLDivElement>(null);
+
   const {
-    register, handleSubmit, watch, setValue, control, reset,
+    register, handleSubmit, watch, control, reset,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -114,7 +128,6 @@ const ProjectEdit = () => {
 
   const selectedPropertyTypeId = watch('propertyTypeId');
   const selectedStatus = watch('projectStatus');
-  const descriptionVal = watch('description') ?? '';
   const selectedPropertyType = propertyTypes.find(pt => String(pt.id) === selectedPropertyTypeId);
   const specFields: SpecField[] = parseSpecFields(selectedPropertyType?.specTemplate);
   const statusMeta = STATUS_META[selectedStatus] ?? STATUS_META['PLANNING'];
@@ -189,6 +202,48 @@ const ProjectEdit = () => {
     }).finally(() => setPageLoading(false));
   }, [id]);
 
+  // ── Template loading ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!id) return;
+    setTemplatesLoading(true);
+    Promise.all([
+      checklistService.getPickerTemplates(),
+      checklistService.listProjectTemplates(id),
+    ]).then(([picker, projTpls]) => {
+      setPickerTemplates(picker.filter(t => t.id !== null && t.scope !== 'SCRATCH'));
+      if (projTpls.length > 0) setProjectTemplate(projTpls[0]);
+    }).catch(() => {}).finally(() => setTemplatesLoading(false));
+  }, [id]);
+
+  // Close template dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (tplDropdownRef.current && !tplDropdownRef.current.contains(e.target as Node))
+        setTplDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filteredTpls = tplSearch.trim()
+    ? pickerTemplates.filter(t => t.title.toLowerCase().includes(tplSearch.toLowerCase()))
+    : pickerTemplates;
+
+  const handleAssignTemplate = async () => {
+    if (!selectedTpl?.id || !id) return;
+    setAssigning(true);
+    try {
+      const cloned = await checklistService.cloneTemplateToProject(selectedTpl.id, id);
+      toast.success('Template assigned! Customise it in the builder.');
+      setShowPicker(false);
+      navigate(`/templates/${cloned.projectTemplateId}/builder?back=/projects/${id}`);
+    } catch (e: unknown) {
+      toast.error((e as Error).message || 'Failed to assign template');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   const clientOptions = clients.map(c => ({
     value: c.id,
     label: c.fullName || c.firstName || '',
@@ -245,8 +300,8 @@ const ProjectEdit = () => {
       await projectService.updateProject(id, payload);
       toast.success('Project updated!');
       navigate(`/projects/${id}`);
-    } catch (e: any) {
-      toast.error(e.message || 'Failed to update project');
+    } catch (e: unknown) {
+      toast.error((e as Error).message || 'Failed to update project');
     } finally {
       setSubmitting(false);
     }
@@ -267,8 +322,8 @@ const ProjectEdit = () => {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 300, gap: 12 }}>
         <AlertTriangle size={32} color="#EF4444" />
         <p style={{ color: '#EF4444', fontSize: 14 }}>{loadError ?? 'Project not found'}</p>
-        <button className={styles.backBtn} onClick={() => navigate(-1)} style={{ marginTop: 8 }}>
-          <ArrowLeft size={14} /> Go Back
+        <button className={styles.backBtn} onClick={() => navigate(ROUTES.PROJECTS)} style={{ marginTop: 8 }}>
+          <ArrowLeft size={14} /> Back to Projects
         </button>
       </div>
     );
@@ -314,7 +369,7 @@ const ProjectEdit = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit, () => toast.error('Please fix the errors.'))}>
+      <form onSubmit={handleSubmit(onSubmit)}>
         <div className={styles.body}>
 
           {/* ── Two-column area ─────────────────────────────────────────── */}
@@ -413,7 +468,6 @@ const ProjectEdit = () => {
                           placeholder="Select property type…"
                           searchable
                           searchPlaceholder="Search types…"
-                          error={errors.propertyTypeId?.message}
                         />
                       )}
                     />
@@ -444,7 +498,6 @@ const ProjectEdit = () => {
                           placeholder="Select a client…"
                           searchable
                           searchPlaceholder="Search clients…"
-                          error={errors.clientId?.message}
                         />
                       )}
                     />
@@ -462,7 +515,6 @@ const ProjectEdit = () => {
                           placeholder="Select manager…"
                           searchable
                           searchPlaceholder="Search managers…"
-                          error={errors.managerId?.message}
                         />
                       )}
                     />
@@ -480,7 +532,6 @@ const ProjectEdit = () => {
                           placeholder="Select QA…"
                           searchable
                           searchPlaceholder="Search QA…"
-                          error={errors.qaId?.message}
                         />
                       )}
                     />
@@ -498,7 +549,6 @@ const ProjectEdit = () => {
                           placeholder="Select inspector…"
                           searchable
                           searchPlaceholder="Search inspectors…"
-                          error={errors.inspectorId?.message}
                         />
                       )}
                     />
@@ -516,7 +566,6 @@ const ProjectEdit = () => {
                           placeholder="Select contractor…"
                           searchable
                           searchPlaceholder="Search contractors…"
-                          error={errors.contractorId?.message}
                         />
                       )}
                     />
@@ -735,6 +784,110 @@ const ProjectEdit = () => {
             </div>
 
           </div>
+
+            {/* ── Inspection Template Management ──────────────────────────── */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionHead}>
+                <span className={styles.sectionIcon}><ClipboardList size={13} color="#33AE95" /></span>
+                <span className={styles.sectionTitle}>Inspection Template</span>
+              </div>
+              <div className={styles.sectionBody}>
+                {templatesLoading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748B', fontSize: 13 }}>
+                    <Loader2 size={14} className={styles.spin} /> Loading…
+                  </div>
+                ) : projectTemplate && !showPicker ? (
+                  /* Template already assigned */
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                      <CheckCircle2 size={18} color="#33AE95" style={{ flexShrink: 0 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{projectTemplate.title}</p>
+                        <p style={{ margin: 0, fontSize: 11, color: '#64748B', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Layers size={10} />{projectTemplate.sectionCount} section{projectTemplate.sectionCount !== 1 ? 's' : ''}&nbsp;·&nbsp;PROJECT copy
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        className={styles.cancelBtn}
+                        style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5, borderColor: '#33AE95', color: '#33AE95' }}
+                        onClick={() => navigate(`/templates/${projectTemplate.id}/builder?back=/projects/${id}`)}
+                      >
+                        <Pencil size={11} /> Edit Template
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.cancelBtn}
+                        style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                        onClick={() => { setShowPicker(true); setSelectedTpl(null); setTplSearch(''); }}
+                      >
+                        <RefreshCw size={11} /> Re-assign
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Picker — no template yet, or re-assigning */
+                  <div>
+                    {showPicker && projectTemplate && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)', marginBottom: 12, fontSize: 12, color: '#92400E' }}>
+                        <AlertTriangle size={13} color="#D97706" style={{ flexShrink: 0 }} />
+                        A template is already assigned. Re-assigning will create a new copy.
+                        <button type="button" onClick={() => setShowPicker(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#64748B' }}>
+                          <X size={11} /> Cancel
+                        </button>
+                      </div>
+                    )}
+                    <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#64748B' }}>
+                      {projectTemplate ? 'Select a new master template to assign:' : 'No template assigned. Select a master template:'}
+                    </p>
+                    {/* Searchable dropdown */}
+                    <div className={styles.tplDropdownWrap} ref={tplDropdownRef}>
+                      <div className={styles.tplDropdownTrigger} onClick={() => setTplDropdownOpen(o => !o)}>
+                        <Search size={13} className={styles.tplSearchIcon} />
+                        <input
+                          className={styles.tplSearchInput}
+                          placeholder={selectedTpl ? selectedTpl.title : 'Search templates…'}
+                          value={tplSearch}
+                          onChange={e => { setTplSearch(e.target.value); setTplDropdownOpen(true); setSelectedTpl(null); }}
+                          onFocus={() => setTplDropdownOpen(true)}
+                        />
+                        {selectedTpl
+                          ? <button type="button" className={styles.tplClearBtn} onClick={e => { e.stopPropagation(); setSelectedTpl(null); setTplSearch(''); }}><X size={11} /></button>
+                          : <ChevronDown size={13} className={`${styles.tplChevron} ${tplDropdownOpen ? styles.tplChevronOpen : ''}`} />}
+                      </div>
+                      {tplDropdownOpen && (
+                        <div className={styles.tplDropdown}>
+                          {filteredTpls.length === 0
+                            ? <div className={styles.tplDropdownEmpty}>No templates found</div>
+                            : filteredTpls.map(t => (
+                              <button key={t.id} type="button" className={styles.tplDropdownItem} onClick={() => { setSelectedTpl(t); setTplSearch(''); setTplDropdownOpen(false); }}>
+                                <Globe size={12} style={{ flexShrink: 0, color: '#9CA3AF' }} />
+                                <span className={styles.tplDropdownName}>{t.title}</span>
+                                <span className={styles.tplDropdownScope}>{t.scope}</span>
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                    {selectedTpl && (
+                      <div style={{ marginTop: 10 }}>
+                        <button
+                          type="button"
+                          className={styles.tplMapBtn}
+                          disabled={assigning}
+                          onClick={handleAssignTemplate}
+                        >
+                          {assigning ? <><Loader2 size={13} className={styles.spin} /> Assigning…</> : <><ClipboardList size={13} /> Assign Template</>}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
         </div>
 
         {/* ── Sticky footer ─────────────────────────────────────────────── */}

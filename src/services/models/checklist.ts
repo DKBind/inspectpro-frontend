@@ -198,14 +198,17 @@ export interface FolderNode {
 
 export type HipStatus = 'ACCEPTABLE' | 'DEFECTIVE' | 'MARGINAL' | 'NOT_INSPECTED';
 
+import type { InspectionImageUploadResponse } from '../inspectionImageService';
+
 export interface InspectionResultResponse {
-  id: number;
+  id: number | string;
   sectionName: string;
   itemLabel: string;
   logicType?: 'SELECTION' | 'DAMAGE'; // from TemplateBuilder panelType; null for legacy items
   responseValue?: HipStatus;
   comments?: string;
   photoUrl?: string;
+  images?: InspectionImageUploadResponse[];
   isCustom: boolean;
   defectId?: string;
   severity?: string;       // LOW | MEDIUM | HIGH | CRITICAL
