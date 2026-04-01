@@ -5,7 +5,6 @@ import {
   Bug,
   TrendingUp,
   TrendingDown,
-  Calendar,
   Plus,
   FileText,
   UserPlus,
@@ -90,14 +89,14 @@ const getStatusClass = (status: string) => {
   }
 };
 
-const formatDate = () => {
-  return new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-};
+// const formatDate = () => {
+//   return new Date().toLocaleDateString('en-IN', {
+//     weekday: 'long',
+//     year: 'numeric',
+//     month: 'long',
+//     day: 'numeric',
+//   });
+// };
 
 // ─── Component ─────────────────────────────────────────────────────────
 const Dashboard = () => {

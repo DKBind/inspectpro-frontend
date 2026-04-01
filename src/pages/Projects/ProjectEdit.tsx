@@ -28,8 +28,8 @@ import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from '@/components/shared-ui/DropdownMenu/dropdown-menu';
-import { ROUTES } from '@/components/Constant/Route';
 import styles from './ProjectCreate.module.css';
+import { ROUTES } from '@/components/Constant/Route';
 
 const positiveNumber = z
   .string()

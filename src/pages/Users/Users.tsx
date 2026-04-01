@@ -7,6 +7,7 @@ import {
   Users as UsersIcon, Plus, RefreshCw, Eye, Pencil, Trash2,
   UserCircle, Mail, Lock, User,
   ChevronDown, Building2, Shield, Wand2,
+  DeleteIcon,
 } from 'lucide-react';
 import Pagination from '@/components/shared-ui/Pagination/Pagination';
 
@@ -27,7 +28,6 @@ import { Input } from '@/components/shared-ui/Input/input';
 import { Label } from '@/components/shared-ui/Label/label';
 import styles from './Users.module.css';
 import { inputCls } from '@/components/shared-ui/form-helpers';
-import { DeleteIcon } from 'lucide-react';
 
 const PAGE_SIZE = 10;
 
