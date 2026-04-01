@@ -8,6 +8,7 @@ import {
 import { toast } from 'sonner';
 import { checklistService } from '@/services/checklistService';
 import type { InspectionListItem } from '@/services/models/checklist';
+import { useAuthStore } from '@/store/useAuthStore';
 import styles from './InspectionList.module.css';
 import Pagination from '@/components/shared-ui/Pagination/Pagination';
 
@@ -15,6 +16,8 @@ type Filter = 'all' | 'pending' | 'completed';
 
 export default function InspectionList() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isInspector = !user?.isSuperAdmin && user?.role?.toLowerCase() === 'inspector';
   const [inspections, setInspections] = useState<InspectionListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
@@ -187,6 +190,10 @@ export default function InspectionList() {
                     <button className={styles.viewResultsBtn} onClick={() => handleStart(item)}>
                       View Results <ChevronRight size={14} />
                     </button>
+                  ) : !isInspector ? (
+                    <span style={{ fontSize: 11, color: '#94A3B8', fontStyle: 'italic' }}>
+                      View only — inspector role required
+                    </span>
                   ) : isDraft && item.totalResults === 0 ? (
                     <button className={styles.startBtn} disabled>
                       <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />

@@ -69,7 +69,13 @@ const ProjectDetail = () => {
     if (!id) return;
     setTemplatesLoading(true);
     checklistService.listProjectTemplates(id)
-      .then(projTpls => { if (projTpls.length > 0) setProjectTemplate(projTpls[0]); })
+      .then(projTpls => {
+        if (projTpls.length > 0) {
+          // Prefer PROJECT-scoped clone over master template
+          const projectScoped = projTpls.find(t => t.scope === 'PROJECT');
+          setProjectTemplate(projectScoped ?? projTpls[0]);
+        }
+      })
       .catch(() => {})
       .finally(() => setTemplatesLoading(false));
   }, [id]);

@@ -22,7 +22,7 @@ import { propertyTypeService, parseSpecFields } from '@/services/propertyTypeSer
 import type { PropertyTypeResponse, SpecField } from '@/services/propertyTypeService';
 import type { ProjectAssignmentInput } from '@/services/models/project';
 import type { CustomerResponse } from '@/services/models/customer';
-import type { UserResponse } from '@/services/models/user';
+import type { UserResponse, RoleResponse } from '@/services/models/user';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Input } from '@/components/shared-ui/Input/input';
 import { Fld, inputCls } from '@/components/shared-ui/form-helpers';
@@ -43,10 +43,6 @@ const schema = z.object({
   name: z.string().min(1, 'Project name is required').max(250, 'Max 250 characters'),
   clientId: z.string().min(1, 'Client is required'),
   organisationId: z.string().optional(),
-  managerId: z.string().min(1, 'Manager is required'),
-  qaId: z.string().min(1, 'QA is required'),
-  inspectorId: z.string().min(1, 'Inspector is required'),
-  contractorId: z.string().min(1, 'Contractor is required'),
   propertyTypeId: z.string().min(1, 'Property type is required'),
   description: z.string().max(250, 'Max 250 characters').optional(),
   addressLine1: z.string().min(1, 'Address is required').max(250, 'Max 250 characters'),
@@ -69,8 +65,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const EMPTY: FormValues = {
-  name: '', clientId: '', organisationId: '', managerId: '', qaId: '',
-  inspectorId: '', contractorId: '', propertyTypeId: '',
+  name: '', clientId: '', organisationId: '', propertyTypeId: '',
   description: '', addressLine1: '', addressLine2: '', street: '',
   city: '', state: '', country: '', pincode: '', latitude: '', longitude: '',
   startDatePlanned: '', startDateActual: '',
@@ -93,11 +88,9 @@ const ProjectCreate = () => {
   const [franchises, setFranchises] = useState<OrganisationResponse[]>([]);
   const [clients, setClients] = useState<CustomerResponse[]>([]);
   const [propertyTypes, setPropertyTypes] = useState<PropertyTypeResponse[]>([]);
-  const [roleMap, setRoleMap] = useState<Record<string, number>>({});
-  const [managerUsers, setManagerUsers] = useState<UserResponse[]>([]);
-  const [qaUsers, setQaUsers] = useState<UserResponse[]>([]);
-  const [inspectorUsers, setInspectorUsers] = useState<UserResponse[]>([]);
-  const [contractorUsers, setContractorUsers] = useState<UserResponse[]>([]);
+  const [allOrgUsers, setAllOrgUsers] = useState<UserResponse[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<RoleResponse[]>([]);
+  const [dynamicAssignments, setDynamicAssignments] = useState<Array<{ roleId: number; userId: string }>>([]);
   const [specValues, setSpecValues] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<Array<{ label: string; value: string }>>([]);
   const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
@@ -162,22 +155,11 @@ const ProjectCreate = () => {
       .then(d => setClients(d.content ?? []))
       .catch(() => setClients([]));
 
-    userService.listRoles().then(roles => {
-      const map: Record<string, number> = {};
-      roles.forEach(r => { map[r.name.toLowerCase()] = r.roleId; });
-      setRoleMap(map);
+    userService.listRoles().then(setAvailableRoles).catch(() => { });
 
-      if (!isSuperAdmin) {
-        const load = (name: string, setter: (u: UserResponse[]) => void) => {
-          const id = map[name.toLowerCase()];
-          if (id) userService.listUsersByRole(id).then(setter).catch(() => setter([]));
-        };
-        load('manager', setManagerUsers);
-        load('qa', setQaUsers);
-        load('inspector', setInspectorUsers);
-        load('contractor', setContractorUsers);
-      }
-    }).catch(() => { });
+    if (!isSuperAdmin) {
+      userService.listUsers(0, 500).then(d => setAllOrgUsers(d.users)).catch(() => { });
+    }
   }, [user?.id]);
 
   // Super admin: load franchises when parent org is selected in franchise mode
@@ -201,40 +183,22 @@ const ProjectCreate = () => {
       })
       .catch(() => { });
 
-    const load = (name: string, setter: (u: UserResponse[]) => void) => {
-      const id = roleMap[name.toLowerCase()];
-      if (id) userService.listUsersByRole(id, selectedOrgId).then(setter).catch(() => setter([]));
-    };
-    load('manager', setManagerUsers);
-    load('qa', setQaUsers);
-    load('inspector', setInspectorUsers);
-    load('contractor', setContractorUsers);
+    userService.listUsersForAssignment(selectedOrgId)
+      .then(setAllOrgUsers)
+      .catch(() => userService.listUsers(0, 500).then(d => setAllOrgUsers(d.users)).catch(() => {}));
 
     setValue('clientId', '');
-    setValue('managerId', '');
-    setValue('qaId', '');
-    setValue('inspectorId', '');
-    setValue('contractorId', '');
+    setDynamicAssignments([]);
   }, [selectedOrgId]);
 
   // When org admin switches back to 'organisation' mode, reload their own org's data
   useEffect(() => {
     if (isSuperAdmin || projectFor !== 'organisation') return;
     customerService.listClients(0, 500).then(d => setClients(d.content ?? [])).catch(() => { });
-    const load = (name: string, setter: (u: UserResponse[]) => void) => {
-      const id = roleMap[name.toLowerCase()];
-      if (id) userService.listUsersByRole(id).then(setter).catch(() => setter([]));
-    };
-    load('manager', setManagerUsers);
-    load('qa', setQaUsers);
-    load('inspector', setInspectorUsers);
-    load('contractor', setContractorUsers);
+    userService.listUsers(0, 500).then(d => setAllOrgUsers(d.users)).catch(() => {});
     setValue('organisationId', '');
     setValue('clientId', '');
-    setValue('managerId', '');
-    setValue('qaId', '');
-    setValue('inspectorId', '');
-    setValue('contractorId', '');
+    setDynamicAssignments([]);
   }, [projectFor]);
 
   // ── Options ─────────────────────────────────────────────────────────────
@@ -244,11 +208,13 @@ const ProjectCreate = () => {
     meta: c.companyName || undefined,
   }));
   const propertyTypeOptions = propertyTypes.map(pt => ({ value: String(pt.id), label: pt.name }));
-  const toUserOptions = (users: UserResponse[]) => users.map(u => ({
-    value: u.id,
-    label: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
-    meta: u.email || undefined,
-  }));
+  const toUserOptions = (users: UserResponse[]) => users.map(u => {
+    const name = `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim();
+    const label = u.employeeId ? `[${u.employeeId}] ${name}` : name;
+    const meta = [u.roleName, u.email].filter(Boolean).join(' · ');
+    return { value: u.id, label, meta: meta || undefined };
+  });
+  const roleOptions = availableRoles.map(r => ({ value: r.roleId, label: r.name }));
   const topLevelOrgOptions = topLevelOrgs.map(o => ({ value: o.uuid, label: o.name }));
   const franchiseOptions = franchises.map(o => ({ value: o.uuid, label: o.name }));
   const filteredTpls = tplSearch.trim()
@@ -278,15 +244,17 @@ const ProjectCreate = () => {
     Object.entries(specValues).forEach(([k, v]) => { if (v?.trim()) specs[k] = v.trim(); });
     customFields.forEach(cf => { if (cf.label.trim() && cf.value.trim()) specs[cf.label.trim()] = cf.value.trim(); });
 
-    const assignments: ProjectAssignmentInput[] = [];
-    if (data.qaId && roleMap['qa']) assignments.push({ userId: data.qaId, roleId: roleMap['qa'] });
-    if (data.inspectorId && roleMap['inspector']) assignments.push({ userId: data.inspectorId, roleId: roleMap['inspector'] });
-    if (data.contractorId && roleMap['contractor']) assignments.push({ userId: data.contractorId, roleId: roleMap['contractor'] });
+    const validAssignments = dynamicAssignments.filter(a => a.roleId && a.userId);
+    const managerRole = availableRoles.find(r => r.name.toLowerCase() === 'manager');
+    const managerUserId = managerRole
+      ? validAssignments.find(a => a.roleId === managerRole.roleId)?.userId
+      : undefined;
+    const assignments: ProjectAssignmentInput[] = validAssignments.map(a => ({ userId: a.userId, roleId: a.roleId }));
 
     const payload = {
       name: data.name.trim(),
       clientId: data.clientId,
-      managerId: data.managerId || undefined,
+      managerId: managerUserId || undefined,
       organisationId: isSuperAdmin && data.organisationId ? data.organisationId : undefined,
       assignments: assignments.length > 0 ? assignments : undefined,
       propertyTypeId: data.propertyTypeId ? Number(data.propertyTypeId) : undefined,
@@ -563,73 +531,90 @@ const ProjectCreate = () => {
                     />
                   </Fld>
 
-                  <Fld label="Manager" required error={errors.managerId?.message}>
-                    <Controller
-                      name="managerId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(managerUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder={managerUsers.length === 0 ? 'No managers in org' : 'Select manager…'}
-                          searchable
-                          searchPlaceholder="Search managers…"
-                        />
-                      )}
-                    />
-                  </Fld>
+                  {/* ── Role Assignments Panel ─────────────────────────── */}
+                  <div style={{ background: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: 10, padding: '12px 14px' }}>
+                    {/* Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dynamicAssignments.length > 0 ? 12 : 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Users size={13} color="#6B7280" />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>
+                          Role Assignments
+                          {dynamicAssignments.length > 0 && (
+                            <span style={{ marginLeft: 6, fontWeight: 400, color: '#9CA3AF', fontSize: 11 }}>
+                              · {dynamicAssignments.length} {dynamicAssignments.length === 1 ? 'entry' : 'entries'}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDynamicAssignments(prev => [...prev, { roleId: 0, userId: '' }])}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5, fontSize: 12,
+                          color: '#33AE95', background: 'rgba(51,174,149,0.08)',
+                          border: '1px solid rgba(51,174,149,0.3)', borderRadius: 6,
+                          cursor: 'pointer', fontWeight: 500, padding: '4px 10px', lineHeight: 1,
+                        }}
+                      >
+                        <PlusCircle size={12} /> Add Role
+                      </button>
+                    </div>
 
-                  <Fld label="QA" required error={errors.qaId?.message}>
-                    <Controller
-                      name="qaId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(qaUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder={qaUsers.length === 0 ? 'No QA users in org' : 'Select QA…'}
-                          searchable
-                          searchPlaceholder="Search QA…"
-                        />
-                      )}
-                    />
-                  </Fld>
+                    {/* Empty state */}
+                    {dynamicAssignments.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
+                        <Users size={22} color="#D1D5DB" style={{ margin: '0 auto 6px', display: 'block' }} />
+                        <p style={{ fontSize: 12, color: '#9CA3AF', margin: 0 }}>
+                          No role assignments yet — click <strong style={{ color: '#33AE95' }}>Add Role</strong> to begin.
+                        </p>
+                      </div>
+                    )}
 
-                  <Fld label="Inspector" required error={errors.inspectorId?.message}>
-                    <Controller
-                      name="inspectorId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(inspectorUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder={inspectorUsers.length === 0 ? 'No inspectors in org' : 'Select inspector…'}
-                          searchable
-                          searchPlaceholder="Search inspectors…"
-                        />
-                      )}
-                    />
-                  </Fld>
-
-                  <Fld label="Contractor" required error={errors.contractorId?.message}>
-                    <Controller
-                      name="contractorId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(contractorUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder={contractorUsers.length === 0 ? 'No contractors in org' : 'Select contractor…'}
-                          searchable
-                          searchPlaceholder="Search contractors…"
-                        />
-                      )}
-                    />
-                  </Fld>
+                    {/* Assignment rows */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {dynamicAssignments.map((row, idx) => (
+                        <div key={idx} style={{
+                          display: 'flex', gap: 8, alignItems: 'center',
+                          background: '#fff', border: '1px solid #E5E7EB',
+                          borderRadius: 8, padding: '8px 10px',
+                        }}>
+                          {/* Role selector — wider */}
+                          <div style={{ flex: '0 0 175px', minWidth: 0 }}>
+                            <DropdownSelect
+                              options={roleOptions}
+                              value={row.roleId || null}
+                              onChange={val => setDynamicAssignments(prev => prev.map((a, i) => i === idx ? { ...a, roleId: Number(val) } : a))}
+                              placeholder="Select role…"
+                              searchable
+                              searchPlaceholder="Search roles…"
+                            />
+                          </div>
+                          {/* User selector — remaining space */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <DropdownSelect
+                              options={toUserOptions(allOrgUsers)}
+                              value={row.userId || null}
+                              onChange={val => setDynamicAssignments(prev => prev.map((a, i) => i === idx ? { ...a, userId: String(val ?? '') } : a))}
+                              placeholder={allOrgUsers.length === 0 ? 'Loading users…' : 'Search name / employee ID…'}
+                              searchable
+                              searchPlaceholder="Name, employee ID or role…"
+                            />
+                          </div>
+                          {/* Remove */}
+                          <button
+                            type="button"
+                            onClick={() => setDynamicAssignments(prev => prev.filter((_, i) => i !== idx))}
+                            style={{ flexShrink: 0, padding: 6, color: '#CBD5E1', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 6, display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#EF4444')}
+                            onMouseLeave={e => (e.currentTarget.style.color = '#CBD5E1')}
+                            title="Remove"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 

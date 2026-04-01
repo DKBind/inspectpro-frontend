@@ -29,6 +29,7 @@ export interface UserResponse {
   middleName?: string;
   lastName: string;
   email: string;
+  employeeId?: string;
   phoneNumber?: string;
   gender?: string;
   dateOfBirth?: string;
@@ -51,6 +52,7 @@ export interface UserRequest {
   middleName?: string;
   lastName: string;
   email: string;
+  employeeId?: string;
   password?: string;
   phoneNumber?: string;
   gender?: string;
