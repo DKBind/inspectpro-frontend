@@ -69,6 +69,7 @@ const schema = z.object({
   email: z.string().email('Enter a valid email'),
   password: z.string().optional(),
   phoneNumber: z.string().optional(),
+  employeeId: z.string().optional(),
   gender: z.string().optional(),
   bio: z.string().optional(),
   remark: z.string().optional(),
@@ -86,7 +87,7 @@ type FormValues = z.infer<typeof schema>;
 
 const EMPTY: FormValues = {
   firstName: '', middleName: '', lastName: '', email: '', password: '',
-  gender: '', bio: '', remark: '', roleId: '', phoneNumber: '', orgId: '',
+  gender: '', bio: '', remark: '', roleId: '', phoneNumber: '', employeeId: '', orgId: '',
   addressLine1: '', addressLine2: '', street: '', district: '',
   state: '', country: '', pincode: '',
 };
@@ -530,7 +531,7 @@ const UsersRoles = () => {
   const openEdit = (u: UserResponse) => {
     reset({
       firstName: u.firstName, middleName: u.middleName ?? '', lastName: u.lastName,
-      email: u.email, password: '', phoneNumber: u.phoneNumber ?? '', gender: u.gender ?? '',
+      email: u.email, password: '', phoneNumber: u.phoneNumber ?? '', employeeId: u.employeeId ?? '', gender: u.gender ?? '',
       bio: u.bio ?? '', remark: u.remark ?? '',
       roleId: u.roleId ? String(u.roleId) : '',
       orgId: u.orgId ?? '',
@@ -588,6 +589,7 @@ const UsersRoles = () => {
         email: values.email,
         ...(values.password?.trim() && { password: values.password.trim() }),
         phoneNumber: values.phoneNumber?.trim() || undefined,
+        employeeId: values.employeeId?.trim() || undefined,
         gender: values.gender || undefined,
         bio: values.bio?.trim() || undefined,
         remark: values.remark?.trim() || undefined,
@@ -682,6 +684,7 @@ const UsersRoles = () => {
                 <thead>
                   <tr>
                     <th>User</th>
+                    <th>Employee ID</th>
                     <th>Phone</th>
                     <th>Email</th>
                     <th>Organisation</th>
@@ -699,6 +702,11 @@ const UsersRoles = () => {
                           <div className={styles.userName}>
                             {[u.firstName, u.middleName, u.lastName].filter(Boolean).join(' ')}
                           </div>
+                        </td>
+                        <td className={styles.mutedCell}>
+                          {u.employeeId
+                            ? <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 5, background: 'rgba(51,174,149,0.08)', border: '1px solid rgba(51,174,149,0.2)', fontSize: 12, fontWeight: 600, color: '#33AE95', fontFamily: 'monospace' }}>{u.employeeId}</span>
+                            : <span style={{ color: '#D1D5DB' }}>—</span>}
                         </td>
                         <td className={styles.mutedCell}>
                           {u.phoneNumber
@@ -1257,6 +1265,38 @@ const UsersRoles = () => {
 
           <FormProvider {...methods}>
             <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
+
+              {/* ── "Creating user for" green tab bar — pinned to top, create only ── */}
+              {modalMode === 'create' && (isSuperAdmin || isOrgAdmin) && isSuperAdmin && (
+                <div style={{ borderBottom: '1px solid #E5E7EB', background: '#F9FAFB', padding: '0 28px' }}>
+                  <p style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9CA3AF', paddingTop: 14, marginBottom: 8 }}>
+                    Creating user for
+                  </p>
+                  <div style={{ display: 'flex', gap: 0 }}>
+                    {([
+                      { value: 'internal', label: 'Super Admin' },
+                      { value: 'organisation', label: 'Organisation' },
+                      { value: 'franchise', label: 'Franchise' },
+                    ] as const).map((opt) => (
+                      <button key={opt.value} type="button"
+                        onClick={() => { setUserAccountType(opt.value); setParentOrgForUser(''); setFranchisesForUser2([]); setValue('orgId', ''); }}
+                        style={{
+                          padding: '10px 20px 12px', fontSize: 13,
+                          fontWeight: userAccountType === opt.value ? 700 : 500,
+                          color: userAccountType === opt.value ? '#33AE95' : '#6B7280',
+                          background: 'transparent', border: 'none',
+                          borderBottom: userAccountType === opt.value ? '2.5px solid #33AE95' : '2.5px solid transparent',
+                          cursor: 'pointer', transition: 'all 0.15s', lineHeight: 1.3, marginBottom: -1,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                        }}>
+                        <span>{opt.label}</span>
+                        {/* <span style={{ fontSize: 10, fontWeight: 400, color: userAccountType === opt.value ? '#6EE0CB' : '#9CA3AF' }}>{opt.desc}</span> */}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="px-7 py-6 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-3">
                   <Fld label="First Name" required error={errors.firstName?.message}>
@@ -1303,36 +1343,16 @@ const UsersRoles = () => {
                       <Input type="tel" placeholder="+1 234 567 8900" {...register('phoneNumber')} className={inputCls(false)} />
                     </IcoInput>
                   </Fld>
+                  <Fld label="Employee ID">
+                    <Input placeholder="e.g. EMP-001" {...register('employeeId')} className={inputCls(false)} />
+                  </Fld>
                 </div>
 
-                {/* Account Type + Org selector — top of create modal */}
+                {/* Org selector — shown below the tab bar when relevant */}
                 {modalMode === 'create' && (isSuperAdmin || isOrgAdmin) && (
                   <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {isSuperAdmin ? (
                       <>
-                        <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Creating user for</p>
-                        <div style={{ display: 'flex', gap: 0, border: '1px solid #E5E7EB', borderRadius: 10, overflow: 'hidden', background: 'white' }}>
-                          {([
-                            { value: 'internal', label: 'Super Admin', desc: 'InspectPro internal' },
-                            { value: 'organisation', label: 'Organisation', desc: 'Top-level org user' },
-                            { value: 'franchise', label: 'Franchise', desc: 'Sub-org user' },
-                          ] as const).map((opt, i) => (
-                            <button key={opt.value} type="button"
-                              onClick={() => { setUserAccountType(opt.value); setParentOrgForUser(''); setFranchisesForUser2([]); setValue('orgId', ''); }}
-                              style={{
-                                flex: 1, padding: '10px 6px', fontSize: 12, lineHeight: 1.3,
-                                fontWeight: userAccountType === opt.value ? 700 : 500,
-                                color: userAccountType === opt.value ? '#2563EB' : '#6B7280',
-                                background: userAccountType === opt.value ? '#EFF6FF' : 'transparent',
-                                border: 'none', borderRight: i < 2 ? '1px solid #E5E7EB' : 'none',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s',
-                              }}>
-                              <div>{opt.label}</div>
-                              <div style={{ fontSize: 10, fontWeight: 400, color: userAccountType === opt.value ? '#93C5FD' : '#9CA3AF', marginTop: 2 }}>{opt.desc}</div>
-                            </button>
-                          ))}
-                        </div>
                         {/* Org picker for 'organisation' type */}
                         {userAccountType === 'organisation' && (
                           <Fld label="Organisation" required>
@@ -1526,6 +1546,7 @@ const UsersRoles = () => {
               {([
                 ['Full Name', [viewUser.firstName, viewUser.middleName, viewUser.lastName].filter(Boolean).join(' ')],
                 ['Email', viewUser.email],
+                ...(viewUser.employeeId ? [['Employee ID', viewUser.employeeId] as [string, string]] : []),
                 ...(viewUser.phoneNumber ? [['Phone', viewUser.phoneNumber] as [string, string]] : []),
                 ['Gender', viewUser.gender ?? '—'],
                 ['Role', viewUser.roleName ?? '—'],

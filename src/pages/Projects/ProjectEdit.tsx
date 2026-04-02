@@ -13,11 +13,9 @@ import {
 
 import { projectService } from '@/services/projectService';
 import { checklistService } from '@/services/checklistService';
-import { customerService } from '@/services/customerService';
 import { userService } from '@/services/userService';
 import type { ProjectResponse, ProjectAssignmentInput } from '@/services/models/project';
-import type { CustomerResponse } from '@/services/models/customer';
-import type { UserResponse } from '@/services/models/user';
+import type { UserResponse, RoleResponse } from '@/services/models/user';
 import type { TemplateResponse } from '@/services/models/checklist';
 import { useAuthStore } from '@/store/useAuthStore';
 import { propertyTypeService, parseSpecFields } from '@/services/propertyTypeService';
@@ -38,21 +36,17 @@ const positiveNumber = z
 
 const PROJECT_STATUSES = ['PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'] as const;
 const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-  PLANNING:    { label: 'Planning',    color: '#3b82f6', bg: 'rgba(59,130,246,0.1)'  },
-  IN_PROGRESS: { label: 'In Progress', color: '#10b981', bg: 'rgba(16,185,129,0.1)'  },
-  ON_HOLD:     { label: 'On Hold',     color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
-  COMPLETED:   { label: 'Completed',   color: '#22c55e', bg: 'rgba(34,197,94,0.1)'   },
-  CANCELLED:   { label: 'Cancelled',   color: '#ef4444', bg: 'rgba(239,68,68,0.1)'   },
+  PLANNING: { label: 'Planning', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+  IN_PROGRESS: { label: 'In Progress', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+  ON_HOLD: { label: 'On Hold', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+  COMPLETED: { label: 'Completed', color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
+  CANCELLED: { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
 };
 
 const schema = z.object({
   name: z.string().min(1, 'Project name is required').max(250, 'Max 250 characters'),
-  clientId: z.string().min(1, 'Client is required'),
-  managerId: z.string().min(1, 'Manager is required'),
-  qaId: z.string().min(1, 'QA is required'),
-  inspectorId: z.string().min(1, 'Inspector is required'),
-  contractorId: z.string().min(1, 'Contractor is required'),
   propertyTypeId: z.string().min(1, 'Property type is required'),
+  propertySubTypeId: z.string().min(1, 'Property sub type is required'),
   projectStatus: z.string().min(1, 'Status is required'),
   description: z.string().max(250, 'Max 250 characters').optional(),
   addressLine1: z.string().max(250).optional(),
@@ -75,8 +69,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const EMPTY: FormValues = {
-  name: '', clientId: '', managerId: '', qaId: '',
-  inspectorId: '', contractorId: '', propertyTypeId: '',
+  name: '', propertyTypeId: '', propertySubTypeId: '',
   projectStatus: 'PLANNING',
   description: '', addressLine1: '', addressLine2: '', street: '',
   city: '', state: '', country: '', pincode: '', latitude: '', longitude: '',
@@ -94,16 +87,18 @@ const ProjectEdit = () => {
   const [pageLoading, setPageLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [clients, setClients] = useState<CustomerResponse[]>([]);
   const [propertyTypes, setPropertyTypes] = useState<PropertyTypeResponse[]>([]);
-  const [roleMap, setRoleMap] = useState<Record<string, number>>({});
-  const [managerUsers, setManagerUsers] = useState<UserResponse[]>([]);
-  const [qaUsers, setQaUsers] = useState<UserResponse[]>([]);
-  const [inspectorUsers, setInspectorUsers] = useState<UserResponse[]>([]);
-  const [contractorUsers, setContractorUsers] = useState<UserResponse[]>([]);
+  const [subTypes, setSubTypes] = useState<any[]>([]);
+  const [allOrgUsers, setAllOrgUsers] = useState<UserResponse[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<RoleResponse[]>([]);
+  const [dynamicAssignments, setDynamicAssignments] = useState<Array<{ roleId: number; userIds: string[] }>>([]);
+  const [extraTimelines, setExtraTimelines] = useState<Array<{ label: string; date: string }>>([]);
+  const [extraFinancials, setExtraFinancials] = useState<Array<{ label: string; amount: string }>>([]);
   const [specValues, setSpecValues] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<Array<{ label: string; value: string }>>([]);
   const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
+  const [editingMilestoneIdx, setEditingMilestoneIdx] = useState<number | null>(null);
+  const [editingFinancialIdx, setEditingFinancialIdx] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   // ── Template state ───────────────────────────────────────────────────────
@@ -118,7 +113,7 @@ const ProjectEdit = () => {
   const tplDropdownRef = useRef<HTMLDivElement>(null);
 
   const {
-    register, handleSubmit, watch, control, reset,
+    register, handleSubmit, watch, control, reset, setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -127,9 +122,11 @@ const ProjectEdit = () => {
   });
 
   const selectedPropertyTypeId = watch('propertyTypeId');
+  const selectedSubTypeId = watch('propertySubTypeId');
   const selectedStatus = watch('projectStatus');
   const selectedPropertyType = propertyTypes.find(pt => String(pt.id) === selectedPropertyTypeId);
-  const specFields: SpecField[] = parseSpecFields(selectedPropertyType?.specTemplate);
+  const selectedSubType = subTypes.find(st => String(st.id) === selectedSubTypeId);
+  const specFields: SpecField[] = parseSpecFields(selectedSubType?.specTemplate);
   const statusMeta = STATUS_META[selectedStatus] ?? STATUS_META['PLANNING'];
 
   // ── Load project data ────────────────────────────────────────────────────
@@ -140,41 +137,63 @@ const ProjectEdit = () => {
     Promise.all([
       projectService.getProject(id),
       propertyTypeService.listPropertyTypes(),
-      customerService.listClients(0, 500),
       userService.listRoles(),
-    ]).then(([proj, ptypes, clientsData, rolesData]) => {
+    ]).then(async ([proj, ptypes, rolesData]) => {
       setProject(proj);
       setPropertyTypes(ptypes);
-      setClients(clientsData.content ?? []);
+      setAvailableRoles(rolesData);
 
-      const map: Record<string, number> = {};
-      rolesData.forEach(r => { map[r.name.toLowerCase()] = r.roleId; });
-      setRoleMap(map);
+      // Load sub types for initial property type
+      if (proj.propertyTypeId) {
+        try {
+          const sTypes = await propertyTypeService.listPropertySubTypes(proj.propertyTypeId);
+          setSubTypes(sTypes);
+        } catch { }
+      }
 
-      // Load role-based users
-      const loadUsers = (name: string, setter: (u: UserResponse[]) => void) => {
-        const rid = map[name.toLowerCase()];
-        if (rid) userService.listUsersByRole(rid, proj.organisationId).then(setter).catch(() => setter([]));
-      };
-      loadUsers('manager', setManagerUsers);
-      loadUsers('qa', setQaUsers);
-      loadUsers('inspector', setInspectorUsers);
-      loadUsers('contractor', setContractorUsers);
+      // Load all org users for assignment dropdowns — try new endpoint, fall back to listUsers
+      (proj.organisationId
+        ? userService.listUsersForAssignment(proj.organisationId)
+        : userService.listUsers(0, 500).then(d => d.users)
+      ).then(setAllOrgUsers)
+        .catch(() => userService.listUsers(0, 500).then(d => setAllOrgUsers(d.users)).catch(() => { }));
 
-      // Find assignments
-      const qaUser = proj.assignments?.find(a => a.roleName?.toLowerCase() === 'qa');
-      const inspUser = proj.assignments?.find(a => a.roleName?.toLowerCase() === 'inspector');
-      const conUser = proj.assignments?.find(a => a.roleName?.toLowerCase() === 'contractor');
+      // Load org-scoped roles if available
+      if (proj.organisationId) {
+        userService.listRoles(proj.organisationId).then(setAvailableRoles).catch(() => { });
+      }
+
+      // Pre-populate dynamic assignments: group flat {roleId, userId} into {roleId, userIds[]}
+      const flatAssignments = (proj.assignments ?? []).filter(a => a.roleId != null && a.userId != null);
+      const roleMap = new Map<number, string[]>();
+
+      // For backward compat: if project has managerId, inject it first
+      if (proj.managerId) {
+        const managerRole = rolesData.find(r => r.name.toLowerCase() === 'manager');
+        if (managerRole) {
+          const alreadyPresent = flatAssignments.some(
+            a => a.roleId === managerRole.roleId && a.userId === proj.managerId
+          );
+          if (!alreadyPresent) {
+            flatAssignments.unshift({ roleId: managerRole.roleId, userId: proj.managerId });
+          }
+        }
+      }
+
+      // Group by roleId
+      flatAssignments.forEach(a => {
+        const existing = roleMap.get(a.roleId!) ?? [];
+        if (!existing.includes(a.userId!)) existing.push(a.userId!);
+        roleMap.set(a.roleId!, existing);
+      });
+      const initialAssignments = Array.from(roleMap.entries()).map(([roleId, userIds]) => ({ roleId, userIds }));
+      setDynamicAssignments(initialAssignments);
 
       // Pre-populate form
       reset({
         name: proj.name ?? '',
-        clientId: proj.clientId ?? '',
-        managerId: proj.managerId ?? '',
-        qaId: qaUser?.userId ?? '',
-        inspectorId: inspUser?.userId ?? '',
-        contractorId: conUser?.userId ?? '',
         propertyTypeId: proj.propertyTypeId ? String(proj.propertyTypeId) : '',
+        propertySubTypeId: proj.propertySubTypeId ? String(proj.propertySubTypeId) : '',
         projectStatus: proj.projectStatus ?? 'PLANNING',
         description: proj.description ?? '',
         addressLine1: proj.addressLine1 ?? '',
@@ -194,13 +213,47 @@ const ProjectEdit = () => {
         contractValue: proj.contractValue != null ? String(proj.contractValue) : '',
       });
 
-      // Pre-populate spec values
-      if (proj.projectSpecs) setSpecValues(proj.projectSpecs);
+      // Pre-populate spec values & extra items
+      if (proj.projectSpecs) {
+        const specs = proj.projectSpecs;
+        const sType = subTypes.find(st => st.id === proj.propertySubTypeId);
+        const baseFieldLabels = parseSpecFields(sType?.specTemplate).map(f => f.label);
+
+        const t: Array<{ label: string; date: string }> = [];
+        const f: Array<{ label: string; amount: string }> = [];
+        const c: Array<{ label: string; value: string }> = [];
+        const b: Record<string, string> = {};
+
+        Object.entries(specs).forEach(([k, v]) => {
+          if (k.startsWith('Timeline: ')) {
+            t.push({ label: k.replace('Timeline: ', ''), date: v });
+          } else if (k.startsWith('Finance: ')) {
+            f.push({ label: k.replace('Finance: ', ''), amount: v });
+          } else if (!baseFieldLabels.includes(k)) {
+            c.push({ label: k, value: v });
+          } else {
+            b[k] = v;
+          }
+        });
+
+        setExtraTimelines(t);
+        setExtraFinancials(f);
+        setCustomFields(c);
+        setSpecValues(b);
+      }
 
     }).catch(e => {
       setLoadError(e.message || 'Failed to load project');
     }).finally(() => setPageLoading(false));
-  }, [id]);
+  }, [id, subTypes.length > 0]);
+
+  // Fetch sub types when property type changes
+  useEffect(() => {
+    if (!selectedPropertyTypeId || pageLoading) return;
+    propertyTypeService.listPropertySubTypes(Number(selectedPropertyTypeId))
+      .then(setSubTypes)
+      .catch(() => setSubTypes([]));
+  }, [selectedPropertyTypeId]);
 
   // ── Template loading ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -212,7 +265,7 @@ const ProjectEdit = () => {
     ]).then(([picker, projTpls]) => {
       setPickerTemplates(picker.filter(t => t.id !== null && t.scope !== 'SCRATCH'));
       if (projTpls.length > 0) setProjectTemplate(projTpls[0]);
-    }).catch(() => {}).finally(() => setTemplatesLoading(false));
+    }).catch(() => { }).finally(() => setTemplatesLoading(false));
   }, [id]);
 
   // Close template dropdown on outside click
@@ -244,38 +297,61 @@ const ProjectEdit = () => {
     }
   };
 
-  const clientOptions = clients.map(c => ({
-    value: c.id,
-    label: c.fullName || c.firstName || '',
-    meta: c.companyName || undefined,
-  }));
   const propertyTypeOptions = propertyTypes.map(pt => ({ value: String(pt.id), label: pt.name }));
-  const toUserOptions = (users: UserResponse[]) => users.map(u => ({
-    value: u.id,
-    label: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
-    meta: u.email || undefined,
-  }));
+  const toUserOptions = (users: UserResponse[]) => users.map(u => {
+    const name = `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim();
+    const label = u.employeeId ? `[${u.employeeId}] ${name}` : name;
+    const meta = [u.roleName, u.email].filter(Boolean).join(' · ');
+    return { value: u.id, label, meta: meta || undefined };
+  });
+  const subTypeOptions = subTypes.map(st => ({ value: String(st.id), label: st.name }));
+  // Exclude platform-scope and system-generated roles
+  const roleOptions = availableRoles
+    .filter(r => r.scope !== 'PLATFORM' && !r.isSystemRole)
+    .map(r => ({ value: r.roleId, label: r.name }));
 
   // ── Submit ───────────────────────────────────────────────────────────────
   const onSubmit = async (data: FormValues) => {
     if (!id) return;
+
+    // Validate Client assignment (required by backend)
+    const clientRole = availableRoles.find(r => r.name.toLowerCase() === 'client');
+    const hasClient = clientRole && dynamicAssignments.some(a => a.roleId === clientRole.roleId && a.userIds.some(uid => uid));
+    if (!hasClient) {
+      toast.error('Please assign at least one Client to the project');
+      return;
+    }
+
     setSubmitting(true);
 
     const specs: Record<string, string> = {};
     Object.entries(specValues).forEach(([k, v]) => { if (v?.trim()) specs[k] = v.trim(); });
     customFields.forEach(cf => { if (cf.label.trim() && cf.value.trim()) specs[cf.label.trim()] = cf.value.trim(); });
+    extraTimelines.forEach(t => { if (t.label.trim() && t.date) specs[`Timeline: ${t.label.trim()}`] = t.date; });
+    extraFinancials.forEach(f => { if (f.label.trim() && f.amount.trim()) specs[`Finance: ${f.label.trim()}`] = f.amount.trim(); });
 
-    const assignments: ProjectAssignmentInput[] = [];
-    if (data.qaId && roleMap['qa']) assignments.push({ userId: data.qaId, roleId: roleMap['qa'] });
-    if (data.inspectorId && roleMap['inspector']) assignments.push({ userId: data.inspectorId, roleId: roleMap['inspector'] });
-    if (data.contractorId && roleMap['contractor']) assignments.push({ userId: data.contractorId, roleId: roleMap['contractor'] });
+    const flatAssignments = dynamicAssignments.flatMap(a =>
+      a.userIds.filter(uid => uid).map(uid => ({ roleId: a.roleId, userId: uid }))
+    );
+    const validAssignments = flatAssignments.filter(a => a.roleId && a.userId);
+    const managerRole = availableRoles.find(r => r.name.toLowerCase() === 'manager');
+    const managerUserId = managerRole
+      ? validAssignments.find(a => a.roleId === managerRole.roleId)?.userId
+      : undefined;
+
+    const clientUserId = clientRole
+      ? validAssignments.find(a => a.roleId === clientRole.roleId)?.userId
+      : undefined;
+
+    const assignments: ProjectAssignmentInput[] = validAssignments.map(a => ({ userId: a.userId, roleId: a.roleId }));
 
     const payload = {
       name: data.name.trim(),
-      clientId: data.clientId,
-      managerId: data.managerId || undefined,
+      managerId: managerUserId || undefined,
+      clientId: clientUserId || undefined,
       assignments: assignments.length > 0 ? assignments : undefined,
       propertyTypeId: data.propertyTypeId ? Number(data.propertyTypeId) : undefined,
+      propertySubTypeId: data.propertySubTypeId ? Number(data.propertySubTypeId) : undefined,
       projectSpecs: Object.keys(specs).length > 0 ? specs : undefined,
       projectStatus: data.projectStatus,
       description: data.description?.trim() || undefined,
@@ -463,6 +539,7 @@ const ProjectEdit = () => {
                           value={field.value || null}
                           onChange={val => {
                             field.onChange(val ?? '');
+                            setValue('propertySubTypeId', '');
                             setSpecValues({});
                           }}
                           placeholder="Select property type…"
@@ -472,6 +549,28 @@ const ProjectEdit = () => {
                       )}
                     />
                   </Fld>
+
+                  {selectedPropertyTypeId && (
+                    <Fld label="Property Sub Type" required error={errors.propertySubTypeId?.message}>
+                      <Controller
+                        name="propertySubTypeId"
+                        control={control}
+                        render={({ field }) => (
+                          <DropdownSelect
+                            options={subTypeOptions}
+                            value={field.value || null}
+                            onChange={val => {
+                              field.onChange(val ?? '');
+                              setSpecValues({});
+                            }}
+                            placeholder="Select sub type…"
+                            searchable
+                            searchPlaceholder="Search sub types…"
+                          />
+                        )}
+                      />
+                    </Fld>
+                  )}
                 </div>
               </div>
             </div>
@@ -483,93 +582,119 @@ const ProjectEdit = () => {
               <div className={styles.sectionCard} style={{ flex: 1 }}>
                 <div className={styles.sectionHead}>
                   <span className={styles.sectionIcon}><Users size={13} color="#6B7280" /></span>
-                  <span className={styles.sectionTitle}>Team & Client</span>
+                  <span className={styles.sectionTitle}>Team Assignments</span>
                 </div>
                 <div className={styles.sectionBody}>
-                  <Fld label="Client" required error={errors.clientId?.message}>
-                    <Controller
-                      name="clientId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={clientOptions}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder="Select a client…"
-                          searchable
-                          searchPlaceholder="Search clients…"
-                        />
-                      )}
-                    />
-                  </Fld>
+                  {/* ── Role Assignments Panel ─────────────────────────── */}
+                  <div style={{ background: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: 10, padding: '12px 14px' }}>
+                    {/* Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dynamicAssignments.length > 0 ? 12 : 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Users size={13} color="#6B7280" />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>
+                          Role Assignments
+                          {dynamicAssignments.length > 0 && (
+                            <span style={{ marginLeft: 6, fontWeight: 400, color: '#9CA3AF', fontSize: 11 }}>
+                              · {dynamicAssignments.length} {dynamicAssignments.length === 1 ? 'role' : 'roles'}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDynamicAssignments(prev => [...prev, { roleId: 0, userIds: [] }])}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5, fontSize: 12,
+                          color: '#33AE95', background: 'rgba(51,174,149,0.08)',
+                          border: '1px solid rgba(51,174,149,0.3)', borderRadius: 6,
+                          cursor: 'pointer', fontWeight: 500, padding: '4px 10px', lineHeight: 1,
+                        }}
+                      >
+                        <PlusCircle size={12} /> Add Role
+                      </button>
+                    </div>
 
-                  <Fld label="Manager" required error={errors.managerId?.message}>
-                    <Controller
-                      name="managerId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(managerUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder="Select manager…"
-                          searchable
-                          searchPlaceholder="Search managers…"
-                        />
-                      )}
-                    />
-                  </Fld>
+                    {/* Empty state */}
+                    {dynamicAssignments.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
+                        <Users size={22} color="#D1D5DB" style={{ margin: '0 auto 6px', display: 'block' }} />
+                        <p style={{ fontSize: 12, color: '#9CA3AF', margin: 0 }}>
+                          No role assignments — click <strong style={{ color: '#33AE95' }}>Add Role</strong> to begin.
+                        </p>
+                      </div>
+                    )}
 
-                  <Fld label="QA" required error={errors.qaId?.message}>
-                    <Controller
-                      name="qaId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(qaUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder="Select QA…"
-                          searchable
-                          searchPlaceholder="Search QA…"
-                        />
-                      )}
-                    />
-                  </Fld>
-
-                  <Fld label="Inspector" required error={errors.inspectorId?.message}>
-                    <Controller
-                      name="inspectorId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(inspectorUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder="Select inspector…"
-                          searchable
-                          searchPlaceholder="Search inspectors…"
-                        />
-                      )}
-                    />
-                  </Fld>
-
-                  <Fld label="Contractor" required error={errors.contractorId?.message}>
-                    <Controller
-                      name="contractorId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(contractorUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder="Select contractor…"
-                          searchable
-                          searchPlaceholder="Search contractors…"
-                        />
-                      )}
-                    />
-                  </Fld>
+                    {/* Assignment rows */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {dynamicAssignments.map((row, idx) => {
+                        const roleObj = availableRoles.find(r => r.roleId === row.roleId);
+                        const isMulti = !roleObj || roleObj.allowMultipleUsers !== false;
+                        return (
+                          <div key={idx} style={{
+                            background: '#fff', border: '1px solid #E5E7EB',
+                            borderRadius: 8, padding: '10px 12px',
+                          }}>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                              {/* Role selector */}
+                              <div style={{ flex: '0 0 175px', minWidth: 0 }}>
+                                <DropdownSelect
+                                  options={roleOptions}
+                                  value={row.roleId || null}
+                                  onChange={val => setDynamicAssignments(prev => prev.map((a, i) => i === idx ? { ...a, roleId: Number(val), userIds: [] } : a))}
+                                  placeholder="Select role…"
+                                  searchable
+                                  searchPlaceholder="Search roles…"
+                                />
+                                {roleObj?.allowMultipleUsers && (
+                                  <span style={{ fontSize: 10, color: '#6B7280', marginTop: 2, display: 'block' }}>
+                                    Multi-user allowed
+                                  </span>
+                                )}
+                              </div>
+                              {/* User multi-select */}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                {isMulti ? (
+                                  <DropdownSelect
+                                    multiple={true}
+                                    options={toUserOptions(allOrgUsers)}
+                                    value={row.userIds as (string | number)[]}
+                                    onChange={val => setDynamicAssignments(prev => prev.map((a, i) =>
+                                      i === idx ? { ...a, userIds: val as string[] } : a
+                                    ))}
+                                    placeholder={allOrgUsers.length === 0 ? 'Loading users…' : 'Select one or more users…'}
+                                    searchable
+                                    searchPlaceholder="Name, employee ID or role…"
+                                  />
+                                ) : (
+                                  <DropdownSelect
+                                    options={toUserOptions(allOrgUsers)}
+                                    value={row.userIds[0] ?? null}
+                                    onChange={val => setDynamicAssignments(prev => prev.map((a, i) =>
+                                      i === idx ? { ...a, userIds: val ? [String(val)] : [] } : a
+                                    ))}
+                                    placeholder={allOrgUsers.length === 0 ? 'Loading users…' : 'Select user…'}
+                                    searchable
+                                    searchPlaceholder="Name, employee ID or role…"
+                                  />
+                                )}
+                              </div>
+                              {/* Remove row */}
+                              <button
+                                type="button"
+                                onClick={() => setDynamicAssignments(prev => prev.filter((_, i) => i !== idx))}
+                                style={{ flexShrink: 0, padding: 6, color: '#CBD5E1', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 6, display: 'flex', alignItems: 'center', transition: 'color 0.15s', marginTop: 2 }}
+                                onMouseEnter={e => (e.currentTarget.style.color = '#EF4444')}
+                                onMouseLeave={e => (e.currentTarget.style.color = '#CBD5E1')}
+                                title="Remove"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -578,13 +703,116 @@ const ProjectEdit = () => {
           {/* ── Full-width sections ──────────────────────────────────────── */}
           <div className={styles.fullSections}>
 
+            {/* ── Inspection Template Management ──────────────────────────── */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionHead}>
+                <span className={styles.sectionIcon}><ClipboardList size={13} color="#33AE95" /></span>
+                <span className={styles.sectionTitle}>Inspection Template</span>
+              </div>
+              <div className={styles.sectionBody}>
+                {templatesLoading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748B', fontSize: 13 }}>
+                    <Loader2 size={14} className={styles.spin} /> Loading…
+                  </div>
+                ) : projectTemplate && !showPicker ? (
+                  /* Template already assigned */
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                      <CheckCircle2 size={18} color="#33AE95" style={{ flexShrink: 0 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{projectTemplate.title}</p>
+                        {/* <p style={{ margin: 0, fontSize: 11, color: '#64748B', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Layers size={10} />{projectTemplate.sectionCount} section{projectTemplate.sectionCount !== 1 ? 's' : ''}&nbsp;·&nbsp;PROJECT copy
+                        </p> */}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        className={styles.cancelBtn}
+                        style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5, borderColor: '#33AE95', color: '#33AE95' }}
+                        onClick={() => navigate(`/templates/${projectTemplate.id}/builder?back=/projects/${id}`)}
+                      >
+                        <Pencil size={11} /> Edit Template
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.cancelBtn}
+                        style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                        onClick={() => { setShowPicker(true); setSelectedTpl(null); setTplSearch(''); }}
+                      >
+                        <RefreshCw size={11} /> Re-assign
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Picker — no template yet, or re-assigning */
+                  <div>
+                    {showPicker && projectTemplate && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)', marginBottom: 12, fontSize: 12, color: '#92400E' }}>
+                        <AlertTriangle size={13} color="#D97706" style={{ flexShrink: 0 }} />
+                        A template is already assigned. Re-assigning will create a new copy.
+                        <button type="button" onClick={() => setShowPicker(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#64748B' }}>
+                          <X size={11} /> Cancel
+                        </button>
+                      </div>
+                    )}
+                    <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#64748B' }}>
+                      {projectTemplate ? 'Select a new master template to assign:' : 'No template assigned. Select a master template:'}
+                    </p>
+                    {/* Searchable dropdown */}
+                    <div className={styles.tplDropdownWrap} ref={tplDropdownRef}>
+                      <div className={styles.tplDropdownTrigger} onClick={() => setTplDropdownOpen(o => !o)}>
+                        <Search size={13} className={styles.tplSearchIcon} />
+                        <input
+                          className={styles.tplSearchInput}
+                          placeholder={selectedTpl ? selectedTpl.title : 'Search templates…'}
+                          value={tplSearch}
+                          onChange={e => { setTplSearch(e.target.value); setTplDropdownOpen(true); setSelectedTpl(null); }}
+                          onFocus={() => setTplDropdownOpen(true)}
+                        />
+                        {selectedTpl
+                          ? <button type="button" className={styles.tplClearBtn} onClick={e => { e.stopPropagation(); setSelectedTpl(null); setTplSearch(''); }}><X size={11} /></button>
+                          : <ChevronDown size={13} className={`${styles.tplChevron} ${tplDropdownOpen ? styles.tplChevronOpen : ''}`} />}
+                      </div>
+                      {tplDropdownOpen && (
+                        <div className={styles.tplDropdown}>
+                          {filteredTpls.length === 0
+                            ? <div className={styles.tplDropdownEmpty}>No templates found</div>
+                            : filteredTpls.map(t => (
+                              <button key={t.id} type="button" className={styles.tplDropdownItem} onClick={() => { setSelectedTpl(t); setTplSearch(''); setTplDropdownOpen(false); }}>
+                                <Globe size={12} style={{ flexShrink: 0, color: '#9CA3AF' }} />
+                                <span className={styles.tplDropdownName}>{t.title}</span>
+                                <span className={styles.tplDropdownScope}>{t.scope}</span>
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                    {selectedTpl && (
+                      <div style={{ marginTop: 10 }}>
+                        <button
+                          type="button"
+                          className={styles.tplMapBtn}
+                          disabled={assigning}
+                          onClick={handleAssignTemplate}
+                        >
+                          {assigning ? <><Loader2 size={13} className={styles.spin} /> Assigning…</> : <><ClipboardList size={13} /> Assign Template</>}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Property Specifications */}
-            {selectedPropertyTypeId && (
+            {selectedPropertyTypeId && selectedSubTypeId && (
               <div className={styles.sectionCard}>
                 <div className={styles.sectionHead}>
                   <span className={styles.sectionIcon}><ClipboardList size={13} color="#6B7280" /></span>
                   <span className={styles.sectionTitle}>
-                    {selectedPropertyType?.name ?? 'Property'} Specifications
+                    {selectedSubType?.name ?? selectedPropertyType?.name ?? 'Property'} Specifications
                     {(specFields.length + customFields.length) > 0 && (
                       <span style={{ fontWeight: 400, color: '#9CA3AF', marginLeft: 8, textTransform: 'none', letterSpacing: 0 }}>
                         · {specFields.length + customFields.length} question{specFields.length + customFields.length !== 1 ? 's' : ''}
@@ -703,7 +931,7 @@ const ProjectEdit = () => {
                   <Fld label="Street">
                     <Input placeholder="Street name" {...register('street')} className={inputCls(false)} />
                   </Fld>
-                  <Fld label="City / District">
+                  <Fld label="District / City">
                     <Input placeholder="Mumbai" {...register('city')} className={inputCls(false)} />
                   </Fld>
                 </div>
@@ -756,6 +984,64 @@ const ProjectEdit = () => {
                     <Input type="date" {...register('actualCompletionDate')} className={inputCls(false)} />
                   </Fld>
                 </div>
+
+                  {/* Extra milestone entries — in the same grid */}
+                  {extraTimelines.map((entry, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-1.5 h-[20px]">
+                        <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                          {editingMilestoneIdx === i ? (
+                            <input
+                              autoFocus
+                              placeholder="Type milestone…"
+                              value={entry.label}
+                              onChange={e => setExtraTimelines(prev => prev.map((t, ti) => ti === i ? { ...t, label: e.target.value } : t))}
+                              onBlur={() => setEditingMilestoneIdx(null)}
+                              onKeyDown={e => e.key === 'Enter' && setEditingMilestoneIdx(null)}
+                              className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#33AE95] outline-none w-full"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingMilestoneIdx(i)}>
+                              <label
+                                className="text-[#263B4F] text-sm font-medium group-hover:text-[#33AE95] transition-colors truncate cursor-pointer"
+                                title="Click to rename"
+                              >
+                                {entry.label || 'Unnamed Milestone'}
+                              </label>
+                              <Pencil size={10} className="text-[#9CA3AF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setExtraTimelines(prev => prev.filter((_, ti) => ti !== i))}
+                          className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors p-1"
+                          title="Remove milestone"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                      <Input
+                        type="date"
+                        value={entry.date}
+                        onChange={e => setExtraTimelines(prev => prev.map((t, ti) => ti === i ? { ...t, date: e.target.value } : t))}
+                        className={inputCls(false)}
+                      />
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    className={styles.addCustomBtn}
+                    style={{ alignSelf: 'end', minHeight: 42 }}
+                    onClick={() => {
+                      const newIdx = extraTimelines.length;
+                      setExtraTimelines(prev => [...prev, { label: '', date: '' }]);
+                      setEditingMilestoneIdx(newIdx);
+                    }}
+                  >
+                    <PlusCircle size={14} /> Add Milestone
+                  </button>
               </div>
             </div>
 
@@ -780,113 +1066,73 @@ const ProjectEdit = () => {
                     </div>
                   </Fld>
                 </div>
+
+                  {/* Extra financial entries — in the same grid */}
+                  {extraFinancials.map((entry, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-1.5 h-[20px]">
+                        <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                          {editingFinancialIdx === i ? (
+                            <input
+                              autoFocus
+                              placeholder="Type label…"
+                              value={entry.label}
+                              onChange={e => setExtraFinancials(prev => prev.map((f, fi) => fi === i ? { ...f, label: e.target.value } : f))}
+                              onBlur={() => setEditingFinancialIdx(null)}
+                              onKeyDown={e => e.key === 'Enter' && setEditingFinancialIdx(null)}
+                              className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#33AE95] outline-none w-full"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingFinancialIdx(i)}>
+                              <label
+                                className="text-[#263B4F] text-sm font-medium group-hover:text-[#33AE95] transition-colors truncate cursor-pointer"
+                                title="Click to rename"
+                              >
+                                {entry.label || 'Unnamed Line Item'}
+                              </label>
+                              <Pencil size={10} className="text-[#9CA3AF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setExtraFinancials(prev => prev.filter((_, fi) => fi !== i))}
+                          className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors p-1"
+                          title="Remove line item"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <IndianRupee style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
+                        <Input
+                          type="number"
+                          step="any"
+                          placeholder="0.00"
+                          value={entry.amount}
+                          onChange={e => setExtraFinancials(prev => prev.map((f, fi) => fi === i ? { ...f, amount: e.target.value } : f))}
+                          className={inputCls(false) + ' pl-9'}
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    className={styles.addCustomBtn}
+                    style={{ alignSelf: 'end', minHeight: 42 }}
+                    onClick={() => {
+                      const newIdx = extraFinancials.length;
+                      setExtraFinancials(prev => [...prev, { label: '', amount: '' }]);
+                      setEditingFinancialIdx(newIdx);
+                    }}
+                  >
+                    <PlusCircle size={14} /> Add Line Item
+                  </button>
               </div>
             </div>
 
           </div>
-
-            {/* ── Inspection Template Management ──────────────────────────── */}
-            <div className={styles.sectionCard}>
-              <div className={styles.sectionHead}>
-                <span className={styles.sectionIcon}><ClipboardList size={13} color="#33AE95" /></span>
-                <span className={styles.sectionTitle}>Inspection Template</span>
-              </div>
-              <div className={styles.sectionBody}>
-                {templatesLoading ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748B', fontSize: 13 }}>
-                    <Loader2 size={14} className={styles.spin} /> Loading…
-                  </div>
-                ) : projectTemplate && !showPicker ? (
-                  /* Template already assigned */
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                      <CheckCircle2 size={18} color="#33AE95" style={{ flexShrink: 0 }} />
-                      <div style={{ minWidth: 0 }}>
-                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{projectTemplate.title}</p>
-                        <p style={{ margin: 0, fontSize: 11, color: '#64748B', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Layers size={10} />{projectTemplate.sectionCount} section{projectTemplate.sectionCount !== 1 ? 's' : ''}&nbsp;·&nbsp;PROJECT copy
-                        </p>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        className={styles.cancelBtn}
-                        style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5, borderColor: '#33AE95', color: '#33AE95' }}
-                        onClick={() => navigate(`/templates/${projectTemplate.id}/builder?back=/projects/${id}`)}
-                      >
-                        <Pencil size={11} /> Edit Template
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.cancelBtn}
-                        style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
-                        onClick={() => { setShowPicker(true); setSelectedTpl(null); setTplSearch(''); }}
-                      >
-                        <RefreshCw size={11} /> Re-assign
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* Picker — no template yet, or re-assigning */
-                  <div>
-                    {showPicker && projectTemplate && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)', marginBottom: 12, fontSize: 12, color: '#92400E' }}>
-                        <AlertTriangle size={13} color="#D97706" style={{ flexShrink: 0 }} />
-                        A template is already assigned. Re-assigning will create a new copy.
-                        <button type="button" onClick={() => setShowPicker(false)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#64748B' }}>
-                          <X size={11} /> Cancel
-                        </button>
-                      </div>
-                    )}
-                    <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#64748B' }}>
-                      {projectTemplate ? 'Select a new master template to assign:' : 'No template assigned. Select a master template:'}
-                    </p>
-                    {/* Searchable dropdown */}
-                    <div className={styles.tplDropdownWrap} ref={tplDropdownRef}>
-                      <div className={styles.tplDropdownTrigger} onClick={() => setTplDropdownOpen(o => !o)}>
-                        <Search size={13} className={styles.tplSearchIcon} />
-                        <input
-                          className={styles.tplSearchInput}
-                          placeholder={selectedTpl ? selectedTpl.title : 'Search templates…'}
-                          value={tplSearch}
-                          onChange={e => { setTplSearch(e.target.value); setTplDropdownOpen(true); setSelectedTpl(null); }}
-                          onFocus={() => setTplDropdownOpen(true)}
-                        />
-                        {selectedTpl
-                          ? <button type="button" className={styles.tplClearBtn} onClick={e => { e.stopPropagation(); setSelectedTpl(null); setTplSearch(''); }}><X size={11} /></button>
-                          : <ChevronDown size={13} className={`${styles.tplChevron} ${tplDropdownOpen ? styles.tplChevronOpen : ''}`} />}
-                      </div>
-                      {tplDropdownOpen && (
-                        <div className={styles.tplDropdown}>
-                          {filteredTpls.length === 0
-                            ? <div className={styles.tplDropdownEmpty}>No templates found</div>
-                            : filteredTpls.map(t => (
-                              <button key={t.id} type="button" className={styles.tplDropdownItem} onClick={() => { setSelectedTpl(t); setTplSearch(''); setTplDropdownOpen(false); }}>
-                                <Globe size={12} style={{ flexShrink: 0, color: '#9CA3AF' }} />
-                                <span className={styles.tplDropdownName}>{t.title}</span>
-                                <span className={styles.tplDropdownScope}>{t.scope}</span>
-                              </button>
-                            ))}
-                        </div>
-                      )}
-                    </div>
-                    {selectedTpl && (
-                      <div style={{ marginTop: 10 }}>
-                        <button
-                          type="button"
-                          className={styles.tplMapBtn}
-                          disabled={assigning}
-                          onClick={handleAssignTemplate}
-                        >
-                          {assigning ? <><Loader2 size={13} className={styles.spin} /> Assigning…</> : <><ClipboardList size={13} /> Assign Template</>}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
 
         </div>
 

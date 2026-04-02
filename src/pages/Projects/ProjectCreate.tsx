@@ -8,21 +8,21 @@ import {
   ArrowLeft, FolderOpen, ClipboardList, MapPin, Calendar,
   IndianRupee, Loader2, Users, Building2, Navigation,
   Banknote, PlusCircle, Pencil, Trash2, ChevronDown,
-  Globe, Search, Layers, X,
+  Globe, Search, X,
+  Zap,
 } from 'lucide-react';
 
 import { projectService } from '@/services/projectService';
 import { checklistService } from '@/services/checklistService';
 import type { TemplateResponse } from '@/services/models/checklist';
-import { customerService } from '@/services/customerService';
+import TemplateBuilder from '@/pages/Templates/TemplateBuilder';
 import { userService } from '@/services/userService';
 import { organisationService } from '@/services/organisationService';
 import type { OrganisationResponse } from '@/services/models/organisation';
 import { propertyTypeService, parseSpecFields } from '@/services/propertyTypeService';
 import type { PropertyTypeResponse, SpecField } from '@/services/propertyTypeService';
 import type { ProjectAssignmentInput } from '@/services/models/project';
-import type { CustomerResponse } from '@/services/models/customer';
-import type { UserResponse } from '@/services/models/user';
+import type { UserResponse, RoleResponse } from '@/services/models/user';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Input } from '@/components/shared-ui/Input/input';
 import { Fld, inputCls } from '@/components/shared-ui/form-helpers';
@@ -41,21 +41,18 @@ const positiveNumber = z
 
 const schema = z.object({
   name: z.string().min(1, 'Project name is required').max(250, 'Max 250 characters'),
-  clientId: z.string().min(1, 'Client is required'),
   organisationId: z.string().optional(),
-  managerId: z.string().min(1, 'Manager is required'),
-  qaId: z.string().min(1, 'QA is required'),
-  inspectorId: z.string().min(1, 'Inspector is required'),
-  contractorId: z.string().min(1, 'Contractor is required'),
   propertyTypeId: z.string().min(1, 'Property type is required'),
+  propertySubTypeId: z.string().min(1, 'Property sub type is required'),
   description: z.string().max(250, 'Max 250 characters').optional(),
   addressLine1: z.string().min(1, 'Address is required').max(250, 'Max 250 characters'),
   addressLine2: z.string().max(250, 'Max 250 characters').optional(),
   street: z.string().max(250, 'Max 250 characters').optional(),
   city: z.string().max(250, 'Max 250 characters').optional(),
-  state: z.string().max(250, 'Max 250 characters').optional(),
-  country: z.string().max(250, 'Max 250 characters').optional(),
-  pincode: z.string().max(10, 'Max 10 characters').optional(),
+  district: z.string().min(1, 'District is required').max(250, 'Max 250 characters'),
+  state: z.string().min(1, 'State is required').max(250, 'Max 250 characters'),
+  country: z.string().min(1, 'Country is required').max(250, 'Max 250 characters'),
+  pincode: z.string().min(1, 'Pin Code is required').max(10, 'Max 10 characters'),
   latitude: positiveNumber,
   longitude: positiveNumber,
   startDatePlanned: z.string().optional(),
@@ -69,10 +66,9 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const EMPTY: FormValues = {
-  name: '', clientId: '', organisationId: '', managerId: '', qaId: '',
-  inspectorId: '', contractorId: '', propertyTypeId: '',
+  name: '', organisationId: '', propertyTypeId: '', propertySubTypeId: '',
   description: '', addressLine1: '', addressLine2: '', street: '',
-  city: '', state: '', country: '', pincode: '', latitude: '', longitude: '',
+  city: '', district: '', state: '', country: '', pincode: '', latitude: '', longitude: '',
   startDatePlanned: '', startDateActual: '',
   estimatedCompletionDate: '', actualCompletionDate: '',
   totalBudget: '', contractValue: '',
@@ -91,18 +87,23 @@ const ProjectCreate = () => {
 
   const [topLevelOrgs, setTopLevelOrgs] = useState<OrganisationResponse[]>([]);
   const [franchises, setFranchises] = useState<OrganisationResponse[]>([]);
-  const [clients, setClients] = useState<CustomerResponse[]>([]);
   const [propertyTypes, setPropertyTypes] = useState<PropertyTypeResponse[]>([]);
-  const [roleMap, setRoleMap] = useState<Record<string, number>>({});
-  const [managerUsers, setManagerUsers] = useState<UserResponse[]>([]);
-  const [qaUsers, setQaUsers] = useState<UserResponse[]>([]);
-  const [inspectorUsers, setInspectorUsers] = useState<UserResponse[]>([]);
-  const [contractorUsers, setContractorUsers] = useState<UserResponse[]>([]);
+  const [subTypes, setSubTypes] = useState<any[]>([]);
+  const [allOrgUsers, setAllOrgUsers] = useState<UserResponse[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<RoleResponse[]>([]);
+  const [dynamicAssignments, setDynamicAssignments] = useState<Array<{ roleId: number; userIds: string[] }>>([]);
+  const [extraTimelines, setExtraTimelines] = useState<Array<{ label: string; date: string }>>([]);
+  const [extraFinancials, setExtraFinancials] = useState<Array<{ label: string; amount: string }>>([]);
   const [specValues, setSpecValues] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<Array<{ label: string; value: string }>>([]);
   const [editingLabelIdx, setEditingLabelIdx] = useState<number | null>(null);
+  const [editingMilestoneIdx, setEditingMilestoneIdx] = useState<number | null>(null);
+  const [editingFinancialIdx, setEditingFinancialIdx] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [tplError, setTplError] = useState('');
+
+  const [step, setStep] = useState<'info' | 'mapping'>('info');
+  const [finalizedTemplateId, setFinalizedTemplateId] = useState<string | undefined>(undefined);
 
   // ── Template picker state ────────────────────────────────────────────────
   const [pickerTemplates, setPickerTemplates] = useState<TemplateResponse[]>([]);
@@ -121,9 +122,11 @@ const ProjectCreate = () => {
   });
 
   const selectedPropertyTypeId = watch('propertyTypeId');
+  const selectedSubTypeId = watch('propertySubTypeId');
   const selectedOrgId = watch('organisationId'); // final target UUID (org or franchise)
   const selectedPropertyType = propertyTypes.find(pt => String(pt.id) === selectedPropertyTypeId);
-  const specFields: SpecField[] = parseSpecFields(selectedPropertyType?.specTemplate);
+  const selectedSubType = subTypes.find(st => String(st.id) === selectedSubTypeId);
+  const specFields: SpecField[] = parseSpecFields(selectedSubType?.specTemplate);
 
 
   // ── Close template dropdown on outside click ────────────────────────────
@@ -157,28 +160,24 @@ const ProjectCreate = () => {
         .catch(() => { });
     }
 
-    // Load clients scoped to caller's org
-    customerService.listClients(0, 500)
-      .then(d => setClients(d.content ?? []))
-      .catch(() => setClients([]));
+    userService.listRoles().then(setAvailableRoles).catch(() => { });
 
-    userService.listRoles().then(roles => {
-      const map: Record<string, number> = {};
-      roles.forEach(r => { map[r.name.toLowerCase()] = r.roleId; });
-      setRoleMap(map);
-
-      if (!isSuperAdmin) {
-        const load = (name: string, setter: (u: UserResponse[]) => void) => {
-          const id = map[name.toLowerCase()];
-          if (id) userService.listUsersByRole(id).then(setter).catch(() => setter([]));
-        };
-        load('manager', setManagerUsers);
-        load('qa', setQaUsers);
-        load('inspector', setInspectorUsers);
-        load('contractor', setContractorUsers);
-      }
-    }).catch(() => { });
+    if (!isSuperAdmin) {
+      userService.listUsers(0, 500).then(d => setAllOrgUsers(d.users)).catch(() => { });
+    }
   }, [user?.id]);
+
+  // Fetch sub types when property type changes
+  useEffect(() => {
+    if (!selectedPropertyTypeId) {
+      setSubTypes([]);
+      setValue('propertySubTypeId', '');
+      return;
+    }
+    propertyTypeService.listPropertySubTypes(Number(selectedPropertyTypeId))
+      .then(setSubTypes)
+      .catch(() => setSubTypes([]));
+  }, [selectedPropertyTypeId]);
 
   // Super admin: load franchises when parent org is selected in franchise mode
   useEffect(() => {
@@ -194,72 +193,71 @@ const ProjectCreate = () => {
     if (!selectedOrgId) return;
     if (!isSuperAdmin && projectFor !== 'franchise') return;
 
-    customerService.listCustomers(selectedOrgId, 0, 500)
-      .then(d => {
-        const items = d.content ?? (Array.isArray(d) ? (d as CustomerResponse[]) : []);
-        if (items.length > 0) setClients(items);
-      })
-      .catch(() => { });
+    userService.listUsersForAssignment(selectedOrgId)
+      .then(setAllOrgUsers)
+      .catch(() => userService.listUsers(0, 500).then(d => setAllOrgUsers(d.users)).catch(() => { }));
 
-    const load = (name: string, setter: (u: UserResponse[]) => void) => {
-      const id = roleMap[name.toLowerCase()];
-      if (id) userService.listUsersByRole(id, selectedOrgId).then(setter).catch(() => setter([]));
-    };
-    load('manager', setManagerUsers);
-    load('qa', setQaUsers);
-    load('inspector', setInspectorUsers);
-    load('contractor', setContractorUsers);
+    userService.listRoles(selectedOrgId).then(setAvailableRoles).catch(() => { });
 
-    setValue('clientId', '');
-    setValue('managerId', '');
-    setValue('qaId', '');
-    setValue('inspectorId', '');
-    setValue('contractorId', '');
+    setDynamicAssignments([]);
   }, [selectedOrgId]);
 
   // When org admin switches back to 'organisation' mode, reload their own org's data
   useEffect(() => {
     if (isSuperAdmin || projectFor !== 'organisation') return;
-    customerService.listClients(0, 500).then(d => setClients(d.content ?? [])).catch(() => { });
-    const load = (name: string, setter: (u: UserResponse[]) => void) => {
-      const id = roleMap[name.toLowerCase()];
-      if (id) userService.listUsersByRole(id).then(setter).catch(() => setter([]));
-    };
-    load('manager', setManagerUsers);
-    load('qa', setQaUsers);
-    load('inspector', setInspectorUsers);
-    load('contractor', setContractorUsers);
+    userService.listUsers(0, 500).then(d => setAllOrgUsers(d.users)).catch(() => { });
+    userService.listRoles().then(setAvailableRoles).catch(() => { });
     setValue('organisationId', '');
-    setValue('clientId', '');
-    setValue('managerId', '');
-    setValue('qaId', '');
-    setValue('inspectorId', '');
-    setValue('contractorId', '');
+    setDynamicAssignments([]);
   }, [projectFor]);
 
   // ── Options ─────────────────────────────────────────────────────────────
-  const clientOptions = clients.map(c => ({
-    value: c.id,
-    label: c.fullName || c.firstName || '',
-    meta: c.companyName || undefined,
-  }));
   const propertyTypeOptions = propertyTypes.map(pt => ({ value: String(pt.id), label: pt.name }));
-  const toUserOptions = (users: UserResponse[]) => users.map(u => ({
-    value: u.id,
-    label: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
-    meta: u.email || undefined,
-  }));
+  const toUserOptions = (users: UserResponse[]) => users.map(u => {
+    const name = `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim();
+    const label = u.employeeId ? `[${u.employeeId}] ${name}` : name;
+    const meta = [u.roleName, u.email].filter(Boolean).join(' · ');
+    return { value: u.id, label, meta: meta || undefined };
+  });
+  // Exclude platform-scope and system-generated roles
+  const roleOptions = availableRoles
+    .filter(r => {
+      // Platform scope roles never shown in project assignment
+      if (r.scope === 'PLATFORM') return false;
+
+      // Enforce: Only ORGANISATION_ADMIN and FRANCHISE_ADMIN are isSystemRole
+      const name = r.name.toUpperCase();
+      const isActuallySystem = name === 'ORGANISATION_ADMIN' || name === 'FRANCHISE_ADMIN';
+
+      // CLIENT role is NEVER a system role
+      const isClient = name === 'CLIENT';
+
+      // If we are for a franchise, hide any role whose scope is NOT FRANCHISE?
+      // Actually, if we pass orgId to listRoles, the backend should return the correct roles.
+      // But the constraint says: "the Role Dropdown must only display roles belonging specifically to that Franchise."
+      // and "Do not pull or show roles from the Parent Organisation."
+      // If the role scope matches the target mode, we keep it.
+      if (projectFor === 'franchise' && r.scope === 'ORGANISATION') return false;
+
+      // If it's a system role (enforced above), we exclude it from manual mapping
+      if (isActuallySystem && !isClient) return false;
+
+      return true;
+    })
+    // Ensure distinct names
+    .filter((r, idx, self) => self.findIndex(x => x.name === r.name) === idx)
+    .map(r => ({ value: r.roleId, label: r.name }));
   const topLevelOrgOptions = topLevelOrgs.map(o => ({ value: o.uuid, label: o.name }));
   const franchiseOptions = franchises.map(o => ({ value: o.uuid, label: o.name }));
+  const subTypeOptions = subTypes.map(st => ({ value: String(st.id), label: st.name }));
   const filteredTpls = tplSearch.trim()
     ? pickerTemplates.filter(t => t.title.toLowerCase().includes(tplSearch.toLowerCase()))
     : pickerTemplates;
-  const tplTotalItems = (selectedTpl?.sections ?? []).reduce((s, sec) => s + (sec.items?.length ?? 0), 0);
-
   // ── Submit ───────────────────────────────────────────────────────────────
   const onSubmit = async (data: FormValues) => {
     // Validate template selection
-    if (!selectedTpl) {
+    const tplIdToUse = finalizedTemplateId || selectedTpl?.id;
+    if (!tplIdToUse) {
       setTplError('Please select an inspection template');
       return;
     }
@@ -272,24 +270,47 @@ const ProjectCreate = () => {
       return;
     }
 
+    // Validate Client assignment (required by backend)
+    const clientRole = availableRoles.find(r => r.name.toLowerCase() === 'client');
+    const hasClient = clientRole && dynamicAssignments.some(a => a.roleId === clientRole.roleId && a.userIds.some(uid => uid));
+    if (!hasClient) {
+      toast.error('Please assign at least one Client to the project');
+      return;
+    }
+
     setSubmitting(true);
 
     const specs: Record<string, string> = {};
     Object.entries(specValues).forEach(([k, v]) => { if (v?.trim()) specs[k] = v.trim(); });
     customFields.forEach(cf => { if (cf.label.trim() && cf.value.trim()) specs[cf.label.trim()] = cf.value.trim(); });
+    // Store extra timeline / financial entries in projectSpecs
+    extraTimelines.forEach(t => { if (t.label.trim() && t.date) specs[`Timeline: ${t.label.trim()}`] = t.date; });
+    extraFinancials.forEach(f => { if (f.label.trim() && f.amount.trim()) specs[`Finance: ${f.label.trim()}`] = f.amount.trim(); });
 
-    const assignments: ProjectAssignmentInput[] = [];
-    if (data.qaId && roleMap['qa']) assignments.push({ userId: data.qaId, roleId: roleMap['qa'] });
-    if (data.inspectorId && roleMap['inspector']) assignments.push({ userId: data.inspectorId, roleId: roleMap['inspector'] });
-    if (data.contractorId && roleMap['contractor']) assignments.push({ userId: data.contractorId, roleId: roleMap['contractor'] });
+    // Expand multi-user assignments to flat {userId, roleId}[] list
+    const flatAssignments = dynamicAssignments.flatMap(a =>
+      a.userIds.filter(uid => uid).map(uid => ({ roleId: a.roleId, userId: uid }))
+    );
+    const validAssignments = flatAssignments.filter(a => a.roleId && a.userId);
+    const managerRole = availableRoles.find(r => r.name.toLowerCase() === 'manager');
+    const managerUserId = managerRole
+      ? validAssignments.find(a => a.roleId === managerRole.roleId)?.userId
+      : undefined;
+
+    const clientUserId = clientRole
+      ? validAssignments.find(a => a.roleId === clientRole.roleId)?.userId
+      : undefined;
+
+    const assignments: ProjectAssignmentInput[] = validAssignments.map(a => ({ userId: a.userId, roleId: a.roleId }));
 
     const payload = {
       name: data.name.trim(),
-      clientId: data.clientId,
-      managerId: data.managerId || undefined,
+      managerId: managerUserId || undefined,
+      clientId: clientUserId || undefined,
       organisationId: isSuperAdmin && data.organisationId ? data.organisationId : undefined,
       assignments: assignments.length > 0 ? assignments : undefined,
       propertyTypeId: data.propertyTypeId ? Number(data.propertyTypeId) : undefined,
+      propertySubTypeId: data.propertySubTypeId ? Number(data.propertySubTypeId) : undefined,
       projectSpecs: Object.keys(specs).length > 0 ? specs : undefined,
       projectStatus: 'PLANNING' as const,
       description: data.description?.trim() || undefined,
@@ -314,9 +335,12 @@ const ProjectCreate = () => {
     try {
       const created = await projectService.createProject(payload);
       try {
-        const cloned = await checklistService.cloneTemplateToProject(selectedTpl.id!, created.id!);
-        toast.success('Project created! Customize your template, then create the inspection.');
-        navigate(`/templates/${cloned.projectTemplateId}/builder?back=/projects/${created.id}`);
+        // Use finalizedTemplateId if we have it, else clone the selected master
+        const cloneId = finalizedTemplateId || selectedTpl?.id!;
+        await checklistService.cloneTemplateToProject(cloneId, created.id!);
+
+        toast.success('Project created!');
+        navigate(`/projects/${created.id}`);
       } catch {
         toast.success('Project created!');
         toast.error('Template assignment failed — assign it from the project page');
@@ -356,8 +380,130 @@ const ProjectCreate = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      {step === 'mapping' && selectedTpl && (
+        <div className={styles.mappingOverlay}>
+          <TemplateBuilder
+            id={finalizedTemplateId || (selectedTpl ? selectedTpl.id!.toString() : undefined)}
+            isSubComponent={true}
+            onFinish={(newTplId: string) => {
+              setFinalizedTemplateId(newTplId);
+              setStep('info');
+              toast.success('Template mapping finalized!');
+            }}
+          />
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit(onSubmit)} className={step === 'mapping' ? styles.hidden : ''}>
         <div className={styles.body}>
+
+          {/* ── Step 1: Organisation / Franchise Selection ─────────────── */}
+          <div className={styles.sectionCard} style={{ marginBottom: 4 }}>
+            <div className={styles.sectionHead}>
+              <span className={styles.sectionIcon}><Building2 size={13} color="#6B7280" /></span>
+              <span className={styles.sectionTitle}>Project Scope</span>
+              <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9CA3AF', fontWeight: 400 }}>
+                Select organisation or franchise first
+              </span>
+            </div>
+            <div className={styles.sectionBody}>
+              {/* Create For toggle */}
+              <Fld label="Create For">
+                <div className={styles.forToggle}>
+                  {(['organisation', 'franchise'] as const).map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      className={`${styles.forToggleBtn} ${projectFor === opt ? styles.forToggleBtnActive : ''}`}
+                      onClick={() => {
+                        setProjectFor(opt);
+                        setFranchiseOrgId('');
+                        setValue('organisationId', '');
+                      }}
+                    >
+                      {opt === 'organisation' ? <Building2 size={13} /> : <Users size={13} />}
+                      {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </Fld>
+
+              {/* Super admin: org picker (org mode) or org→franchise pickers (franchise mode) */}
+              {isSuperAdmin && projectFor === 'organisation' && (
+                <Fld label="Organisation" required error={errors.organisationId?.message}>
+                  <Controller
+                    name="organisationId"
+                    control={control}
+                    render={({ field }) => (
+                      <DropdownSelect
+                        options={topLevelOrgOptions}
+                        value={field.value || null}
+                        onChange={val => field.onChange(val ?? '')}
+                        placeholder="Select organisation…"
+                        searchable
+                        searchPlaceholder="Search organisations…"
+                      />
+                    )}
+                  />
+                </Fld>
+              )}
+
+              {isSuperAdmin && projectFor === 'franchise' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <Fld label="Organisation" required>
+                    <DropdownSelect
+                      options={topLevelOrgOptions}
+                      value={franchiseOrgId || null}
+                      onChange={val => {
+                        setFranchiseOrgId(String(val ?? ''));
+                        setValue('organisationId', '');
+                      }}
+                      placeholder="Select parent organisation…"
+                      searchable
+                      searchPlaceholder="Search organisations…"
+                    />
+                  </Fld>
+                  <Fld label="Franchise" required error={errors.organisationId?.message}>
+                    <Controller
+                      name="organisationId"
+                      control={control}
+                      render={({ field }) => (
+                        <DropdownSelect
+                          options={franchiseOptions}
+                          value={field.value || null}
+                          onChange={val => field.onChange(val ?? '')}
+                          placeholder={franchiseOrgId ? 'Select franchise…' : 'Select organisation first…'}
+                          searchable
+                          searchPlaceholder="Search franchises…"
+                          error={errors.organisationId?.message}
+                        />
+                      )}
+                    />
+                  </Fld>
+                </div>
+              )}
+
+              {/* Org admin: franchise picker (franchise mode only) */}
+              {!isSuperAdmin && projectFor === 'franchise' && (
+                <Fld label="Franchise" required error={errors.organisationId?.message}>
+                  <Controller
+                    name="organisationId"
+                    control={control}
+                    render={({ field }) => (
+                      <DropdownSelect
+                        options={franchiseOptions}
+                        value={field.value || null}
+                        onChange={val => field.onChange(val ?? '')}
+                        placeholder={franchises.length === 0 ? 'No franchises found' : 'Select franchise…'}
+                        searchable
+                        searchPlaceholder="Search franchises…"
+                      />
+                    )}
+                  />
+                </Fld>
+              )}
+            </div>
+          </div>
 
           {/* ── Two-column area ─────────────────────────────────────────── */}
           <div className={styles.twoCol}>
@@ -372,103 +518,6 @@ const ProjectCreate = () => {
                   <span className={styles.sectionTitle}>Project Info</span>
                 </div>
                 <div className={styles.sectionBody}>
-
-                  {/* Create For toggle */}
-                  <Fld label="Create For">
-                    <div className={styles.forToggle}>
-                      {(['organisation', 'franchise'] as const).map(opt => (
-                        <button
-                          key={opt}
-                          type="button"
-                          className={`${styles.forToggleBtn} ${projectFor === opt ? styles.forToggleBtnActive : ''}`}
-                          onClick={() => {
-                            setProjectFor(opt);
-                            setFranchiseOrgId('');
-                            setValue('organisationId', '');
-                          }}
-                        >
-                          {opt === 'organisation' ? <Building2 size={13} /> : <Users size={13} />}
-                          {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                  </Fld>
-
-                  {/* Super admin: org picker (org mode) or org→franchise pickers (franchise mode) */}
-                  {isSuperAdmin && projectFor === 'organisation' && (
-                    <Fld label="Organisation" required error={errors.organisationId?.message}>
-                      <Controller
-                        name="organisationId"
-                        control={control}
-                        render={({ field }) => (
-                          <DropdownSelect
-                            options={topLevelOrgOptions}
-                            value={field.value || null}
-                            onChange={val => field.onChange(val ?? '')}
-                            placeholder="Select organisation…"
-                            searchable
-                            searchPlaceholder="Search organisations…"
-                          />
-                        )}
-                      />
-                    </Fld>
-                  )}
-
-                  {isSuperAdmin && projectFor === 'franchise' && (
-                    <>
-                      <Fld label="Organisation" required>
-                        <DropdownSelect
-                          options={topLevelOrgOptions}
-                          value={franchiseOrgId || null}
-                          onChange={val => {
-                            setFranchiseOrgId(String(val ?? ''));
-                            setValue('organisationId', '');
-                            setValue('clientId', '');
-                          }}
-                          placeholder="Select parent organisation…"
-                          searchable
-                          searchPlaceholder="Search organisations…"
-                        />
-                      </Fld>
-                      <Fld label="Franchise" required error={errors.organisationId?.message}>
-                        <Controller
-                          name="organisationId"
-                          control={control}
-                          render={({ field }) => (
-                            <DropdownSelect
-                              options={franchiseOptions}
-                              value={field.value || null}
-                              onChange={val => field.onChange(val ?? '')}
-                              placeholder={franchiseOrgId ? 'Select franchise…' : 'Select organisation first…'}
-                              searchable
-                              searchPlaceholder="Search franchises…"
-                              error={errors.organisationId?.message}
-                            />
-                          )}
-                        />
-                      </Fld>
-                    </>
-                  )}
-
-                  {/* Org admin: franchise picker (franchise mode only) */}
-                  {!isSuperAdmin && projectFor === 'franchise' && (
-                    <Fld label="Franchise" required error={errors.organisationId?.message}>
-                      <Controller
-                        name="organisationId"
-                        control={control}
-                        render={({ field }) => (
-                          <DropdownSelect
-                            options={franchiseOptions}
-                            value={field.value || null}
-                            onChange={val => field.onChange(val ?? '')}
-                            placeholder={franchises.length === 0 ? 'No franchises found' : 'Select franchise…'}
-                            searchable
-                            searchPlaceholder="Search franchises…"
-                          />
-                        )}
-                      />
-                    </Fld>
-                  )}
 
                   <Fld label="Project Name" required error={errors.name?.message}>
                     <Input
@@ -522,6 +571,7 @@ const ProjectCreate = () => {
                           value={field.value || null}
                           onChange={val => {
                             field.onChange(val ?? '');
+                            setValue('propertySubTypeId', '');
                             setSpecValues({});
                           }}
                           placeholder="Select property type…"
@@ -531,6 +581,28 @@ const ProjectCreate = () => {
                       )}
                     />
                   </Fld>
+
+                  {selectedPropertyTypeId && (
+                    <Fld label="Property Sub Type" required error={errors.propertySubTypeId?.message}>
+                      <Controller
+                        name="propertySubTypeId"
+                        control={control}
+                        render={({ field }) => (
+                          <DropdownSelect
+                            options={subTypeOptions}
+                            value={field.value || null}
+                            onChange={val => {
+                              field.onChange(val ?? '');
+                              setSpecValues({});
+                            }}
+                            placeholder="Select sub type…"
+                            searchable
+                            searchPlaceholder="Search sub types…"
+                          />
+                        )}
+                      />
+                    </Fld>
+                  )}
                 </div>
               </div>
             </div>
@@ -542,94 +614,125 @@ const ProjectCreate = () => {
               <div className={styles.sectionCard} style={{ flex: 1 }}>
                 <div className={styles.sectionHead}>
                   <span className={styles.sectionIcon}><Users size={13} color="#6B7280" /></span>
-                  <span className={styles.sectionTitle}>Team & Client</span>
+                  <span className={styles.sectionTitle}>Team Assignments</span>
                 </div>
                 <div className={styles.sectionBody}>
-                  {/* Client — full width */}
-                  <Fld label="Client" required error={errors.clientId?.message}>
-                    <Controller
-                      name="clientId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={clientOptions}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder={clients.length === 0 ? 'No clients yet' : 'Select a client…'}
-                          searchable
-                          searchPlaceholder="Search clients…"
-                        />
-                      )}
-                    />
-                  </Fld>
 
-                  <Fld label="Manager" required error={errors.managerId?.message}>
-                    <Controller
-                      name="managerId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(managerUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder={managerUsers.length === 0 ? 'No managers in org' : 'Select manager…'}
-                          searchable
-                          searchPlaceholder="Search managers…"
-                        />
-                      )}
-                    />
-                  </Fld>
+                  {/* ── Role Assignments Panel ─────────────────────────── */}
+                  <div style={{ background: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: 10, padding: '12px 14px' }}>
+                    {/* Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: dynamicAssignments.length > 0 ? 12 : 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Users size={13} color="#6B7280" />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>
+                          Role Assignments
+                          {dynamicAssignments.length > 0 && (
+                            <span style={{ marginLeft: 6, fontWeight: 400, color: '#9CA3AF', fontSize: 11 }}>
+                              · {dynamicAssignments.length} {dynamicAssignments.length === 1 ? 'role' : 'roles'}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDynamicAssignments(prev => [...prev, { roleId: 0, userIds: [] }])}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5, fontSize: 12,
+                          color: '#33AE95', background: 'rgba(51,174,149,0.08)',
+                          border: '1px solid rgba(51,174,149,0.3)', borderRadius: 6,
+                          cursor: 'pointer', fontWeight: 500, padding: '4px 10px', lineHeight: 1,
+                        }}
+                      >
+                        <PlusCircle size={12} /> Map Role & User
+                      </button>
+                    </div>
 
-                  <Fld label="QA" required error={errors.qaId?.message}>
-                    <Controller
-                      name="qaId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(qaUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder={qaUsers.length === 0 ? 'No QA users in org' : 'Select QA…'}
-                          searchable
-                          searchPlaceholder="Search QA…"
-                        />
-                      )}
-                    />
-                  </Fld>
+                    {/* Enforcement notice if needed */}
+                    <p style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 8, marginTop: -4 }}>
+                      Only project-specific roles are shown below. Organisation and Franchise admins have automatic access.
+                    </p>
 
-                  <Fld label="Inspector" required error={errors.inspectorId?.message}>
-                    <Controller
-                      name="inspectorId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(inspectorUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder={inspectorUsers.length === 0 ? 'No inspectors in org' : 'Select inspector…'}
-                          searchable
-                          searchPlaceholder="Search inspectors…"
-                        />
-                      )}
-                    />
-                  </Fld>
+                    {/* Empty state */}
+                    {dynamicAssignments.length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
+                        <Users size={22} color="#D1D5DB" style={{ margin: '0 auto 6px', display: 'block' }} />
+                        <p style={{ fontSize: 12, color: '#9CA3AF', margin: 0 }}>
+                          No role assignments yet — click <strong style={{ color: '#33AE95' }}>Map Role & User</strong> to begin.
+                        </p>
+                      </div>
+                    )}
 
-                  <Fld label="Contractor" required error={errors.contractorId?.message}>
-                    <Controller
-                      name="contractorId"
-                      control={control}
-                      render={({ field }) => (
-                        <DropdownSelect
-                          options={toUserOptions(contractorUsers)}
-                          value={field.value || null}
-                          onChange={val => field.onChange(val ?? '')}
-                          placeholder={contractorUsers.length === 0 ? 'No contractors in org' : 'Select contractor…'}
-                          searchable
-                          searchPlaceholder="Search contractors…"
-                        />
-                      )}
-                    />
-                  </Fld>
+                    {/* Assignment rows */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {dynamicAssignments.map((row, idx) => {
+                        const roleObj = availableRoles.find(r => r.roleId === row.roleId);
+                        const isMulti = !roleObj || roleObj.allowMultipleUsers !== false;
+                        return (
+                          <div key={idx} style={{
+                            background: '#fff', border: '1px solid #E5E7EB',
+                            borderRadius: 8, padding: '10px 12px',
+                          }}>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                              {/* Role selector */}
+                              <div style={{ flex: '0 0 175px', minWidth: 0 }}>
+                                <DropdownSelect
+                                  options={roleOptions}
+                                  value={row.roleId || null}
+                                  onChange={val => setDynamicAssignments(prev => prev.map((a, i) => i === idx ? { ...a, roleId: Number(val), userIds: [] } : a))}
+                                  placeholder="Select role…"
+                                  searchable
+                                  searchPlaceholder="Search roles…"
+                                />
+                                {roleObj?.allowMultipleUsers && (
+                                  <span style={{ fontSize: 10, color: '#6B7280', marginTop: 2, display: 'block' }}>
+                                    Multi-user allowed
+                                  </span>
+                                )}
+                              </div>
+                              {/* User multi-select */}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                {isMulti ? (
+                                  <DropdownSelect
+                                    multiple={true}
+                                    options={toUserOptions(allOrgUsers)}
+                                    value={row.userIds as (string | number)[]}
+                                    onChange={val => setDynamicAssignments(prev => prev.map((a, i) =>
+                                      i === idx ? { ...a, userIds: val as string[] } : a
+                                    ))}
+                                    placeholder={allOrgUsers.length === 0 ? 'Loading users…' : 'Select one or more users…'}
+                                    searchable
+                                    searchPlaceholder="Name, employee ID or role…"
+                                  />
+                                ) : (
+                                  <DropdownSelect
+                                    options={toUserOptions(allOrgUsers)}
+                                    value={row.userIds[0] ?? null}
+                                    onChange={val => setDynamicAssignments(prev => prev.map((a, i) =>
+                                      i === idx ? { ...a, userIds: val ? [String(val)] : [] } : a
+                                    ))}
+                                    placeholder={allOrgUsers.length === 0 ? 'Loading users…' : 'Select user…'}
+                                    searchable
+                                    searchPlaceholder="Name, employee ID or role…"
+                                  />
+                                )}
+                              </div>
+                              {/* Remove row */}
+                              <button
+                                type="button"
+                                onClick={() => setDynamicAssignments(prev => prev.filter((_, i) => i !== idx))}
+                                style={{ flexShrink: 0, padding: 6, color: '#CBD5E1', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 6, display: 'flex', alignItems: 'center', transition: 'color 0.15s', marginTop: 2 }}
+                                onMouseEnter={e => (e.currentTarget.style.color = '#EF4444')}
+                                onMouseLeave={e => (e.currentTarget.style.color = '#CBD5E1')}
+                                title="Remove"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -639,13 +742,16 @@ const ProjectCreate = () => {
           {/* ── Full-width sections ──────────────────────────────────────── */}
           <div className={styles.fullSections}>
 
+
+
+
             {/* Property Specifications — full-width, 2-column grid */}
-            {selectedPropertyTypeId && (
+            {selectedPropertyTypeId && selectedSubTypeId && (
               <div className={styles.sectionCard}>
                 <div className={styles.sectionHead}>
                   <span className={styles.sectionIcon}><ClipboardList size={13} color="#6B7280" /></span>
                   <span className={styles.sectionTitle}>
-                    {selectedPropertyType?.name ?? 'Property'} Specifications
+                    {selectedSubType?.name ?? selectedPropertyType?.name ?? 'Property'} Specifications
                     {(specFields.length + customFields.length) > 0 && (
                       <span style={{ fontWeight: 400, color: '#9CA3AF', marginLeft: 8, textTransform: 'none', letterSpacing: 0 }}>
                         · {specFields.length + customFields.length} question{specFields.length + customFields.length !== 1 ? 's' : ''}
@@ -667,7 +773,7 @@ const ProjectCreate = () => {
                               <DropdownMenuTrigger asChild>
                                 <button
                                   type="button"
-                                  className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none data-[state=open]:border-[#3B82F6] data-[state=open]:ring-1 data-[state=open]:ring-[#3B82F6]/20 ${inputCls(false)}`}
+                                  className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none data-[state=open]:border-[#33AE95] data-[state=open]:ring-1 data-[state=open]:ring-[#33AE95]/20 ${inputCls(false)}`}
                                 >
                                   <span className={specValues[f.label] ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
                                     {specValues[f.label] || 'Select…'}
@@ -684,7 +790,7 @@ const ProjectCreate = () => {
                                   <DropdownMenuItem
                                     key={o}
                                     onSelect={() => setSpecValues(prev => ({ ...prev, [f.label]: o }))}
-                                    className={specValues[f.label] === o ? 'bg-[#EFF6FF] text-[#3B82F6] font-medium' : ''}
+                                    className={specValues[f.label] === o ? 'bg-[#EFF6FF] text-[#33AE95] font-medium' : ''}
                                   >
                                     {o}
                                   </DropdownMenuItem>
@@ -706,34 +812,39 @@ const ProjectCreate = () => {
 
                     {/* Custom fields — in the same grid */}
                     {customFields.map((cf, idx) => (
-                      <div key={idx} className={styles.customFieldCard}>
-                        <div className={styles.customFieldHeader}>
-                          {editingLabelIdx === idx ? (
-                            <input
-                              autoFocus
-                              placeholder="Type question label…"
-                              value={cf.label}
-                              onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, label: e.target.value } : f))}
-                              onBlur={() => setEditingLabelIdx(null)}
-                              onKeyDown={e => e.key === 'Enter' && setEditingLabelIdx(null)}
-                              className={styles.customFieldLabelInput}
-                            />
-                          ) : (
-                            <span className={styles.customFieldLabelText}>
-                              {cf.label || <span style={{ color: '#9CA3AF' }}>Unnamed question</span>}
-                            </span>
-                          )}
-                          <div className={styles.customFieldActions}>
-                            <button type="button" title="Edit label"
-                              onClick={() => setEditingLabelIdx(editingLabelIdx === idx ? null : idx)}
-                              className={styles.customFieldActionBtn}><Pencil size={11} /></button>
-                            <button type="button" title="Remove"
-                              onClick={() => {
-                                setCustomFields(prev => prev.filter((_, i) => i !== idx));
-                                if (editingLabelIdx === idx) setEditingLabelIdx(null);
-                              }}
-                              className={`${styles.customFieldActionBtn} ${styles.danger}`}><Trash2 size={11} /></button>
+                      <div key={idx} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-1.5 h-[20px]">
+                          <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                            {editingLabelIdx === idx ? (
+                              <input
+                                autoFocus
+                                placeholder="Type label…"
+                                value={cf.label}
+                                onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, label: e.target.value } : f))}
+                                onBlur={() => setEditingLabelIdx(null)}
+                                onKeyDown={e => e.key === 'Enter' && setEditingLabelIdx(null)}
+                                className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#33AE95] outline-none w-full"
+                              />
+                            ) : (
+                              <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingLabelIdx(idx)}>
+                                <label
+                                  className="text-[#263B4F] text-sm font-medium group-hover:text-[#33AE95] transition-colors truncate cursor-pointer"
+                                  title="Click to rename"
+                                >
+                                  {cf.label || 'Unnamed Detail'}
+                                </label>
+                                <Pencil size={10} className="text-[#9CA3AF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => setCustomFields(prev => prev.filter((_, i) => i !== idx))}
+                            className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors p-1"
+                            title="Remove field"
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                         <Input
                           placeholder="Enter value…"
@@ -745,122 +856,27 @@ const ProjectCreate = () => {
                     ))}
 
                     {/* Add Custom Detail — next available grid cell */}
-                    <button
-                      type="button"
-                      className={styles.addCustomBtn}
-                      style={{ alignSelf: 'end', minHeight: 42 }}
-                      onClick={() => {
-                        const newIdx = customFields.length;
-                        setCustomFields(prev => [...prev, { label: '', value: '' }]);
-                        setEditingLabelIdx(newIdx);
-                      }}
-                    >
-                      <PlusCircle size={14} /> Add Custom Detail
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className={styles.addCustomBtn}
+                        style={{ height: 40, width: '100%', justifyContent: 'center' }}
+                        onClick={() => {
+                          const newIdx = customFields.length;
+                          setCustomFields(prev => [...prev, { label: '', value: '' }]);
+                          setEditingLabelIdx(newIdx);
+                        }}
+                      >
+                        <PlusCircle size={14} /> Add Custom Detail
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Address */}
-            <div className={styles.sectionCard}>
-              <div className={styles.sectionHead}>
-                <span className={styles.sectionIcon}><MapPin size={13} color="#6B7280" /></span>
-                <span className={styles.sectionTitle}>Address</span>
-              </div>
-              <div className={styles.sectionBody}>
-                <div className={styles.grid2}>
-                  <Fld label="Address Line 1" required error={errors.addressLine1?.message}>
-                    <Input placeholder="Flat / Building no." {...register('addressLine1')} className={inputCls(!!errors.addressLine1)} />
-                  </Fld>
-                  <Fld label="Address Line 2">
-                    <Input placeholder="Area / Colony" {...register('addressLine2')} className={inputCls(false)} />
-                  </Fld>
-                  <Fld label="Street">
-                    <Input placeholder="Street name" {...register('street')} className={inputCls(false)} />
-                  </Fld>
-                  <Fld label="City / District">
-                    <Input placeholder="Mumbai" {...register('city')} className={inputCls(false)} />
-                  </Fld>
-                </div>
-                <div className={styles.grid3}>
-                  <Fld label="State">
-                    <Input placeholder="Maharashtra" {...register('state')} className={inputCls(false)} />
-                  </Fld>
-                  <Fld label="Country">
-                    <Input placeholder="India" {...register('country')} className={inputCls(false)} />
-                  </Fld>
-                  <Fld label="Pincode">
-                    <Input placeholder="400001" {...register('pincode')} className={inputCls(false)} />
-                  </Fld>
-                </div>
-                <div className={styles.grid2}>
-                  <Fld label="Latitude" error={errors.latitude?.message}>
-                    <div className="relative">
-                      <Navigation style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
-                      <Input type="number" step="any" placeholder="19.0760" {...register('latitude')} className={inputCls(!!errors.latitude) + ' pl-9'} />
-                    </div>
-                  </Fld>
-                  <Fld label="Longitude" error={errors.longitude?.message}>
-                    <div className="relative">
-                      <Navigation style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none rotate-90" />
-                      <Input type="number" step="any" placeholder="72.8777" {...register('longitude')} className={inputCls(!!errors.longitude) + ' pl-9'} />
-                    </div>
-                  </Fld>
-                </div>
-              </div>
-            </div>
-
-            {/* Timeline */}
-            <div className={styles.sectionCard}>
-              <div className={styles.sectionHead}>
-                <span className={styles.sectionIcon}><Calendar size={13} color="#6B7280" /></span>
-                <span className={styles.sectionTitle}>Timeline</span>
-              </div>
-              <div className={styles.sectionBody}>
-                <div className={styles.grid2}>
-                  <Fld label="Planned Start Date">
-                    <Input type="date" {...register('startDatePlanned')} className={inputCls(false)} />
-                  </Fld>
-                  <Fld label="Actual Start Date">
-                    <Input type="date" {...register('startDateActual')} className={inputCls(false)} />
-                  </Fld>
-                  <Fld label="Estimated End Date">
-                    <Input type="date" {...register('estimatedCompletionDate')} className={inputCls(false)} />
-                  </Fld>
-                  <Fld label="Actual End Date">
-                    <Input type="date" {...register('actualCompletionDate')} className={inputCls(false)} />
-                  </Fld>
-                </div>
-              </div>
-            </div>
-
-            {/* Financials */}
-            <div className={styles.sectionCard}>
-              <div className={styles.sectionHead}>
-                <span className={styles.sectionIcon}><IndianRupee size={13} color="#6B7280" /></span>
-                <span className={styles.sectionTitle}>Financials</span>
-              </div>
-              <div className={styles.sectionBody}>
-                <div className={styles.grid2}>
-                  <Fld label="Total Budget" error={errors.totalBudget?.message}>
-                    <div className="relative">
-                      <IndianRupee style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
-                      <Input type="number" step="any" placeholder="0.00" {...register('totalBudget')} className={inputCls(!!errors.totalBudget) + ' pl-9'} />
-                    </div>
-                  </Fld>
-                  <Fld label="Contract Value" error={errors.contractValue?.message}>
-                    <div className="relative">
-                      <Banknote style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
-                      <Input type="number" step="any" placeholder="0.00" {...register('contractValue')} className={inputCls(!!errors.contractValue) + ' pl-9'} />
-                    </div>
-                  </Fld>
-                </div>
-              </div>
-            </div>
-
-            {/* Inspection Template (required) */}
-            <div className={styles.sectionCard}>
+            {/* ── Inspection Template (required) — shown first ─────────── */}
+            {/* <div className={styles.sectionCard}>
               <div className={styles.sectionHead}>
                 <span className={styles.sectionIcon}><ClipboardList size={13} color="#33AE95" /></span>
                 <span className={styles.sectionTitle}>
@@ -873,7 +889,6 @@ const ProjectCreate = () => {
                   A unique project copy will be created — the master stays unchanged.
                 </p>
 
-                {/* Searchable dropdown */}
                 <div className={styles.tplDropdownWrap} ref={tplDropdownRef}>
                   <div className={styles.tplDropdownTrigger} onClick={() => setTplDropdownOpen(o => !o)}>
                     <Search size={13} className={styles.tplSearchIcon} />
@@ -917,7 +932,6 @@ const ProjectCreate = () => {
                   <p style={{ margin: 0, fontSize: 12, color: '#EF4444' }}>{tplError}</p>
                 )}
 
-                {/* Preview card */}
                 {selectedTpl && (
                   <div className={styles.tplPreviewCard}>
                     <div className={styles.tplPreviewRow}>
@@ -927,17 +941,8 @@ const ProjectCreate = () => {
                         {selectedTpl.description && <p className={styles.tplPreviewDesc}>{selectedTpl.description}</p>}
                       </div>
                     </div>
-                    <div className={styles.tplPreviewStats}>
-                      <span><Layers size={11} />{selectedTpl.sectionCount} sections</span>
-                      <span><ClipboardList size={11} />{tplTotalItems} items</span>
-                      <span><Globe size={11} />{selectedTpl.scope}</span>
-                    </div>
                     <div className={styles.tplPreviewAction}>
-                      <button
-                        type="submit"
-                        className={styles.tplMapBtn}
-                        disabled={submitting}
-                      >
+                      <button type="submit" className={styles.tplMapBtn} disabled={submitting}>
                         {submitting ? (
                           <><Loader2 size={13} className={styles.spin} /> Mapping…</>
                         ) : (
@@ -948,8 +953,341 @@ const ProjectCreate = () => {
                   </div>
                 )}
               </div>
+            </div> */}
+
+            {/* Address */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionHead}>
+                <span className={styles.sectionIcon}><MapPin size={13} color="#6B7280" /></span>
+                <span className={styles.sectionTitle}>Address</span>
+              </div>
+              <div className={styles.sectionBody}>
+                <div className={styles.grid2}>
+                  <Fld label="Address Line 1" required error={errors.addressLine1?.message}>
+                    <Input placeholder="Flat / Building no." {...register('addressLine1')} className={inputCls(!!errors.addressLine1)} />
+                  </Fld>
+                  <Fld label="Address Line 2">
+                    <Input placeholder="Area / Colony" {...register('addressLine2')} className={inputCls(false)} />
+                  </Fld>
+                  <Fld label="Street">
+                    <Input placeholder="Street name" {...register('street')} className={inputCls(false)} />
+                  </Fld>
+                  <Fld label="City / District" required error={errors.district?.message}>
+                    <Input placeholder="Mumbai" {...register('district')} className={inputCls(!!errors.district)} />
+                  </Fld>
+                </div>
+                <div className={styles.grid3}>
+                  <Fld label="State" required error={errors.state?.message}>
+                    <Input placeholder="Maharashtra" {...register('state')} className={inputCls(!!errors.state)} />
+                  </Fld>
+                  <Fld label="Country" required error={errors.country?.message}>
+                    <Input placeholder="India" {...register('country')} className={inputCls(!!errors.country)} />
+                  </Fld>
+                  <Fld label="Pincode" required error={errors.pincode?.message}>
+                    <Input placeholder="400001" {...register('pincode')} className={inputCls(!!errors.pincode)} />
+                  </Fld>
+                </div>
+                <div className={styles.grid2}>
+                  <Fld label="Latitude" error={errors.latitude?.message}>
+                    <div className="relative">
+                      <Navigation style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
+                      <Input type="number" step="any" placeholder="19.0760" {...register('latitude')} className={inputCls(!!errors.latitude) + ' pl-9'} />
+                    </div>
+                  </Fld>
+                  <Fld label="Longitude" error={errors.longitude?.message}>
+                    <div className="relative">
+                      <Navigation style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none rotate-90" />
+                      <Input type="number" step="any" placeholder="72.8777" {...register('longitude')} className={inputCls(!!errors.longitude) + ' pl-9'} />
+                    </div>
+                  </Fld>
+                </div>
+              </div>
             </div>
 
+            {/* Timeline */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionHead}>
+                <span className={styles.sectionIcon}><Calendar size={13} color="#6B7280" /></span>
+                <span className={styles.sectionTitle}>Timeline</span>
+              </div>
+              <div className={styles.sectionBody}>
+                <div className={styles.grid2}>
+                  <Fld label="Planned Start Date">
+                    <Input type="date" {...register('startDatePlanned')} className={inputCls(false)} />
+                  </Fld>
+                  <Fld label="Actual Start Date">
+                    <Input type="date" {...register('startDateActual')} className={inputCls(false)} />
+                  </Fld>
+                  <Fld label="Estimated End Date">
+                    <Input type="date" {...register('estimatedCompletionDate')} className={inputCls(false)} />
+                  </Fld>
+                  <Fld label="Actual End Date">
+                    <Input type="date" {...register('actualCompletionDate')} className={inputCls(false)} />
+                  </Fld>
+
+                  {/* Extra milestone entries — in the same grid */}
+                  {extraTimelines.map((entry, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-1.5 h-[20px]">
+                        <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                          {editingMilestoneIdx === i ? (
+                            <input
+                              autoFocus
+                              placeholder="Type milestone…"
+                              value={entry.label}
+                              onChange={e => setExtraTimelines(prev => prev.map((t, ti) => ti === i ? { ...t, label: e.target.value } : t))}
+                              onBlur={() => setEditingMilestoneIdx(null)}
+                              onKeyDown={e => e.key === 'Enter' && setEditingMilestoneIdx(null)}
+                              className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#33AE95] outline-none w-full"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingMilestoneIdx(i)}>
+                              <label
+                                className="text-[#263B4F] text-sm font-medium group-hover:text-[#33AE95] transition-colors truncate cursor-pointer"
+                                title="Click to rename"
+                              >
+                                {entry.label || 'Unnamed Milestone'}
+                              </label>
+                              <Pencil size={10} className="text-[#9CA3AF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setExtraTimelines(prev => prev.filter((_, ti) => ti !== i))}
+                          className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors p-1"
+                          title="Remove milestone"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                      <Input
+                        type="date"
+                        value={entry.date}
+                        onChange={e => setExtraTimelines(prev => prev.map((t, ti) => ti === i ? { ...t, date: e.target.value } : t))}
+                        className={inputCls(false)}
+                      />
+                    </div>
+                  ))}
+
+                  {/* Add More Milestone — next available grid cell */}
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <button
+                      type="button"
+                      className={styles.addCustomBtn}
+                      style={{ height: 40, width: '100%', justifyContent: 'center' }}
+                      onClick={() => {
+                        const newIdx = extraTimelines.length;
+                        setExtraTimelines(prev => [...prev, { label: '', date: '' }]);
+                        setEditingMilestoneIdx(newIdx);
+                      }}
+                    >
+                      <PlusCircle size={13} /> Add More Milestone
+                    </button>
+                  </div>
+                </div>
+
+
+              </div>
+            </div>
+
+            {/* Financials */}
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionHead}>
+                <span className={styles.sectionIcon}><IndianRupee size={13} color="#6B7280" /></span>
+                <span className={styles.sectionTitle}>Financials</span>
+              </div>
+              <div className={styles.sectionBody}>
+                <div className={styles.grid2}>
+                  <Fld label="Total Budget" error={errors.totalBudget?.message}>
+                    <div className="relative">
+                      <IndianRupee style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
+                      <Input type="number" step="any" placeholder="0.00" {...register('totalBudget')} className={inputCls(!!errors.totalBudget) + ' pl-9'} />
+                    </div>
+                  </Fld>
+                  <Fld label="Contract Value" error={errors.contractValue?.message}>
+                    <div className="relative">
+                      <Banknote style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
+                      <Input type="number" step="any" placeholder="0.00" {...register('contractValue')} className={inputCls(!!errors.contractValue) + ' pl-9'} />
+                    </div>
+                  </Fld>
+
+                  {/* Extra financial entries — in the same grid */}
+                  {extraFinancials.map((entry, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-1.5 h-[20px]">
+                        <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                          {editingFinancialIdx === i ? (
+                            <input
+                              autoFocus
+                              placeholder="Type label…"
+                              value={entry.label}
+                              onChange={e => setExtraFinancials(prev => prev.map((f, fi) => fi === i ? { ...f, label: e.target.value } : f))}
+                              onBlur={() => setEditingFinancialIdx(null)}
+                              onKeyDown={e => e.key === 'Enter' && setEditingFinancialIdx(null)}
+                              className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#33AE95] outline-none w-full"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingFinancialIdx(i)}>
+                              <label
+                                className="text-[#263B4F] text-sm font-medium group-hover:text-[#33AE95] transition-colors truncate cursor-pointer"
+                                title="Click to rename"
+                              >
+                                {entry.label || 'Unnamed Line Item'}
+                              </label>
+                              <Pencil size={10} className="text-[#9CA3AF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setExtraFinancials(prev => prev.filter((_, fi) => fi !== i))}
+                          className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors p-1"
+                          title="Remove line item"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <IndianRupee style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
+                        <Input
+                          type="number"
+                          step="any"
+                          placeholder="0.00"
+                          value={entry.amount}
+                          onChange={e => setExtraFinancials(prev => prev.map((f, fi) => fi === i ? { ...f, amount: e.target.value } : f))}
+                          className={inputCls(false) + ' pl-9'}
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add More Line Item — next available grid cell */}
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <button
+                      type="button"
+                      className={styles.addCustomBtn}
+                      style={{ height: 40, width: '100%', justifyContent: 'center' }}
+                      onClick={() => {
+                        const newIdx = extraFinancials.length;
+                        setExtraFinancials(prev => [...prev, { label: '', amount: '' }]);
+                        setEditingFinancialIdx(newIdx);
+                      }}
+                    >
+                      <PlusCircle size={13} /> Add More Line Item
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.sectionCard}>
+              <div className={styles.sectionHead}>
+                <span className={styles.sectionIcon}><ClipboardList size={13} color="#33AE95" /></span>
+                <span className={styles.sectionTitle}>
+                  Inspection Template <span style={{ color: '#EF4444', marginLeft: 2 }}>*</span>
+                </span>
+              </div>
+              <div className={styles.sectionBody}>
+                <p className={styles.tplPickerHint}>
+                  Select a master template to assign it when the project is created.
+                  A unique project copy will be created — the master stays unchanged.
+                </p>
+
+                <div className={styles.tplDropdownWrap} ref={tplDropdownRef}>
+                  <div className={styles.tplDropdownTrigger} onClick={() => setTplDropdownOpen(o => !o)}>
+                    <Search size={13} className={styles.tplSearchIcon} />
+                    <input
+                      className={styles.tplSearchInput}
+                      placeholder={selectedTpl ? selectedTpl.title : 'Search templates…'}
+                      value={tplSearch}
+                      onChange={e => { setTplSearch(e.target.value); setTplDropdownOpen(true); setSelectedTpl(null); }}
+                      onFocus={() => setTplDropdownOpen(true)}
+                    />
+                    {selectedTpl ? (
+                      <button
+                        type="button"
+                        className={styles.tplClearBtn}
+                        onClick={e => { e.stopPropagation(); setSelectedTpl(null); setTplSearch(''); }}
+                        title="Clear selection"
+                      >
+                        <X size={12} />
+                      </button>
+                    ) : (
+                      <ChevronDown size={13} className={`${styles.tplChevron} ${tplDropdownOpen ? styles.tplChevronOpen : ''}`} />
+                    )}
+                  </div>
+                  {tplDropdownOpen && (
+                    <div className={styles.tplDropdown}>
+                      {filteredTpls.length === 0 ? (
+                        <div className={styles.tplDropdownEmpty}>No templates found</div>
+                      ) : filteredTpls.map(t => (
+                        <button key={t.id} type="button" className={styles.tplDropdownItem} onClick={() => {
+                          setSelectedTpl(t); setTplSearch(''); setTplDropdownOpen(false); setTplError('');
+                        }}>
+                          <Globe size={12} style={{ flexShrink: 0, color: '#9CA3AF' }} />
+                          <span className={styles.tplDropdownName}>{t.title}</span>
+                          <span className={styles.tplDropdownScope}>{t.scope}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {tplError && (
+                  <p style={{ margin: 0, fontSize: 12, color: '#EF4444' }}>{tplError}</p>
+                )}
+
+                {selectedTpl && (
+                  <div className={styles.tplPreviewCard}>
+                    <div className={styles.tplPreviewRow}>
+                      <div className={styles.tplPreviewIcon}><Globe size={15} color="#33AE95" /></div>
+                      <div>
+                        <p className={styles.tplPreviewTitle}>{selectedTpl.title}</p>
+                        {selectedTpl.description && <p className={styles.tplPreviewDesc}>{selectedTpl.description}</p>}
+                      </div>
+                    </div>
+                    <div className={styles.tplPreviewAction}>
+                      <button
+                        type="button"
+                        className={styles.tplMapBtn}
+                        onClick={async () => {
+                          if (finalizedTemplateId) {
+                            setStep('mapping');
+                            return;
+                          }
+                          try {
+                            setSubmitting(true);
+                            const res = await checklistService.createTemplate({
+                              title: `${selectedTpl.title} (Mapped)`,
+                              description: `Mapped template from ${selectedTpl.title}`,
+                              scope: projectFor === 'franchise' ? 'FRANCHISE' : 'ORGANISATION',
+                              nodes: selectedTpl.nodes || [],
+                              globalOveralls: selectedTpl.globalOveralls || [],
+                              sections: [],
+                            });
+                            setFinalizedTemplateId(res.id!.toString());
+                            setStep('mapping');
+                          } catch (err) {
+                            toast.error('Failed to prepare template mapping');
+                          } finally {
+                            setSubmitting(false);
+                          }
+                        }}
+                        disabled={submitting}
+                      >
+                        {submitting ? <Loader2 size={13} className={styles.spin} /> : <Zap size={13} />}
+                        {finalizedTemplateId ? 'Edit Mapping' : 'Map Template'}
+                      </button>
+                      {finalizedTemplateId && (
+                        <p className={styles.mappingReady}>
+                          ✓ Template mapping ready
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

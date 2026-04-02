@@ -103,6 +103,8 @@ export interface TemplateResponse {
   projectName?: string;
   organisationId?: string;
   organisationName?: string;
+  /** Set when the template's organisation is a franchise (has a parent org). */
+  parentOrgId?: string;
   /** New recursive tree — populated for templates saved in the new format */
   nodes?: TemplateNode[];
   globalOveralls?: string[];

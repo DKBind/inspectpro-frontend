@@ -69,7 +69,13 @@ const ProjectDetail = () => {
     if (!id) return;
     setTemplatesLoading(true);
     checklistService.listProjectTemplates(id)
-      .then(projTpls => { if (projTpls.length > 0) setProjectTemplate(projTpls[0]); })
+      .then(projTpls => {
+        if (projTpls.length > 0) {
+          // Prefer PROJECT-scoped clone over master template
+          const projectScoped = projTpls.find(t => t.scope === 'PROJECT');
+          setProjectTemplate(projectScoped ?? projTpls[0]);
+        }
+      })
       .catch(() => {})
       .finally(() => setTemplatesLoading(false));
   }, [id]);
@@ -119,7 +125,6 @@ const ProjectDetail = () => {
   const hasAddress   = [project.addressLine1, project.addressLine2, project.street, project.city, project.state, project.country, project.pincode].some(Boolean);
   const hasTimeline  = [project.startDatePlanned, project.startDateActual, project.estimatedCompletionDate, project.actualCompletionDate].some(Boolean);
   const hasFinancials = project.totalBudget != null || project.contractValue != null;
-  const hasSpecs = project.projectSpecs && Object.keys(project.projectSpecs).length > 0;
 
   const allAssignments = [
     ...(project.managerName ? [{ role: 'Manager', name: project.managerName }] : []),
@@ -158,11 +163,9 @@ const ProjectDetail = () => {
               <span className={styles.statusDot} style={{ background: statusMeta.color }} />
               {statusMeta.label}
             </span>
-            {project.propertyTypeName && (
               <span className={styles.heroPropType}>
-                <Building2 size={11} /> {project.propertyTypeName}
+                <Building2 size={11} /> {project.propertySubTypeName || project.propertyTypeName}
               </span>
-            )}
             {project.organisationName && (
               <span className={styles.heroPropType}>
                 <Building2 size={11} /> {project.organisationName}
@@ -193,13 +196,16 @@ const ProjectDetail = () => {
           </div>
         </Section>
 
-        {hasSpecs && (() => {
-          const entries = Object.entries(project.projectSpecs as Record<string, string>);
+        {(() => {
+          const allSpecs = project.projectSpecs as Record<string, string> || {};
+          const baseSpecs = Object.entries(allSpecs).filter(([k]) => !k.startsWith('Timeline: ') && !k.startsWith('Finance: '));
+          if (baseSpecs.length === 0) return null;
+
           return (
-            <Section icon={<ClipboardList size={14} color="#3B82F6" />} title={`${project.propertyTypeName ?? 'Property'} Specifications`}>
+            <Section icon={<ClipboardList size={14} color="#3B82F6" />} title={`${project.propertySubTypeName ?? project.propertyTypeName ?? 'Property'} Specifications`}>
               <div className={styles.grid}>
-                {entries.map(([k, v], i) => (
-                  <Field key={k} label={k} value={v || '—'} full={i === entries.length - 1 && entries.length % 2 !== 0} />
+                {baseSpecs.map(([k, v], i) => (
+                  <Field key={k} label={k} value={v || '—'} full={i === baseSpecs.length - 1 && baseSpecs.length % 2 !== 0} />
                 ))}
               </div>
             </Section>
@@ -211,7 +217,7 @@ const ProjectDetail = () => {
             <div className={styles.grid}>
               {project.addressLine1 && <Field label="Line 1" value={project.addressLine1} full />}
               {project.addressLine2 && <Field label="Line 2" value={project.addressLine2} full />}
-              {project.city    && <Field label="City"    value={project.city} />}
+              {project.city && <Field label="District / City" value={project.city} />}
               {project.state   && <Field label="State"   value={project.state} />}
               {project.country && <Field label="Country" value={project.country} />}
               {project.pincode && <Field label="Pincode" value={project.pincode} />}
@@ -219,22 +225,32 @@ const ProjectDetail = () => {
           </Section>
         )}
 
-        {hasTimeline && (
+        {(hasTimeline || Object.keys(project.projectSpecs || {}).some(k => k.startsWith('Timeline: '))) && (
           <Section icon={<Calendar size={14} color="#7C3AED" />} title="Timeline">
             <div className={styles.grid}>
               <Field label="Planned Start"     value={fmt(project.startDatePlanned)} />
               <Field label="Actual Start"      value={fmt(project.startDateActual)} />
               <Field label="Est. Completion"   value={fmt(project.estimatedCompletionDate)} />
               <Field label="Actual Completion" value={fmt(project.actualCompletionDate)} />
+              {Object.entries(project.projectSpecs as Record<string, string> || {})
+                .filter(([k]) => k.startsWith('Timeline: '))
+                .map(([k, v]) => (
+                  <Field key={k} label={k.replace('Timeline: ', '')} value={fmt(v)} />
+                ))}
             </div>
           </Section>
         )}
 
-        {hasFinancials && (
+        {(hasFinancials || Object.keys(project.projectSpecs || {}).some(k => k.startsWith('Finance: '))) && (
           <Section icon={<IndianRupee size={14} color="#16A34A" />} title="Financials">
             <div className={styles.grid}>
               <Field label="Total Budget"   value={fmtMoney(project.totalBudget)} />
               <Field label="Contract Value" value={fmtMoney(project.contractValue)} />
+              {Object.entries(project.projectSpecs as Record<string, string> || {})
+                .filter(([k]) => k.startsWith('Finance: '))
+                .map(([k, v]) => (
+                  <Field key={k} label={k.replace('Finance: ', '')} value={v != null ? `₹ ${v.toLocaleString()}` : '—'} />
+                ))}
             </div>
           </Section>
         )}

@@ -17,7 +17,13 @@ export interface SpecField {
 export interface PropertyTypeResponse {
   id: number;
   name: string;
-  /** spec_template is a parsed array; string fallback kept for safety */
+}
+
+export interface PropertySubTypeResponse {
+  id: number;
+  name: string;
+  propertyTypeId: number;
+  propertyTypeName?: string;
   specTemplate?: SpecField[] | string;
 }
 
@@ -51,5 +57,24 @@ export const propertyTypeService = {
   deletePropertyType: async (id: string): Promise<void> => {
     const res = await api.delete<ApiResponse<null>>(`/property-types/${id}`);
     if (!res.status) throw new Error(res.message || 'Failed to delete property type');
+  },
+
+  listPropertySubTypes: async (typeId?: number): Promise<PropertySubTypeResponse[]> => {
+    const url = typeId ? `/property-sub-types?typeId=${typeId}` : '/property-sub-types';
+    const res = await api.get<ApiResponse<PropertySubTypeResponse[]>>(url);
+    if (!res.status) throw new Error(res.message || 'Failed to fetch property sub types');
+    return (res.object as PropertySubTypeResponse[]) ?? [];
+  },
+
+  getPropertySubType: async (id: number): Promise<PropertySubTypeResponse> => {
+    const res = await api.get<ApiResponse<PropertySubTypeResponse>>(`/property-sub-types/${id}`);
+    if (!res.status) throw new Error(res.message || 'Failed to fetch property sub type');
+    return res.object as PropertySubTypeResponse;
+  },
+
+  createPropertySubType: async (data: { name: string; propertyTypeId: number; specTemplate?: SpecField[] }): Promise<PropertySubTypeResponse> => {
+    const res = await api.post<ApiResponse<PropertySubTypeResponse>>('/property-sub-types', data);
+    if (!res.status) throw new Error(res.message || 'Failed to create sub type');
+    return res.object as PropertySubTypeResponse;
   },
 };

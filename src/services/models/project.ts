@@ -38,8 +38,10 @@ export interface ProjectResponse {
 
   propertyTypeId?: number;
   propertyTypeName?: string;
+  propertySubTypeId?: number;
+  propertySubTypeName?: string;
   projectSpecs?: Record<string, string>;
-  specTemplate?: { fields: Array<{ key: string; label: string; type: string; required?: boolean; options?: string[] }> };
+  specTemplate?: any;
 
   createdAt?: string;
   assignments?: ProjectAssignmentInfo[];
@@ -60,7 +62,7 @@ export interface ProjectAssignmentInfo {
 
 export interface ProjectRequest {
   name: string;
-  clientId: string;
+  clientId?: string;
   managerId?: string;
   organisationId?: string;
   assignments?: ProjectAssignmentInput[];
@@ -86,5 +88,6 @@ export interface ProjectRequest {
   contractValue?: number;
 
   propertyTypeId?: number;
+  propertySubTypeId?: number;
   projectSpecs?: Record<string, string>;
 }

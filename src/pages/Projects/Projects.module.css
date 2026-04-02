@@ -243,7 +243,7 @@
 
 /* "…more" link in truncated description */
 .descMore {
-  color: #3B82F6;
+  color: #33AE95;
   font-weight: 600;
   margin-left: 1px;
 }
@@ -517,7 +517,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(51,174,149,0.3);
+  box-shadow: 0 4px 12px rgba(51, 174, 149, 0.3);
 }
 
 .viewHeroMeta {
@@ -663,8 +663,13 @@
   font-weight: 700;
 }
 
-.viewFinAmountGreen { color: #059669; }
-.viewFinAmountBlue  { color: #2563EB; }
+.viewFinAmountGreen {
+  color: #059669;
+}
+
+.viewFinAmountBlue {
+  color: #2563EB;
+}
 
 /* Specs view block */
 .viewSpecsBlock {

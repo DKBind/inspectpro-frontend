@@ -13,6 +13,7 @@ import type {
   InspectionWithResultsResponse,
   InspectionResultResponse,
 } from '@/services/models/checklist';
+import { useAuthStore } from '@/store/useAuthStore';
 
 // ─── Child Components ────────────────────────────────────────────────────────
 import InspectionImageUpload from './components/InspectionImageUpload';
@@ -118,6 +119,8 @@ function nodeMatchesSearch(node: NavNode, q: string): boolean {
 export default function InspectionExecution() {
   const { inspectionId } = useParams<{ inspectionId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isInspector = !user?.isSuperAdmin && user?.role?.toLowerCase() === 'inspector';
 
   const [inspection, setInspection] = useState<InspectionWithResultsResponse | null>(null);
   const [results, setResults] = useState<LocalResult[]>([]);
@@ -128,7 +131,13 @@ export default function InspectionExecution() {
   // Navigation
   const [activePath, setActivePath] = useState<string[]>([]);
   const [openNavSections, setOpenNavSections] = useState<Set<string>>(new Set());
-  const [localEmptyFolders, setLocalEmptyFolders] = useState<string[]>([]);
+  const [localEmptyFolders, setLocalEmptyFolders] = useState<string[]>(() => {
+    if (!inspectionId) return [];
+    try {
+      const raw = localStorage.getItem(`insp-folders-${inspectionId}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  });
 
   // Section-complete prompt
   const [showCompletePrompt, setShowCompletePrompt] = useState(false);
@@ -234,6 +243,16 @@ export default function InspectionExecution() {
   }, [inspectionId, localEmptyFolders]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Persist empty folders to localStorage whenever they change
+  useEffect(() => {
+    if (!inspectionId) return;
+    if (localEmptyFolders.length === 0) {
+      localStorage.removeItem(`insp-folders-${inspectionId}`);
+    } else {
+      localStorage.setItem(`insp-folders-${inspectionId}`, JSON.stringify(localEmptyFolders));
+    }
+  }, [localEmptyFolders, inspectionId]);
 
   // Auto-retry for empty results
   useEffect(() => {
@@ -394,6 +413,7 @@ export default function InspectionExecution() {
       }
       await checklistService.completeInspection(inspectionId!);
       if (draftKey) localStorage.removeItem(draftKey);
+      if (inspectionId) localStorage.removeItem(`insp-folders-${inspectionId}`);
       toast.success('Inspection submitted! Status set to COMPLETED.');
       navigate(-1);
     } catch {
@@ -423,6 +443,8 @@ export default function InspectionExecution() {
   }
 
   const isCompleted = inspection.status === 'COMPLETED' || inspection.status === 'SUBMITTED';
+  // Non-inspectors (super admin, org, franchise) can view but not perform inspections
+  const readOnly = isCompleted || !isInspector;
 
   // Filtered tree for search
   const filteredTree = navSearch
@@ -457,6 +479,16 @@ export default function InspectionExecution() {
             border: '1px solid rgba(34,197,94,0.25)',
           }}>
             <CheckCircle2 size={11} /> Completed
+          </span>
+        )}
+        {!isCompleted && !isInspector && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+            background: 'rgba(245,158,11,0.1)', color: '#b45309',
+            border: '1px solid rgba(245,158,11,0.25)',
+          }}>
+            View Only
           </span>
         )}
       </header>
@@ -614,7 +646,7 @@ export default function InspectionExecution() {
                       )}
 
                       {/* Node actions (matching TemplateBuilder exactly) */}
-                      {!isRenaming && !isCompleted && (
+                      {!isRenaming && !readOnly && (
                         <div className={tbCss.nodeActions} onClick={e => e.stopPropagation()}>
                           {/* Add child (+ icon — matching TemplateBuilder's "Add Child") */}
                           <button
@@ -692,7 +724,7 @@ export default function InspectionExecution() {
           </div>
 
           {/* Sidebar footer — always creates folder */}
-          {!isCompleted && (
+          {!readOnly && (
             <div className={tbCss.sidebarFooter}>
               <button
                 className={tbCss.sidebarAddBtn}
@@ -968,7 +1000,7 @@ export default function InspectionExecution() {
                               <div
                                 className={tbCss.itemRow}
                                 style={{ paddingLeft: 13, cursor: 'pointer' }}
-                                onDoubleClick={() => !isCompleted && setEditItemModal(result)}
+                                onDoubleClick={() => !readOnly && setEditItemModal(result)}
                               >
                                 {/* Label */}
                                 <span className={tbCss.itemLabel} style={{ fontSize: 13.5, fontWeight: 500, color: '#263B4F' }}>
@@ -980,7 +1012,7 @@ export default function InspectionExecution() {
 
                                 {/* Pass/Fail action */}
                                 <div style={{ flexShrink: 0 }}>
-                                  {isCompleted ? (
+                                  {readOnly ? (
                                     <span className={`ie-readonly-status ${isCorrect ? 'ie-readonly-pass' : isDamaged ? 'ie-readonly-fail' : ''}`}>
                                       {isCorrect
                                         ? <><CheckCircle2 size={12} /> {result.logicType === 'SELECTION' ? 'Selected' : 'Pass'}</>
@@ -1011,7 +1043,7 @@ export default function InspectionExecution() {
                                 </div>
 
                                 {/* Item actions — Sort, Copy local, Move to section, Copy to section, Delete */}
-                                {!isCompleted && (
+                                {!readOnly && (
                                   <div className={tbCss.itemActionsGroup} onClick={e => e.stopPropagation()}>
                                     {/* Sort up/down */}
                                     <div className={tbCss.itemSortBtns}>
@@ -1067,42 +1099,38 @@ export default function InspectionExecution() {
                                 )}
                               </div>
 
-                              {/* Item details expansion (photos, comments) */}
-                              {(isDamaged || isCorrect) && !isCompleted && (
+                              {/* Item details expansion — DAMAGE only (photos, severity, comments) */}
+                              {isDamaged && !readOnly && (
                                 <div className="ie-defect-expand">
                                   <div className="ie-photo-row" style={{ marginTop: 12 }}>
                                     <div style={{ marginTop: 10 }}>
-                                      <InspectionImageUpload resultId={result.id} initialImages={result.images || []} readOnly={isCompleted} />
+                                      <InspectionImageUpload resultId={result.id} initialImages={result.images || []} readOnly={false} />
                                     </div>
                                   </div>
-                                  {isDamaged && (
-                                    <div className="ie-severity-row">
-                                      <span className="ie-severity-label">Severity:</span>
-                                      {(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as Severity[]).map(sev => (
-                                        <button key={sev} type="button"
-                                          className={`ie-sev-btn ie-sev-${sev.toLowerCase()} ${result.severity === sev ? 'ie-sev-active' : ''}`}
-                                          onClick={() => setSeverityLocal(result.id, sev)}>
-                                          {sev}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
+                                  <div className="ie-severity-row">
+                                    <span className="ie-severity-label">Severity:</span>
+                                    {(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as Severity[]).map(sev => (
+                                      <button key={sev} type="button"
+                                        className={`ie-sev-btn ie-sev-${sev.toLowerCase()} ${result.severity === sev ? 'ie-sev-active' : ''}`}
+                                        onClick={() => setSeverityLocal(result.id, sev)}>
+                                        {sev}
+                                      </button>
+                                    ))}
+                                  </div>
                                   <textarea className="ie-comment-area" rows={2}
                                     placeholder="Add notes or observations…"
                                     value={result.comments ?? ''}
                                     onChange={e => updateComment(result.id, e.target.value)}
-                                    // Save on blur with current status
-                                    onBlur={() => saveResult(result.id, (result.responseValue as any) || null, result.comments)}
                                   />
                                 </div>
                               )}
-                              {/* Completed view — only render if there's something to show */}
-                              {(isDamaged || isCorrect) && isCompleted && (result.images?.length || (isDamaged && result.severity) || result.comments) ? (
+                              {/* Completed view — DAMAGE only, only if there's something to show */}
+                              {isDamaged && isCompleted && (result.images?.length || result.severity || result.comments) ? (
                                 <div className="ie-defect-expand" style={{ pointerEvents: 'none' }}>
                                   {result.images?.length ? (
                                     <InspectionImageUpload resultId={result.id} initialImages={result.images} readOnly />
                                   ) : null}
-                                  {isDamaged && result.severity && (
+                                  {result.severity && (
                                     <div className="ie-severity-row">
                                       <span className="ie-severity-label">Severity:</span>
                                       <span className={`ie-sev-btn ie-sev-${result.severity.toLowerCase()} ie-sev-active`}>{result.severity}</span>
@@ -1120,7 +1148,7 @@ export default function InspectionExecution() {
                       </div>
 
                       {/* Add item footer — matching TemplateBuilder's panelFooterBtn */}
-                      {!isCompleted && (
+                      {!readOnly && (
                         <button
                           className={`${tbCss.panelFooterBtn} ${isSel ? tbCss.panelFooterBtnSel : tbCss.panelFooterBtnDmg}`}
                           onClick={() => setAddItemModalOpen(true)}
@@ -1133,7 +1161,7 @@ export default function InspectionExecution() {
                 })()}
 
                 {/* Section-complete prompt */}
-                {!isCompleted && isPanelComplete && showCompletePrompt && nextPanelPath && (
+                {!readOnly && isPanelComplete && showCompletePrompt && nextPanelPath && (
                   <div className="ie-complete-prompt" style={{ marginTop: 16 }}>
                     <div className="ie-complete-icon"><CheckCircle2 size={26} /></div>
                     <div className="ie-complete-text">
@@ -1148,7 +1176,7 @@ export default function InspectionExecution() {
                 )}
 
                 {/* All done banner */}
-                {pct === 100 && !isCompleted && (
+                {pct === 100 && !readOnly && (
                   <div className="ie-all-done" style={{ marginTop: 16 }}>
                     <CheckCircle2 size={20} style={{ color: '#33AE95' }} />
                     <span>All items answered! Ready to submit.</span>
@@ -1160,7 +1188,7 @@ export default function InspectionExecution() {
           </div>
 
           {/* ─── Panel Toolbar (folder view only) — matching TemplateBuilder's panelToolbar ─── */}
-          {currentNode && !currentNode.isLeaf && (
+          {currentNode && !currentNode.isLeaf && !readOnly && (
             <div className={tbCss.panelToolbar} style={{ marginBottom: 55, borderBottom: '1px solid #E5E7EB' }}>
               {/* Left group: actions on focused panel */}
               <div className={tbCss.panelToolbarGroup}>
@@ -1246,7 +1274,7 @@ export default function InspectionExecution() {
                 Next: {nextPanelPath.slice(-1)[0]} <ChevronRight size={13} />
               </button>
             )}
-            {!isCompleted && (
+            {!readOnly && (
               <button
                 className={`${tbCss.fBtn} ${tbCss.fBtnPrimary}`}
                 onClick={handleSubmit}
