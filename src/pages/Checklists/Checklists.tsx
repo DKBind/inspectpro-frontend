@@ -6,6 +6,7 @@ import {
   Check, BookOpen, AlertTriangle,
   Layers, Eye, Copy, Download, Search,
   Home, Warehouse, Zap, Droplets, X, Pencil,
+  ShieldAlert,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -13,8 +14,9 @@ import { checklistService } from '@/services/checklistService';
 import type { TemplateResponse, TemplateScope } from '@/services/models/checklist';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent,
 } from '@/components/shared-ui/Dialog/dialog';
+
 import Pagination from '@/components/shared-ui/Pagination/Pagination';
 import styles from './Checklists.module.css';
 
@@ -47,23 +49,25 @@ function formatDate(d?: string) {
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 15;
-type TabKey = 'all' | 'global' | 'org';
+type TabKey = 'global' | 'organisation' | 'franchise';
 
 export default function Checklists() {
   const navigate = useNavigate();
   const { user: authUser } = useAuthStore();
   const isSuperAdmin = authUser?.isSuperAdmin === true || authUser?.role === 'super_admin';
+  const isFranchiseAdmin = !isSuperAdmin && (authUser?.role?.toLowerCase().includes('franchise') === true);
+  const isOrgAdmin = !isSuperAdmin && !isFranchiseAdmin;
 
   const [templates, setTemplates] = useState<TemplateResponse[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<TabKey>('all');
+  const [tab, setTab] = useState<TabKey>('global');
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState('');
 
   const [deleteTarget, setDeleteTarget] = useState<TemplateResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [viewTarget, setViewTarget] = useState<TemplateResponse | null>(null);
-  const [viewLoading, setViewLoading] = useState(false);
+
   const [cloning, setCloning] = useState<Set<string>>(new Set());
 
   // Quick preview popup
@@ -74,7 +78,7 @@ export default function Checklists() {
     setLoading(true);
     try {
       const data = await checklistService.listGlobalTemplates();
-      setTemplates(data.filter((t) => t.scope !== 'SCRATCH'));
+      setTemplates(data.filter((t) => t.scope !== 'SCRATCH' && t.scope !== 'PROJECT'));
     } catch (e: unknown) {
       toast.error((e as Error).message || 'Failed to load templates');
     } finally {
@@ -84,11 +88,30 @@ export default function Checklists() {
 
   useEffect(() => { load(); }, []);
 
+  // ── Role-based tab visibility ──────────────────────────────────────────────
+  type TabDef = { key: TabKey; label: string };
+  const allTabs: TabDef[] = [
+    { key: 'global', label: '🌐 Global' },
+    { key: 'organisation', label: '🏢 Organisation' },
+    { key: 'franchise', label: '🏪 Franchise' },
+  ];
+
+  // Org Admin: Global + Organisation. Franchise Admin / Super Admin: all 3
+  const visibleTabs = isOrgAdmin
+    ? allTabs.filter(t => t.key !== 'franchise')
+    : allTabs;
+
+  // Parent-org tab = Franchise Admin viewing the "Organisation" tab (read-only)
+  const isParentOrgTab = isFranchiseAdmin && tab === 'organisation';
+
   // ── Filters ──────────────────────────────────────────────────────────────────
   const byTab = templates.filter((t) => {
     if (tab === 'global') return t.scope === 'GLOBAL';
-    if (tab === 'org') return t.scope === 'ORGANISATION';
-    return t.scope !== 'PROJECT';
+    // Organisation tab: ORGANISATION scope templates where the org has NO parent (pure org)
+    if (tab === 'organisation') return t.scope === 'ORGANISATION' && !t.parentOrgId;
+    // Franchise tab: ORGANISATION scope templates where the org IS a franchise (has a parent)
+    if (tab === 'franchise') return t.scope === 'ORGANISATION' && !!t.parentOrgId;
+    return false;
   });
   const filtered = search.trim()
     ? byTab.filter((t) => {
@@ -100,20 +123,11 @@ export default function Checklists() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  // ── Actions ──────────────────────────────────────────────────────────────────
-  const handleView = async (t: TemplateResponse) => {
-    setViewTarget(t);
-    setViewLoading(true);
-    try {
-      const full = await checklistService.getTemplate(t.id as string);
-      setViewTarget(full);
-    } catch {
-      // keep showing partial data on error
-    } finally {
-      setViewLoading(false);
-    }
-  };
+  const canCreate = !isParentOrgTab;
+  const canEdit = (t: TemplateResponse) => !isParentOrgTab && !t.isLocked;
+  const canDelete = (_t: TemplateResponse) => !isParentOrgTab && (isSuperAdmin || !isOrgAdmin);
 
+  // ── Actions ──────────────────────────────────────────────────────────────────
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -129,15 +143,16 @@ export default function Checklists() {
     }
   };
 
-  const handleClone = async (t: TemplateResponse) => {
+  const handleClone = async (t: TemplateResponse, targetScope?: TemplateScope) => {
     const tid = t.id as string;
     setCloning((prev) => new Set([...prev, tid]));
     try {
       const full = await checklistService.getTemplate(tid);
+      const clonedScope = targetScope ?? (full.scope === 'PROJECT' ? 'ORGANISATION' : full.scope);
       const cloned = await checklistService.createTemplate({
         title: `Copy of ${full.title}`,
         description: full.description,
-        scope: full.scope === 'PROJECT' ? 'ORGANISATION' : full.scope,
+        scope: clonedScope,
         sections: full.sections as any[],
       });
       toast.success(`"${cloned.title}" created — opening builder…`);
@@ -166,11 +181,6 @@ export default function Checklists() {
   };
 
   // ── Preview popup handlers ────────────────────────────────────────────────────
-  const showPreview = (e: React.MouseEvent, tpl: TemplateResponse) => {
-    if (previewTimer.current) clearTimeout(previewTimer.current);
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setHoverPreview({ tpl, x: rect.right + 10, y: rect.top - 4 });
-  };
   const hidePreview = () => {
     previewTimer.current = setTimeout(() => setHoverPreview(null), 180);
   };
@@ -192,21 +202,35 @@ export default function Checklists() {
     <div className={styles.page}>
       {/* Tabs + New Template */}
       <div className={styles.tabs}>
-        {([
-          { key: 'all', label: 'All Templates' },
-          { key: 'global', label: '🌐 Global' },
-          { key: 'org', label: '🏢 Organisation' },
-        ] as { key: TabKey; label: string }[]).map((t) => (
+        {visibleTabs.map((t) => (
           <button key={t.key} className={`${styles.tab} ${tab === t.key ? styles.tabActive : ''}`}
-            onClick={() => { setTab(t.key); setCurrentPage(1); }}>
+            onClick={() => { setTab(t.key); setCurrentPage(1); setSearch(''); }}>
             {t.label}
           </button>
         ))}
-        <button className={styles.createBtn}
-          onClick={() => navigate(`/templates/new/builder?scope=${isSuperAdmin ? 'GLOBAL' : 'ORGANISATION'}`)}>
-          <Plus size={15} /> New Template
-        </button>
+        {canCreate && (
+          <button className={styles.createBtn}
+            onClick={() => navigate(`/templates/new/builder?scope=${isSuperAdmin ? 'GLOBAL' : 'ORGANISATION'}`)}>
+            <Plus size={15} /> New Template
+          </button>
+        )}
       </div>
+
+      {/* Read-only notice for Franchise Admin on Parent Org tab */}
+      {isParentOrgTab && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 9,
+          padding: '10px 14px', borderRadius: 10, marginBottom: 14,
+          background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)',
+          fontSize: 12.5, color: '#92400E',
+        }}>
+          <ShieldAlert size={14} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>
+            <strong>Parent Organisation Templates (Read-Only).</strong>{' '}
+            You can view and <strong>Clone</strong> these into your Franchise tab, but cannot edit or delete them.
+          </span>
+        </div>
+      )}
 
       {/* Panel */}
       <div className={styles.panel}>
@@ -251,7 +275,6 @@ export default function Checklists() {
                 <th style={{ width: '34%' }}>Template</th>
                 <th>Scope</th>
                 <th>Lock</th>
-                <th>Sections</th>
                 <th>Organisation</th>
                 <th>Last Updated</th>
                 <th style={{ width: 140, textAlign: 'center' }}>Actions</th>
@@ -272,14 +295,14 @@ export default function Checklists() {
                         <div style={{ minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                             <p className={styles.tplName}>{t.title}</p>
-                            <button
-                              className={styles.previewBtn}
-                              onMouseEnter={(e) => showPreview(e, t)}
-                              onMouseLeave={hidePreview}
-                              title="Quick preview"
-                            >
-                              <Eye size={11} />
-                            </button>
+                            {isParentOrgTab && (
+                              <span style={{
+                                fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 8,
+                                background: 'rgba(245,158,11,0.1)', color: '#b45309',
+                                border: '1px solid rgba(245,158,11,0.2)', textTransform: 'uppercase',
+                                letterSpacing: '0.04em', flexShrink: 0,
+                              }}>Read-only</span>
+                            )}
                           </div>
                           {t.description && (
                             <p className={styles.tplMeta} style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -299,18 +322,6 @@ export default function Checklists() {
                         : <span className={styles.unlocked}><Unlock size={11} /> Open</span>}
                     </td>
 
-                    {/* Sections */}
-                    <td>
-                      <span className={styles.sectionCount}>
-                        <Layers size={12} />{t.sectionCount ?? t.sections?.length ?? 0}
-                      </span>
-                    </td>
-
-                    {/* Version (frontend placeholder) */}
-                    {/* <td>
-                      <span className={styles.versionBadge}>v1.{t.sectionCount ?? 0}</span>
-                    </td> */}
-
                     {/* Organisation */}
                     <td style={{ color: '#6B7280', fontSize: 12.5 }}>
                       {t.organisationName ?? <span style={{ color: '#D1D5DB' }}>—</span>}
@@ -324,31 +335,44 @@ export default function Checklists() {
                     {/* Actions */}
                     <td>
                       <div className={styles.actions} style={{ justifyContent: 'center' }}>
-                        {/* View */}
-                        <button className={styles.actionBtn} title="View details" onClick={() => handleView(t)}>
+                        {/* View — navigate to builder in read-only mode */}
+                        <button
+                          className={styles.actionBtn}
+                          title="View template"
+                          onClick={() => navigate(`/templates/${t.id}/builder?view=true`)}
+                        >
                           <Eye size={14} />
                         </button>
-                        {/* Open Builder (greyed if locked) */}
+                        {/* Open Builder (hidden if read-only tab or locked) */}
+                        {!isParentOrgTab && (
+                          <button
+                            className={`${styles.actionBtn} ${t.isLocked ? styles.actionBtnLocked : ''}`}
+                            title={t.isLocked ? 'Template is locked' : 'Open Builder'}
+                            onClick={() => canEdit(t) && navigate(`/templates/${t.id}/builder`)}
+                            disabled={t.isLocked}
+                          >
+                            {t.isLocked ? <Lock size={14} /> : <Pencil size={14} />}
+                          </button>
+                        )}
+                        {/* Clone — labelled "Clone" on parent-org tab */}
                         <button
-                          className={`${styles.actionBtn} ${t.isLocked ? styles.actionBtnLocked : ''}`}
-                          title={t.isLocked ? 'Template is locked' : 'Open Builder'}
-                          onClick={() => !t.isLocked && navigate(`/templates/${t.id}/builder`)}
-                          disabled={t.isLocked}
+                          className={styles.actionBtn}
+                          title={isParentOrgTab ? 'Clone to My Franchise' : 'Duplicate template'}
+                          onClick={() => handleClone(t, isParentOrgTab ? 'ORGANISATION' : undefined)}
+                          disabled={isCloning}
                         >
-                          {t.isLocked ? <Lock size={14} /> : <Pencil size={14} />}
-                        </button>
-                        {/* Clone */}
-                        <button className={styles.actionBtn} title="Duplicate template" onClick={() => handleClone(t)} disabled={isCloning}>
                           {isCloning ? <RefreshCw size={14} className={styles.spinner} style={{ width: 14, height: 14, marginBottom: 0 }} /> : <Copy size={14} />}
                         </button>
                         {/* Export */}
                         <button className={styles.actionBtn} title="Export as JSON" onClick={() => handleExport(t)}>
                           <Download size={14} />
                         </button>
-                        {/* Delete */}
-                        <button className={`${styles.actionBtn} ${styles.danger}`} title="Delete" onClick={() => setDeleteTarget(t)}>
-                          <Trash2 size={14} />
-                        </button>
+                        {/* Delete (hidden on read-only tab) */}
+                        {canDelete(t) && (
+                          <button className={`${styles.actionBtn} ${styles.danger}`} title="Delete" onClick={() => setDeleteTarget(t)}>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -429,42 +453,56 @@ export default function Checklists() {
               )}
             </div>
             <div className={styles.viewPanelBody}>
-              {viewLoading ? (
-                <div className={styles.viewPanelEmpty}>
-                  <RefreshCw size={20} className={styles.spinner} style={{ marginBottom: 8 }} />
-                  Loading sections…
-                </div>
-              ) : (viewTarget.sections?.length ?? 0) === 0 ? (
-                <div className={styles.viewPanelEmpty}>No sections in this template</div>
-              ) : viewTarget.sections?.map((sec, si) => (
-                <div key={si} className={styles.viewPanelSection}>
-                  <div className={styles.viewPanelSectionHead}>
-                    <Layers size={13} style={{ color: '#9CA3AF' }} />
-                    <span className={styles.viewPanelSectionName}>{sec.sectionName}</span>
-                    <span className={styles.viewPanelSectionCount}>{sec.items?.length ?? 0} items</span>
-                  </div>
-                  <div className={styles.viewPanelSectionBody}>
-                    {sec.items?.map((item, ii) => (
-                      <div key={ii} className={styles.viewPanelItem}>
-                        <span className={styles.viewPanelItemDot}><Check size={10} /></span>
-                        <div>
-                          <p className={styles.viewPanelItemLabel}>{item.label}</p>
-                          <span className={styles.viewPanelItemType}>{item.responseType}</span>
-                        </div>
+              {(viewTarget.nodes?.length ?? 0) > 0 ? (
+                viewTarget.nodes!.map((node, ni) => (
+                  <div key={ni} className={styles.viewPanelSection}>
+                    <div className={styles.viewPanelSectionHead}>
+                      <FolderOpen size={13} style={{ color: '#9CA3AF' }} />
+                      <span className={styles.viewPanelSectionName}>{node.name}</span>
+                      <span className={styles.viewPanelSectionCount}>
+                        {node.type === 'FOLDER' ? `${node.children?.length ?? 0} children` : node.panelType ?? ''}
+                      </span>
+                    </div>
+                    {node.children && node.children.length > 0 && (
+                      <div className={styles.viewPanelSectionBody}>
+                        {node.children.map((child, ci) => (
+                          <div key={ci} className={styles.viewPanelItem}>
+                            <span className={styles.viewPanelItemDot}>
+                              {child.type === 'FOLDER' ? <Layers size={10} /> : <Check size={10} />}
+                            </span>
+                            <div>
+                              <p className={styles.viewPanelItemLabel}>{child.name}</p>
+                              {child.panelType && <span className={styles.viewPanelItemType}>{child.panelType}</span>}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
+                ))
+              ) : (
+                <div className={styles.viewPanelEmpty} style={{ flexDirection: 'column', gap: 10 }}>
+                  <Layers size={28} style={{ color: '#D1D5DB' }} />
+                  <p style={{ margin: 0, fontWeight: 600, color: '#374151' }}>No content yet</p>
+                  <p style={{ margin: 0, fontSize: 12, color: '#9CA3AF' }}>Open the builder to add folders and items.</p>
                 </div>
-              ))}
+              )}
             </div>
             <div className={styles.viewPanelFooter}>
               <button className={styles.viewPanelCancelBtn} onClick={() => setViewTarget(null)}>Close</button>
-              {!viewTarget.isLocked && (
+              {isParentOrgTab ? (
+                <button
+                  className={styles.viewPanelOpenBtn}
+                  onClick={() => { handleClone(viewTarget, 'ORGANISATION'); setViewTarget(null); }}
+                >
+                  <Copy size={13} /> Clone to My Franchise
+                </button>
+              ) : (
                 <button
                   className={styles.viewPanelOpenBtn}
                   onClick={() => { navigate(`/templates/${viewTarget!.id}/builder`); setViewTarget(null); }}
                 >
-                  <Pencil size={13} />Open Builder
+                  <Pencil size={13} /> Open Builder
                 </button>
               )}
             </div>
@@ -474,22 +512,47 @@ export default function Checklists() {
 
       {/* Delete Confirm */}
       <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Template</DialogTitle>
-          </DialogHeader>
-          <div className={styles.deleteBody}>
-            <div className={styles.deleteIcon}><AlertTriangle size={20} /></div>
+        <DialogContent className="sm:max-w-md" style={{ padding: 0, overflow: 'hidden', borderRadius: 14 }}>
+          <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #F3F4F6' }}>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#263B4F' }}>Delete Template</p>
+          </div>
+          <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+              background: 'rgba(220,38,38,0.08)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', color: '#dc2626',
+            }}>
+              <AlertTriangle size={20} />
+            </div>
             <div>
-              <p className={styles.deleteTitle}>Are you sure?</p>
-              <p className={styles.deleteText}>
-                "<strong>{deleteTarget?.title}</strong>" will be permanently deleted and cannot be recovered.
+              <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 600, color: '#263B4F' }}>Are you sure?</p>
+              <p style={{ margin: 0, fontSize: 13, color: '#6B7280', lineHeight: 1.5 }}>
+                <strong style={{ color: '#263B4F' }}>&#8220;{deleteTarget?.title}&#8221;</strong> will be permanently deleted and cannot be recovered.
               </p>
             </div>
           </div>
-          <div className={styles.deleteFooter}>
-            <button className={styles.deleteCancelBtn} onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</button>
-            <button className={styles.deleteConfirmBtn} onClick={handleDelete} disabled={deleting}>
+          <div style={{
+            padding: '14px 24px', borderTop: '1px solid #F3F4F6', background: '#FAFAFA',
+            display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10,
+          }}>
+            <button
+              style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid #E5E7EB', background: 'white', color: '#263B4F', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
+              Cancel
+            </button>
+            <button
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '8px 18px', borderRadius: 8, border: 'none',
+                background: '#DC2626', color: 'white', fontSize: 13, fontWeight: 600,
+                cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.65 : 1,
+                boxShadow: '0 2px 8px rgba(220,38,38,0.25)',
+              }}
+              onClick={handleDelete}
+              disabled={deleting}
+            >
               <Trash2 size={13} />{deleting ? 'Deleting…' : 'Delete Template'}
             </button>
           </div>

@@ -184,11 +184,19 @@ function sectionsToNodes(sections: any[]): TemplateNode[] {
 
 type ItemState = 'none' | 'selected' | 'correct' | 'damaged';
 
+interface TemplateBuilderProps {
+  id?: string;
+  onFinish?: (finalizedTemplateId: string) => void;
+  isSubComponent?: boolean;
+}
+
 /* ─────────────────────────────────────────────────────────────────
    TemplateBuilder — Root
+   Can be used as a standalone page (params) or as a sub-component (props).
 ───────────────────────────────────────────────────────────────── */
-export default function TemplateBuilder() {
-  const { id } = useParams<{ id: string }>();
+export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }: TemplateBuilderProps = {}) {
+  const { id: paramsId } = useParams<{ id: string }>();
+  const id = propId || paramsId;
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isNew = id === 'new';
@@ -598,6 +606,16 @@ export default function TemplateBuilder() {
           <button className={css.saveBtn} onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 size={13} style={{ animation: 'spin .7s linear infinite' }} /> : isNew ? <FilePlus2 size={13} /> : <Save size={13} />}
             {saving ? 'Saving…' : isNew ? 'Create Template' : 'Save'}
+          </button>
+        )}
+        {isSubComponent && (
+          <button
+            className={css.saveBtn}
+            style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)', marginLeft: 12 }}
+            onClick={() => onFinish?.(templateIdRef.current || '')}
+            disabled={saving}
+          >
+            <CheckCircle2 size={13} /> Finish Mapping
           </button>
         )}
       </header>
@@ -1174,7 +1192,7 @@ function NodeCardGrid({ title, subtitle, emptyMsg, nodes, onSelect, onAddFolder,
               const leafCount = isFolder ? countLeaves(node.children ?? []) : 0;
 
               return (
-                <button key={node.id} className={css.cgCard} onClick={() => onSelect(node.id)}>
+                <div key={node.id} className={css.cgCard} onClick={() => onSelect(node.id)}>
                   <div className={css.cgCardIcon}>
                     {isFolder
                       ? <FolderOpen size={22} color="#33AE95" />
@@ -1188,7 +1206,7 @@ function NodeCardGrid({ title, subtitle, emptyMsg, nodes, onSelect, onAddFolder,
                       ? `${childCount} child${childCount !== 1 ? 'ren' : ''} · ${leafCount} leaf${leafCount !== 1 ? 's' : ''} · ${itemCount} item${itemCount !== 1 ? 's' : ''}`
                       : `${isSel ? 'Selection' : 'Damage'} · ${itemCount} item${itemCount !== 1 ? 's' : ''}`}
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>

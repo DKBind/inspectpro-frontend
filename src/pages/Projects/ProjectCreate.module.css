@@ -297,70 +297,6 @@
 }
 
 /* Custom spec fields */
-.customFieldCard {
-  border-radius: 10px;
-  border: 1.5px dashed #BFDBFE;
-  background: white;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.customFieldHeader {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.customFieldLabelInput {
-  flex: 1;
-  border: none;
-  border-bottom: 1.5px solid #3B82F6;
-  background: transparent;
-  font-size: 12px;
-  font-weight: 600;
-  color: #263B4F;
-  padding: 2px 4px;
-  outline: none;
-}
-
-.customFieldLabelText {
-  flex: 1;
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
-}
-
-.customFieldActions {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.customFieldActionBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: #4B5563;
-  transition: background 0.15s, color 0.15s;
-}
-
-.customFieldActionBtn:hover {
-  background: #F3F4F6;
-  color: #374151;
-}
-
-.customFieldActionBtn.danger:hover {
-  background: #FEF2F2;
-  color: #EF4444;
-}
 
 .addCustomBtn {
   display: flex;
@@ -743,4 +679,27 @@
 .tplMapBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.mappingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.mappingReady {
+  font-size: 11px;
+  color: #33AE95;
+  margin-top: 8px;
+  font-weight: 500;
 }

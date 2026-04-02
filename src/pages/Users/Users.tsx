@@ -448,47 +448,55 @@ const Users = () => {
 
           <FormProvider {...methods}>
             <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-              <div className="px-7 py-6 space-y-6">
 
-                {/* Account Type selector — top of modal, super admin create only */}
-                {isSuperAdmin && modalMode === 'create' && (
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-[#6B7280] mb-2">Creating user for</p>
-                    <div style={{ display: 'flex', gap: 0, border: '1px solid #E5E7EB', borderRadius: 10, overflow: 'hidden', background: '#F9FAFB' }}>
-                      {([
-                        { value: 'internal', label: 'Super Admin', desc: 'InspectPro internal' },
-                        { value: 'organisation', label: 'Organisation', desc: 'Top-level org user' },
-                        { value: 'franchise', label: 'Franchise', desc: 'Sub-org user' },
-                      ] as const).map((opt, i) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => {
-                            setAccountType(opt.value);
-                            setParentOrgIdForUser('');
-                            setFranchisesForUser([]);
-                            setValue('orgId', '');
-                          }}
-                          style={{
-                            flex: 1, padding: '10px 8px', fontSize: 12.5,
-                            fontWeight: accountType === opt.value ? 700 : 500,
-                            color: accountType === opt.value ? '#2563EB' : '#6B7280',
-                            background: accountType === opt.value ? 'white' : 'transparent',
-                            border: 'none',
-                            borderRight: i < 2 ? '1px solid #E5E7EB' : 'none',
-                            cursor: 'pointer',
-                            boxShadow: accountType === opt.value ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
-                            transition: 'all 0.15s',
-                            lineHeight: 1.3,
-                          }}
-                        >
-                          <div>{opt.label}</div>
-                          <div style={{ fontSize: 10, fontWeight: 400, color: accountType === opt.value ? '#93C5FD' : '#9CA3AF', marginTop: 2 }}>{opt.desc}</div>
-                        </button>
-                      ))}
-                    </div>
+              {/* ── "Create user for" tab bar — super admin create only, pinned to top ── */}
+              {isSuperAdmin && modalMode === 'create' && (
+                <div style={{ borderBottom: '1px solid #E5E7EB', background: '#F9FAFB', padding: '0 28px' }}>
+                  <p style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9CA3AF', paddingTop: 14, marginBottom: 8 }}>
+                    Creating user for
+                  </p>
+                  <div style={{ display: 'flex', gap: 0 }}>
+                    {([
+                      { value: 'internal', label: 'Super Admin' },
+                      { value: 'organisation', label: 'Organisation' },
+                      { value: 'franchise', label: 'Franchise' },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setAccountType(opt.value);
+                          setParentOrgIdForUser('');
+                          setFranchisesForUser([]);
+                          setValue('orgId', '');
+                        }}
+                        style={{
+                          padding: '10px 20px 12px',
+                          fontSize: 13,
+                          fontWeight: accountType === opt.value ? 700 : 500,
+                          color: accountType === opt.value ? '#33AE95' : '#6B7280',
+                          background: 'transparent',
+                          border: 'none',
+                          borderBottom: accountType === opt.value ? '2.5px solid #33AE95' : '2.5px solid transparent',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          lineHeight: 1.3,
+                          marginBottom: -1,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 2,
+                        }}
+                      >
+                        <span>{opt.label}</span>
+                        {/* <span style={{ fontSize: 10, fontWeight: 400, color: accountType === opt.value ? '#6EE0CB' : '#9CA3AF' }}>{opt.desc}</span> */}
+                      </button>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
+
+              <div className="px-7 py-6 space-y-6">
 
                 {/* Personal Info */}
                 <Sec icon={<User size={13} />} label="Personal Information">

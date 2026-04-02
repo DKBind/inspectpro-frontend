@@ -212,9 +212,8 @@ function RoleField({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`h-9 text-sm bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all ${
-          error ? 'border-red-500' : ''
-        }`}
+        className={`h-9 text-sm bg-slate-950/60 border-slate-700 text-white placeholder:text-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 transition-all ${error ? 'border-red-500' : ''
+          }`}
       />
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>

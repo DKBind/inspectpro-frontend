@@ -77,6 +77,8 @@ export interface RoleResponse {
   orgName?: string;
   statusName?: string;
   isActive?: boolean;
+  isSystemRole?: boolean;
+  allowMultipleUsers?: boolean;
   createdByName?: string;
   createdDate?: string;
   assignedUsersCount?: number;
