@@ -30,6 +30,8 @@ interface AuthState {
   isFirstLogin: boolean;
   setAuth: (user: User, accessToken: string, refreshToken: string, isFirstLogin?: boolean, idToken?: string | null) => void;
   setAccessToken: (accessToken: string) => void;
+  /** Update both access and ID tokens after a silent refresh */
+  setTokens: (accessToken: string, idToken: string | null) => void;
   setFirstLoginDone: () => void;
   /** Switch the active role in-memory without a page reload */
   switchRole: (roleName: string, roleId: number) => void;
@@ -48,6 +50,7 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (user, accessToken, refreshToken, isFirstLogin = false, idToken = null) =>
         set({ user, accessToken, idToken, refreshToken, isAuthenticated: true, isFirstLogin }),
       setAccessToken: (accessToken) => set({ accessToken }),
+      setTokens: (accessToken, idToken) => set({ accessToken, idToken }),
       setFirstLoginDone: () => set({ isFirstLogin: false }),
       switchRole: (roleName, roleId) =>
         set((state) => ({

@@ -1,3 +1,5 @@
+import { useAuthStore } from '../store/useAuthStore';
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 interface RequestConfig extends RequestInit {
@@ -13,17 +15,9 @@ class ApiClient {
   }
 
   private getAuthToken(): string | null {
-    try {
-      const authStorage = localStorage.getItem('auth-storage');
-      if (authStorage) {
-        const parsed = JSON.parse(authStorage);
-        // ID token carries email + custom claims; fall back to accessToken if idToken absent
-        return parsed?.state?.idToken || parsed?.state?.accessToken || null;
-      }
-    } catch {
-      return null;
-    }
-    return null;
+    const { idToken, accessToken } = useAuthStore.getState();
+    // ID token carries email + custom claims; fall back to accessToken if idToken absent
+    return idToken || accessToken || null;
   }
 
   private buildUrl(endpoint: string, params?: Record<string, string>): string {
@@ -54,38 +48,30 @@ class ApiClient {
     // Handle 401 Unauthorized - attempt token refresh
     if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh-token')) {
       try {
-        const authStorage = localStorage.getItem('auth-storage');
-        if (authStorage) {
-          const parsed = JSON.parse(authStorage);
-          const refreshToken = parsed?.state?.refreshToken;
+        const { refreshToken } = useAuthStore.getState();
 
-          if (refreshToken) {
-            // Attempt to refresh tokens via the backend
-            const refreshRes = await fetch(this.buildUrl('/auth/refresh-token'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ refreshToken }),
-            });
+        if (refreshToken) {
+          // Attempt to refresh tokens via the backend
+          const refreshRes = await fetch(this.buildUrl('/auth/refresh-token'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken }),
+          });
 
-            if (refreshRes.ok) {
-              const refreshData = await refreshRes.json();
-              if (refreshData.status && refreshData.object) {
-                const { accessToken, idToken } = refreshData.object;
+          if (refreshRes.ok) {
+            const refreshData = await refreshRes.json();
+            if (refreshData.status && refreshData.object) {
+              const { accessToken, idToken } = refreshData.object;
 
-                // Update localStorage
-                if (parsed.state) {
-                  parsed.state.accessToken = accessToken;
-                  parsed.state.idToken = idToken;
-                  localStorage.setItem('auth-storage', JSON.stringify(parsed));
-                }
+              // Update Zustand store (also persists to localStorage via middleware)
+              useAuthStore.getState().setTokens(accessToken, idToken);
 
-                // Retry with ID token (has email + custom claims)
-                headers['Authorization'] = `Bearer ${idToken || accessToken}`;
-                response = await fetch(this.buildUrl(endpoint, params), {
-                  ...fetchConfig,
-                  headers,
-                });
-              }
+              // Retry with ID token (has email + custom claims)
+              headers['Authorization'] = `Bearer ${idToken || accessToken}`;
+              response = await fetch(this.buildUrl(endpoint, params), {
+                ...fetchConfig,
+                headers,
+              });
             }
           }
         }
@@ -93,9 +79,9 @@ class ApiClient {
         console.error('Token refresh failed', error);
       }
 
-      // If still 401 after refresh attempt, logout
+      // If still 401 after refresh attempt, clear auth and redirect to login
       if (response.status === 401) {
-        localStorage.removeItem('auth-storage');
+        useAuthStore.getState().clearAuth();
         window.location.href = '/login';
       }
     }

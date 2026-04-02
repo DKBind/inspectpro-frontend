@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, Plus, Globe, Crown, RefreshCw, Eye, Pencil, Trash2, AlertTriangle, Phone, Hash, Mail } from 'lucide-react';
+import { Building2, Plus, Globe, Crown, Eye, Pencil, Trash2, AlertTriangle, Phone, Hash, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { organisationService } from '@/services/organisationService';

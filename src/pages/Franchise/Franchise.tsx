@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { GitBranch, Plus, Globe, RefreshCw, Eye, Pencil, Trash2, AlertTriangle, Building2, Crown } from 'lucide-react';
+import { GitBranch, Plus, Globe, Eye, Pencil, Trash2, AlertTriangle, Building2, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { organisationService } from '@/services/organisationService';
