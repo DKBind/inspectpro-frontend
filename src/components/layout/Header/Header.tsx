@@ -234,7 +234,7 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
           </DialogHeader>
           <DialogBody className="px-6 py-6">
             <DialogDescription className="text-[#6B7280] text-sm leading-relaxed">
-              Are you sure you want to log out of InspectWisePro? Your active session will be terminated and you will need to sign in again to access the platform.
+              Are you sure you want to log out of InspectWise Pro? Your active session will be terminated and you will need to sign in again to access the platform.
             </DialogDescription>
           </DialogBody>
           <DialogFooter className="px-6 py-4 bg-[#F3F4F6] flex gap-3 sm:flex-row sm:justify-end border-t border-[#E5E7EB]">

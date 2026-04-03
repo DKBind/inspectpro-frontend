@@ -96,7 +96,7 @@ const ForgotPassword = () => {
           <div className={styles.logoIcon}>
             <Shield />
           </div>
-          <div className={styles.logoTitle}>InspectWisePro</div>
+          <div className={styles.logoTitle}>InspectWise Pro</div>
         </div>
 
         {/* Step indicators */}
