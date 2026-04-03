@@ -4,7 +4,7 @@ import { ROUTES } from '@/components/Constant/Route';
 import {
   LayoutDashboard, FolderKanban, ClipboardCheck, ListChecks, Bug,
   BarChart3, Settings, Shield, Building2, CreditCard, GitBranch,
-  Sparkles, Users, Bell, UserCircle, FileText, Home, Lock,
+  Sparkles, Users, Bell, UserCircle, FileText, Home,
   type LucideIcon,
 } from 'lucide-react';
 import styles from './Sidebar.module.css';

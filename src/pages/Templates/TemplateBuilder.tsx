@@ -121,14 +121,14 @@ function countItems(nodes: TemplateNode[]): number {
 }
 
 /** Count leaf nodes (panels) under a subtree. */
-function countLeaves(nodes: TemplateNode[]): number {
-  let count = 0;
-  for (const n of nodes) {
-    if (n.type === 'LEAF') count++;
-    else if (n.children?.length) count += countLeaves(n.children);
-  }
-  return count;
-}
+// function countLeaves(nodes: TemplateNode[]): number {
+//   let count = 0;
+//   for (const n of nodes) {
+//     if (n.type === 'LEAF') count++;
+//     else if (n.children?.length) count += countLeaves(n.children);
+//   }
+//   return count;
+// }
 
 /** Convert old BuilderSection[] format to TemplateNode[] (backward compat). */
 function sectionsToNodes(sections: any[]): TemplateNode[] {
@@ -320,10 +320,10 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
   };
 
   /* ── Item CRUD (inside LEAF nodes) ── */
-  const addItem = (leafId: string) => {
-    const item = emptyItem();
-    dirty(p => mapNode(p, leafId, n => ({ ...n, items: [...(n.items ?? []), item] })));
-  };
+  // const addItem = (leafId: string) => {
+  //   const item = emptyItem();
+  //   dirty(p => mapNode(p, leafId, n => ({ ...n, items: [...(n.items ?? []), item] })));
+  // };
 
   const deleteItem = (leafId: string, itemId: string) => {
     dirty(p => mapNode(p, leafId, n => ({ ...n, items: (n.items ?? []).filter(i => i.id !== itemId) })));
@@ -1149,186 +1149,186 @@ function RecursiveTreeNode({
 /* ─────────────────────────────────────────────────────────────────
    Node Card Grid (Folder workspace view)
 ───────────────────────────────────────────────────────────────── */
-function NodeCardGrid({ title, subtitle, emptyMsg, nodes, onSelect, onAddFolder, onAddSelection, onAddDamage }: {
-  title: string; subtitle: string; emptyMsg: string;
-  nodes: TemplateNode[];
-  onSelect: (id: string) => void;
-  onAddFolder: () => void;
-  onAddSelection: () => void;
-  onAddDamage: () => void;
-}) {
-  return (
-    <div className={css.fadeUp}>
-      <div className={css.cgHeader}>
-        <div>
-          <h2 className={css.cgTitle}>{title}</h2>
-          <p className={css.cgSub}>{subtitle}</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {/* <button className={css.cgAddBtn} onClick={onAddFolder}>
-            <Folder size={13} /> Add Group
-          </button> */}
-          <button className={css.cgAddBtn} onClick={onAddSelection}
-            style={{ background: 'linear-gradient(135deg, #29A356, #1e7a3f)' }}>
-            <CheckCircle2 size={13} /> Selection
-          </button>
-          <button className={css.cgAddBtn} onClick={onAddDamage}
-            style={{ background: 'linear-gradient(135deg, #EF4444, #dc2626)' }}>
-            <AlertTriangle size={13} /> Damage
-          </button>
-        </div>
-      </div>
+// function NodeCardGrid({ title, subtitle, emptyMsg, nodes, onSelect, onAddSelection, onAddDamage }: {
+//   title: string; subtitle: string; emptyMsg: string;
+//   nodes: TemplateNode[];
+//   onSelect: (id: string) => void;
+//   onAddFolder: () => void;
+//   onAddSelection: () => void;
+//   onAddDamage: () => void;
+// }) {
+//   return (
+//     <div className={css.fadeUp}>
+//       <div className={css.cgHeader}>
+//         <div>
+//           <h2 className={css.cgTitle}>{title}</h2>
+//           <p className={css.cgSub}>{subtitle}</p>
+//         </div>
+//         <div style={{ display: 'flex', gap: 8 }}>
+//           {/* <button className={css.cgAddBtn} onClick={onAddFolder}>
+//             <Folder size={13} /> Add Group
+//           </button> */}
+//           <button className={css.cgAddBtn} onClick={onAddSelection}
+//             style={{ background: 'linear-gradient(135deg, #29A356, #1e7a3f)' }}>
+//             <CheckCircle2 size={13} /> Selection
+//           </button>
+//           <button className={css.cgAddBtn} onClick={onAddDamage}
+//             style={{ background: 'linear-gradient(135deg, #EF4444, #dc2626)' }}>
+//             <AlertTriangle size={13} /> Damage
+//           </button>
+//         </div>
+//       </div>
 
-      {nodes.length === 0
-        ? <p className={css.cgEmpty}>{emptyMsg}</p>
-        : (
-          <div className={css.cgGrid}>
-            {nodes.map(node => {
-              const isFolder = node.type === 'FOLDER';
-              const isLeaf = node.type === 'LEAF';
-              const isSel = isLeaf && node.panelType === 'SELECTION';
-              const childCount = isFolder ? (node.children?.length ?? 0) : 0;
-              const itemCount = isFolder ? countItems(node.children ?? []) : (node.items?.length ?? 0);
-              const leafCount = isFolder ? countLeaves(node.children ?? []) : 0;
+//       {nodes.length === 0
+//         ? <p className={css.cgEmpty}>{emptyMsg}</p>
+//         : (
+//           <div className={css.cgGrid}>
+//             {nodes.map(node => {
+//               const isFolder = node.type === 'FOLDER';
+//               const isLeaf = node.type === 'LEAF';
+//               const isSel = isLeaf && node.panelType === 'SELECTION';
+//               const childCount = isFolder ? (node.children?.length ?? 0) : 0;
+//               const itemCount = isFolder ? countItems(node.children ?? []) : (node.items?.length ?? 0);
+//               const leafCount = isFolder ? countLeaves(node.children ?? []) : 0;
 
-              return (
-                <div key={node.id} className={css.cgCard} onClick={() => onSelect(node.id)}>
-                  <div className={css.cgCardIcon}>
-                    {isFolder
-                      ? <FolderOpen size={22} color="#1a7bbd" />
-                      : isSel
-                        ? <CheckCircle2 size={22} color="#29A356" />
-                        : <AlertTriangle size={22} color="#EF4444" />}
-                  </div>
-                  <div className={css.cgCardName}>{node.name}</div>
-                  <div className={css.cgCardMeta}>
-                    {isFolder
-                      ? `${childCount} child${childCount !== 1 ? 'ren' : ''} · ${leafCount} leaf${leafCount !== 1 ? 's' : ''} · ${itemCount} item${itemCount !== 1 ? 's' : ''}`
-                      : `${isSel ? 'Selection' : 'Damage'} · ${itemCount} item${itemCount !== 1 ? 's' : ''}`}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-    </div>
-  );
-}
+//               return (
+//                 <button key={node.id} className={css.cgCard} onClick={() => onSelect(node.id)}>
+//                   <div className={css.cgCardIcon}>
+//                     {isFolder
+//                       ? <FolderOpen size={22} color="#33AE95" />
+//                       : isSel
+//                         ? <CheckCircle2 size={22} color="#29A356" />
+//                         : <AlertTriangle size={22} color="#EF4444" />}
+//                   </div>
+//                   <div className={css.cgCardName}>{node.name}</div>
+//                   <div className={css.cgCardMeta}>
+//                     {isFolder
+//                       ? `${childCount} child${childCount !== 1 ? 'ren' : ''} · ${leafCount} leaf${leafCount !== 1 ? 's' : ''} · ${itemCount} item${itemCount !== 1 ? 's' : ''}`
+//                       : `${isSel ? 'Selection' : 'Damage'} · ${itemCount} item${itemCount !== 1 ? 's' : ''}`}
+//                   </div>
+//                 </button>
+//               );
+//             })}
+//           </div>
+//         )}
+//     </div>
+//   );
+// }
 
 /* ─────────────────────────────────────────────────────────────────
    Leaf Editor (item list for a LEAF node)
 ───────────────────────────────────────────────────────────────── */
-function LeafEditor({ leaf, parentName, itemStates, setItemStates, onBack, onAddItem, onDeleteItem, onRenameItem, onMoveItemUp, onMoveItemDown, onRenameLeaf, onDeleteLeaf }: {
-  leaf: TemplateNode;
-  parentName: string;
-  itemStates: Record<string, ItemState>;
-  setItemStates: React.Dispatch<React.SetStateAction<Record<string, ItemState>>>;
-  onBack: () => void;
-  onAddItem: () => void;
-  onDeleteItem: (itemId: string) => void;
-  onRenameItem: (itemId: string, label: string) => void;
-  onMoveItemUp: (itemId: string) => void;
-  onMoveItemDown: (itemId: string) => void;
-  onRenameLeaf: (name: string) => void;
-  onDeleteLeaf: () => void;
-}) {
-  const isSel = leaf.panelType === 'SELECTION';
-  const accent = isSel ? '#29A356' : '#EF4444';
-  const accentLight = isSel ? 'rgba(41,163,86,0.08)' : 'rgba(239,68,68,0.06)';
-  const accentBorder = isSel ? 'rgba(41,163,86,0.20)' : 'rgba(239,68,68,0.20)';
-  const items = leaf.items ?? [];
+// function LeafEditor({ leaf, parentName, itemStates, setItemStates, onBack, onAddItem, onDeleteItem, onRenameItem, onMoveItemUp, onMoveItemDown, onRenameLeaf, onDeleteLeaf }: {
+//   leaf: TemplateNode;
+//   parentName: string;
+//   itemStates: Record<string, ItemState>;
+//   setItemStates: React.Dispatch<React.SetStateAction<Record<string, ItemState>>>;
+//   onBack: () => void;
+//   onAddItem: () => void;
+//   onDeleteItem: (itemId: string) => void;
+//   onRenameItem: (itemId: string, label: string) => void;
+//   onMoveItemUp: (itemId: string) => void;
+//   onMoveItemDown: (itemId: string) => void;
+//   onRenameLeaf: (name: string) => void;
+//   onDeleteLeaf: () => void;
+// }) {
+//   const isSel = leaf.panelType === 'SELECTION';
+//   const accent = isSel ? '#29A356' : '#EF4444';
+//   const accentLight = isSel ? 'rgba(41,163,86,0.08)' : 'rgba(239,68,68,0.06)';
+//   const accentBorder = isSel ? 'rgba(41,163,86,0.20)' : 'rgba(239,68,68,0.20)';
+//   const items = leaf.items ?? [];
 
-  const [editName, setEditName] = useState(false);
-  const [nameVal, setNameVal] = useState(leaf.name);
-  useEffect(() => setNameVal(leaf.name), [leaf.name]);
+//   const [editName, setEditName] = useState(false);
+//   const [nameVal, setNameVal] = useState(leaf.name);
+//   useEffect(() => setNameVal(leaf.name), [leaf.name]);
 
-  const setItemState = (itemId: string, state: ItemState) =>
-    setItemStates(p => ({ ...p, [itemId]: state }));
+//   const setItemState = (itemId: string, state: ItemState) =>
+//     setItemStates(p => ({ ...p, [itemId]: state }));
 
-  return (
-    <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <button className={css.leafBackBtn} onClick={onBack}>
-        <ArrowLeft size={13} /> Back to {parentName}
-      </button>
-      <div className={css.ieHeader}>
-        <div>
-          <h2 className={css.ieTitle}>{leaf.name}</h2>
-          <p className={css.ieSub}>{isSel ? 'Selection' : 'Damage'} leaf · {items.length} item{items.length !== 1 ? 's' : ''}</p>
-        </div>
-      </div>
+//   return (
+//     <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+//       <button className={css.leafBackBtn} onClick={onBack}>
+//         <ArrowLeft size={13} /> Back to {parentName}
+//       </button>
+//       <div className={css.ieHeader}>
+//         <div>
+//           <h2 className={css.ieTitle}>{leaf.name}</h2>
+//           <p className={css.ieSub}>{isSel ? 'Selection' : 'Damage'} leaf · {items.length} item{items.length !== 1 ? 's' : ''}</p>
+//         </div>
+//       </div>
 
-      {/* Panel card */}
-      <div className={`${css.panelCard} ${isSel ? css.panelCardHeadSel : css.panelCardHeadDmg}`}>
+//       {/* Panel card */}
+//       <div className={`${css.panelCard} ${isSel ? css.panelCardHeadSel : css.panelCardHeadDmg}`}>
 
-        {/* Header */}
-        <div className={css.panelHead} style={{ background: accentLight, borderBottom: `1px solid ${accentBorder}` }}>
-          {isSel
-            ? <CheckCircle2 size={15} style={{ color: accent, flexShrink: 0 }} />
-            : <AlertTriangle size={15} style={{ color: accent, flexShrink: 0 }} />}
-          {editName
-            ? <input autoFocus value={nameVal} onChange={e => setNameVal(e.target.value)}
-              onBlur={() => { onRenameLeaf(nameVal || leaf.name); setEditName(false); }}
-              onKeyDown={e => { if (e.key === 'Enter') { onRenameLeaf(nameVal || leaf.name); setEditName(false); } }}
-              className={css.panelHeadNameInput}
-              style={{ borderBottom: `1px solid ${accent}` }} />
-            : <span onDoubleClick={() => { setEditName(true); setNameVal(leaf.name); }}
-              className={css.panelHeadName}>{leaf.name}</span>}
-          <span className={isSel ? css.panelBadgeSel : css.panelBadgeDmg}>
-            {isSel ? 'SELECTION' : 'DAMAGED'}
-          </span>
-          <button onClick={onDeleteLeaf} className={css.panelDelBtn}>
-            <Trash2 size={13} />
-          </button>
-        </div>
+//         {/* Header */}
+//         <div className={css.panelHead} style={{ background: accentLight, borderBottom: `1px solid ${accentBorder}` }}>
+//           {isSel
+//             ? <CheckCircle2 size={15} style={{ color: accent, flexShrink: 0 }} />
+//             : <AlertTriangle size={15} style={{ color: accent, flexShrink: 0 }} />}
+//           {editName
+//             ? <input autoFocus value={nameVal} onChange={e => setNameVal(e.target.value)}
+//               onBlur={() => { onRenameLeaf(nameVal || leaf.name); setEditName(false); }}
+//               onKeyDown={e => { if (e.key === 'Enter') { onRenameLeaf(nameVal || leaf.name); setEditName(false); } }}
+//               className={css.panelHeadNameInput}
+//               style={{ borderBottom: `1px solid ${accent}` }} />
+//             : <span onDoubleClick={() => { setEditName(true); setNameVal(leaf.name); }}
+//               className={css.panelHeadName}>{leaf.name}</span>}
+//           <span className={isSel ? css.panelBadgeSel : css.panelBadgeDmg}>
+//             {isSel ? 'SELECTION' : 'DAMAGED'}
+//           </span>
+//           <button onClick={onDeleteLeaf} className={css.panelDelBtn}>
+//             <Trash2 size={13} />
+//           </button>
+//         </div>
 
-        {/* Items */}
-        <div>
-          {items.length === 0 && <p className={css.panelEmpty}>No items yet. Click "Add Item" below.</p>}
-          {items.map((item, idx) => {
-            const state = itemStates[item.id] ?? 'none';
-            return isSel
-              ? <SelectionRow key={item.id} item={item} state={state}
-                onToggle={() => setItemState(item.id, state === 'selected' ? 'none' : 'selected')}
-                onDelete={() => onDeleteItem(item.id)}
-                onRename={l => onRenameItem(item.id, l)}
-                onMoveUp={idx > 0 ? () => onMoveItemUp(item.id) : undefined}
-                onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(item.id) : undefined} />
-              : <DamageRow key={item.id} item={item} state={state}
-                onCorrect={() => setItemState(item.id, state === 'correct' ? 'none' : 'correct')}
-                onDamage={() => setItemState(item.id, state === 'damaged' ? 'none' : 'damaged')}
-                onDelete={() => onDeleteItem(item.id)}
-                onRename={l => onRenameItem(item.id, l)}
-                onMoveUp={idx > 0 ? () => onMoveItemUp(item.id) : undefined}
-                onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(item.id) : undefined} />;
-          })}
-        </div>
+//         {/* Items */}
+//         <div>
+//           {items.length === 0 && <p className={css.panelEmpty}>No items yet. Click "Add Item" below.</p>}
+//           {items.map((item, idx) => {
+//             const state = itemStates[item.id] ?? 'none';
+//             return isSel
+//               ? <SelectionRow key={item.id} item={item} state={state}
+//                 onToggle={() => setItemState(item.id, state === 'selected' ? 'none' : 'selected')}
+//                 onDelete={() => onDeleteItem(item.id)}
+//                 onRename={l => onRenameItem(item.id, l)}
+//                 onMoveUp={idx > 0 ? () => onMoveItemUp(item.id) : undefined}
+//                 onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(item.id) : undefined} />
+//               : <DamageRow key={item.id} item={item} state={state}
+//                 onCorrect={() => setItemState(item.id, state === 'correct' ? 'none' : 'correct')}
+//                 onDamage={() => setItemState(item.id, state === 'damaged' ? 'none' : 'damaged')}
+//                 onDelete={() => onDeleteItem(item.id)}
+//                 onRename={l => onRenameItem(item.id, l)}
+//                 onMoveUp={idx > 0 ? () => onMoveItemUp(item.id) : undefined}
+//                 onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(item.id) : undefined} />;
+//           })}
+//         </div>
 
-        {/* Card footer */}
-        <button onClick={onAddItem}
-          className={`${css.panelFooterBtn} ${isSel ? css.panelFooterBtnSel : css.panelFooterBtnDmg}`}>
-          <Plus size={12} /> Add Item
-        </button>
-      </div>
-    </div>
-  );
-}
+//         {/* Card footer */}
+//         <button onClick={onAddItem}
+//           className={`${css.panelFooterBtn} ${isSel ? css.panelFooterBtnSel : css.panelFooterBtnDmg}`}>
+//           <Plus size={12} /> Add Item
+//         </button>
+//       </div>
+//     </div>
+//   );
+// }
 
 /* ─────────────────────────────────────────────────────────────────
    Workspace Footer
 ───────────────────────────────────────────────────────────────── */
-function WorkspaceFooter({ leafType, onAddItem }: {
-  leafType: string;
-  onAddItem: () => void;
-}) {
-  return (
-    <div className={css.wFooter}>
-      <div className={css.wFooterSpacer} />
-      <button className={`${css.fBtn} ${css.fBtnPrimary}`} onClick={onAddItem}>
-        <Plus size={13} /> Add {leafType === 'SELECTION' ? 'Selection' : 'Damage'} Item
-      </button>
-    </div>
-  );
-}
+// function WorkspaceFooter({ leafType, onAddItem }: {
+//   leafType: string;
+//   onAddItem: () => void;
+// }) {
+//   return (
+//     <div className={css.wFooter}>
+//       <div className={css.wFooterSpacer} />
+//       <button className={`${css.fBtn} ${css.fBtnPrimary}`} onClick={onAddItem}>
+//         <Plus size={13} /> Add {leafType === 'SELECTION' ? 'Selection' : 'Damage'} Item
+//       </button>
+//     </div>
+//   );
+// }
 
 /* ─────────────────────────────────────────────────────────────────
    Sidebar helpers
@@ -1429,7 +1429,7 @@ function SelectionRow({ item, state: _state, onToggle: _onToggle, onDelete, onRe
   );
 }
 
-function DamageRow({ item, state, onCorrect, onDamage, onDelete, onRename, onMoveUp, onMoveDown, onMoveToFolder, onCopyToFolder }: {
+function DamageRow({ item, onDelete, onRename, onMoveUp, onMoveDown, onMoveToFolder, onCopyToFolder }: {
   item: BuilderItem; state: ItemState;
   onCorrect: () => void; onDamage: () => void;
   onDelete: () => void; onRename: (l: string) => void;

@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
 import {
-  Users, Plus, RefreshCw, Eye, Pencil, Trash2, Mail, Phone,
+  Users, Plus, Eye, Pencil, Trash2, Mail, Phone,
   Building2, AlertTriangle, User, Loader2,
   Lock, Wand2, ChevronDown, GitBranch,
 } from 'lucide-react';
