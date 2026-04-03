@@ -74,7 +74,9 @@ export interface RoleResponse {
   name: string;
   description?: string;
   scope?: RoleScope;
+  orgId?: string;
   orgName?: string;
+  parentOrgName?: string;
   statusName?: string;
   isActive?: boolean;
   isSystemRole?: boolean;

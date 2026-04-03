@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, useController, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import {
   Shield, Loader2, Eye, Pencil, Trash2, Plus, UserCircle,
   Mail, Lock, User, ChevronDown, Wand2, AlertTriangle,
-  Phone, FileText, Home, Package, Users,
+  Phone, FileText, Home, Package, Users, SlidersHorizontal,
 } from 'lucide-react';
 
 import { userService } from '@/services/userService';
@@ -96,6 +96,7 @@ const selectCls = (hasError = false) =>
   `w-full inline-flex items-center justify-between h-10 rounded-md border bg-white px-3 text-sm font-normal text-[#263B4F] hover:bg-[#F3F4F6] focus:outline-none transition-all ${hasError ? 'border-red-500' : 'border-[#E5E7EB]'}`;
 
 const PAGE_SIZE = 10;
+const ROLES_PAGE_SIZE = 10;
 type SubTab = 'users' | 'roles';
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -125,6 +126,23 @@ const UsersRoles = () => {
   const [roleList, setRoleList] = useState<RoleResponse[]>([]);
   const [roleModules, setRoleModules] = useState<Record<number, RoleModuleAssignment[]>>({});
   const [rolesLoading, setRolesLoading] = useState(false);
+
+  // Role type filter for the Roles tab
+  const [roleTypeFilter, setRoleTypeFilter] = useState<'own' | 'organisation' | 'franchise'>('own');
+  const [roleFilterOrgId, setRoleFilterOrgId] = useState('');
+  const [roleFilterFranchiseId, setRoleFilterFranchiseId] = useState('');
+  const [roleFilterFranchises, setRoleFilterFranchises] = useState<OrganisationResponse[]>([]);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  // Pending (uncommitted) filter values — only applied when user clicks Apply
+  const [pendingTypeFilter, setPendingTypeFilter] = useState<'own' | 'organisation' | 'franchise'>('own');
+  const [pendingOrgId, setPendingOrgId] = useState('');
+  const [pendingFranchiseId, setPendingFranchiseId] = useState('');
+  const [pendingFranchises, setPendingFranchises] = useState<OrganisationResponse[]>([]);
+
+  // Roles table pagination
+  const [rolesPage, setRolesPage] = useState(1);
 
   // Role create/edit modal
   const [roleModalOpen, setRoleModalOpen] = useState(false);
@@ -255,13 +273,76 @@ const UsersRoles = () => {
       .catch(() => setFranchisesForUser2([]));
   }, [parentOrgForUser]);
 
+  // Load franchises for the pending org selection in the filter panel (super admin)
+  useEffect(() => {
+    if (!isSuperAdmin || pendingTypeFilter !== 'franchise' || !pendingOrgId) {
+      setPendingFranchises([]);
+      setPendingFranchiseId('');
+      return;
+    }
+    organisationService.getFranchises(0, 500, pendingOrgId)
+      .then(d => setPendingFranchises(d.content ?? []))
+      .catch(() => setPendingFranchises([]));
+  }, [pendingOrgId, pendingTypeFilter]);
+
+  // Reset roles pagination when filter changes
+  useEffect(() => {
+    setRolesPage(1);
+  }, [roleTypeFilter, roleFilterOrgId, roleFilterFranchiseId]);
+
+  // Close filter panel on outside click (without applying)
+  useEffect(() => {
+    if (!filterPanelOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterPanelOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [filterPanelOpen]);
+
+  // ── Filter panel actions ──────────────────────────────────────────────────
+  const openFilterPanel = () => {
+    // Initialise pending state from currently applied state
+    setPendingTypeFilter(roleTypeFilter);
+    setPendingOrgId(roleFilterOrgId);
+    setPendingFranchiseId(roleFilterFranchiseId);
+    setPendingFranchises(roleFilterFranchises);
+    setFilterPanelOpen(true);
+  };
+
+  const applyRoleFilter = () => {
+    setRoleTypeFilter(pendingTypeFilter);
+    setRoleFilterOrgId(pendingOrgId);
+    setRoleFilterFranchiseId(pendingFranchiseId);
+    setRoleFilterFranchises(pendingFranchises);
+    setRolesPage(1);
+    setFilterPanelOpen(false);
+  };
+
+  const clearRoleFilter = () => {
+    const own = 'own' as const;
+    setRoleTypeFilter(own);
+    setRoleFilterOrgId('');
+    setRoleFilterFranchiseId('');
+    setRoleFilterFranchises([]);
+    setPendingTypeFilter(own);
+    setPendingOrgId('');
+    setPendingFranchiseId('');
+    setPendingFranchises([]);
+    setRolesPage(1);
+    setFilterPanelOpen(false);
+  };
+
   // ── Fetch roles ───────────────────────────────────────────────────────────
   const fetchRoles = async () => {
     setRolesLoading(true);
     try {
-      const [fetched, withModules] = await Promise.all([
+      const [fetched, withModules, orgsData] = await Promise.all([
         userService.listRoles(),
         userService.listRolesWithModules(),
+        allOrgs.length === 0 ? organisationService.getOrganisations(0, 1000) : Promise.resolve(null),
       ]);
       setRoleList(fetched);
       const entries: Record<number, RoleModuleAssignment[]> = {};
@@ -269,6 +350,19 @@ const UsersRoles = () => {
         entries[entry.roleId] = entry.modules ?? [];
       }
       setRoleModules(entries);
+      if (orgsData) {
+        const fetchedOrgs = orgsData.content ?? [];
+        setAllOrgs(fetchedOrgs);
+        // Also load org admin's franchises if not yet loaded
+        if (!isSuperAdmin && authUser?.orgId && orgAdminFranchises.length === 0) {
+          const authOrgData = fetchedOrgs.find((o: OrganisationResponse) => o.uuid === authUser.orgId);
+          if (authOrgData && !authOrgData.parentOrgId) {
+            organisationService.getFranchises(0, 500, authUser.orgId)
+              .then(d => setOrgAdminFranchises(d.content ?? []))
+              .catch(() => {});
+          }
+        }
+      }
     } catch { /* silent */ }
     finally { setRolesLoading(false); }
   };
@@ -648,8 +742,56 @@ const UsersRoles = () => {
     } finally { setToggling(false); setToggleTarget(null); }
   };
 
-  // Backend already filters roleList by createdBy for non-admin users.
-  const visibleRoles = roleList;
+  // ── Role type filter logic ────────────────────────────────────────────────
+  // Available Role Type options depend on auth level
+  const roleTypeOptions: Array<{ value: 'own' | 'organisation' | 'franchise'; label: string }> = isSuperAdmin
+    ? [{ value: 'own', label: 'Own' }, { value: 'organisation', label: 'Organisation' }, { value: 'franchise', label: 'Franchise' }]
+    : isOrgAdmin
+      ? [{ value: 'own', label: 'Own' }, { value: 'franchise', label: 'Franchise' }]
+      : [{ value: 'own', label: 'Own' }];
+
+  // Top-level orgs for the organisation/franchise dropdown (super admin only)
+  const topLevelOrgs = allOrgs.filter(o => !o.parentOrgId);
+
+  // Whether any non-default filter is active (drives the indicator dot)
+  const isFilterActive = roleTypeFilter !== 'own' || !!roleFilterOrgId || !!roleFilterFranchiseId;
+
+  // Filter roleList by type + selected org/franchise
+  const visibleRoles = roleList.filter(role => {
+    if (isSuperAdmin) {
+      if (roleTypeFilter === 'own') return role.scope === 'PLATFORM';
+      if (roleTypeFilter === 'organisation') {
+        if (role.scope !== 'ORGANISATION') return false;
+        return roleFilterOrgId ? role.orgId === roleFilterOrgId : true;
+      }
+      // franchise
+      if (role.scope !== 'FRANCHISE') return false;
+      if (roleFilterFranchiseId) return role.orgId === roleFilterFranchiseId;
+      if (roleFilterOrgId) {
+        const parentName = allOrgs.find(o => o.uuid === roleFilterOrgId)?.name;
+        return parentName ? role.parentOrgName === parentName : true;
+      }
+      return true;
+    } else if (isOrgAdmin) {
+      if (roleTypeFilter === 'own') return role.scope === 'ORGANISATION';
+      // franchise
+      if (role.scope !== 'FRANCHISE') return false;
+      return roleFilterFranchiseId ? role.orgId === roleFilterFranchiseId : true;
+    }
+    // Franchise user: only their own franchise roles
+    return role.scope === 'FRANCHISE';
+  });
+
+  // Extra columns based on filter
+  const showOrgColumn = roleTypeFilter === 'organisation';
+  const showFranchiseColumns = roleTypeFilter === 'franchise';
+
+  // Helper: get parent org name for a franchise-scoped role
+  const getRoleParentOrgName = (role: RoleResponse) => role.parentOrgName ?? null;
+
+  // Roles table pagination
+  const rolesTotalPages = Math.ceil(visibleRoles.length / ROLES_PAGE_SIZE);
+  const paginatedRoles = visibleRoles.slice((rolesPage - 1) * ROLES_PAGE_SIZE, rolesPage * ROLES_PAGE_SIZE);
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
@@ -768,10 +910,136 @@ const UsersRoles = () => {
             <h3 className={styles.panelTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Shield size={15} style={{ color: '#33AE95' }} />
               Roles &amp; Permissions
+              {isFilterActive && (
+                <span className={styles.roleFilterActiveBadge}>
+                  {roleTypeFilter === 'own' ? 'Own' : roleTypeFilter === 'organisation' ? 'Organisation' : 'Franchise'}
+                  {roleFilterOrgId && ` · ${allOrgs.find(o => o.uuid === roleFilterOrgId)?.name ?? ''}`}
+                  {roleFilterFranchiseId && ` · ${[...roleFilterFranchises, ...orgAdminFranchises].find(f => f.uuid === roleFilterFranchiseId)?.name ?? ''}`}
+                </span>
+              )}
             </h3>
-            <button className={styles.addBtn} onClick={openCreateRole}>
-              <Plus size={14} style={{ marginRight: 5 }} /> Create Role
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* Filter icon button — only shown when more than one option exists */}
+              {roleTypeOptions.length > 1 && (
+                <div ref={filterRef} style={{ position: 'relative' }}>
+                  <button
+                    className={`${styles.roleFilterBtn} ${isFilterActive ? styles.roleFilterBtnActive : ''}`}
+                    onClick={openFilterPanel}
+                    title="Filter roles"
+                  >
+                    <SlidersHorizontal size={14} />
+                    Filter
+                    {isFilterActive && <span className={styles.roleFilterDot} />}
+                  </button>
+
+                  {filterPanelOpen && (
+                    <div className={styles.roleFilterPanel}>
+                      {/* Role Type dropdown */}
+                      <div className={styles.roleFilterSection}>
+                        <span className={styles.roleFilterSectionLabel}>Role Type</span>
+                        <select
+                          className={styles.roleFilterSelect}
+                          value={pendingTypeFilter}
+                          onChange={e => {
+                            setPendingTypeFilter(e.target.value as 'own' | 'organisation' | 'franchise');
+                            setPendingOrgId('');
+                            setPendingFranchiseId('');
+                            setPendingFranchises([]);
+                          }}
+                        >
+                          {roleTypeOptions.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Organisation select — super admin only */}
+                      {isSuperAdmin && (pendingTypeFilter === 'organisation' || pendingTypeFilter === 'franchise') && (
+                        <div className={styles.roleFilterSection}>
+                          <span className={styles.roleFilterSectionLabel}>Organisation</span>
+                          <select
+                            className={styles.roleFilterSelect}
+                            value={pendingOrgId}
+                            onChange={e => { setPendingOrgId(e.target.value); setPendingFranchiseId(''); }}
+                          >
+                            <option value=''>All Organisations</option>
+                            {topLevelOrgs.map(o => <option key={o.uuid} value={o.uuid}>{o.name}</option>)}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Franchise select */}
+                      {pendingTypeFilter === 'franchise' && (
+                        isSuperAdmin ? (
+                          pendingOrgId ? (
+                            <div className={styles.roleFilterSection}>
+                              <span className={styles.roleFilterSectionLabel}>Franchise</span>
+                              {pendingFranchises.length === 0 ? (
+                                <span style={{ fontSize: 12, color: 'var(--ip-text-muted)', fontStyle: 'italic', padding: '4px 2px' }}>
+                                  Loading franchises…
+                                </span>
+                              ) : (
+                                <select
+                                  className={styles.roleFilterSelect}
+                                  value={pendingFranchiseId}
+                                  onChange={e => setPendingFranchiseId(e.target.value)}
+                                >
+                                  <option value=''>All Franchises</option>
+                                  {pendingFranchises.map(f => <option key={f.uuid} value={f.uuid}>{f.name}</option>)}
+                                </select>
+                              )}
+                            </div>
+                          ) : (
+                            <div className={styles.roleFilterSection}>
+                              <span className={styles.roleFilterSectionLabel}>Franchise</span>
+                              <span style={{ fontSize: 12, color: 'var(--ip-text-muted)', fontStyle: 'italic', padding: '4px 2px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <Home size={11} style={{ opacity: 0.5 }} /> Select an organisation first
+                              </span>
+                            </div>
+                          )
+                        ) : isOrgAdmin && orgAdminFranchises.length > 0 ? (
+                          <div className={styles.roleFilterSection}>
+                            <span className={styles.roleFilterSectionLabel}>Franchise</span>
+                            <select
+                              className={styles.roleFilterSelect}
+                              value={pendingFranchiseId}
+                              onChange={e => setPendingFranchiseId(e.target.value)}
+                            >
+                              <option value=''>All Franchises</option>
+                              {orgAdminFranchises.map(f => <option key={f.uuid} value={f.uuid}>{f.name}</option>)}
+                            </select>
+                          </div>
+                        ) : null
+                      )}
+
+                      {/* Divider */}
+                      <div className={styles.roleFilterDivider} />
+
+                      {/* Apply + Close buttons */}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className={styles.roleFilterClose} onClick={() => setFilterPanelOpen(false)}>
+                          Close
+                        </button>
+                        <button className={styles.roleFilterApply} onClick={applyRoleFilter}>
+                          Apply
+                        </button>
+                      </div>
+
+                      {/* Clear all filters — only when a filter is currently applied */}
+                      {isFilterActive && (
+                        <button className={styles.roleFilterClear} onClick={clearRoleFilter}>
+                          Clear Filters
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <button className={styles.addBtn} onClick={openCreateRole}>
+                <Plus size={14} style={{ marginRight: 5 }} /> Create Role
+              </button>
+            </div>
           </div>
 
           {rolesLoading ? (
@@ -791,6 +1059,9 @@ const UsersRoles = () => {
               <thead>
                 <tr>
                   <th>Role Name</th>
+                  {showOrgColumn && <th>Organisation</th>}
+                  {showFranchiseColumns && <th>Franchise</th>}
+                  {showFranchiseColumns && <th>Parent Organisation</th>}
                   <th>Assigned Users</th>
                   <th>Modules</th>
                   <th>Status</th>
@@ -800,7 +1071,7 @@ const UsersRoles = () => {
                 </tr>
               </thead>
               <tbody>
-                {visibleRoles.map((role) => {
+                {paginatedRoles.map((role) => {
                   const grouped = groupByModule(roleModules[role.roleId] ?? []);
                   const isActive = role.isActive !== false;
                   // Use the larger of the DB-reported count and the locally derived count
@@ -816,6 +1087,36 @@ const UsersRoles = () => {
                           <span className={styles.userName}>{role.name}</span>
                         </div>
                       </td>
+                      {/* Organisation column (super admin + organisation filter) */}
+                      {showOrgColumn && (
+                        <td className={styles.mutedCell}>
+                          {role.orgName
+                            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
+                                <Home size={11} style={{ opacity: 0.5 }} />{role.orgName}
+                              </span>
+                            : <span style={{ color: '#D1D5DB' }}>—</span>}
+                        </td>
+                      )}
+                      {/* Franchise name column */}
+                      {showFranchiseColumns && (
+                        <td className={styles.mutedCell}>
+                          {role.orgName
+                            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
+                                <Home size={11} style={{ opacity: 0.5 }} />{role.orgName}
+                              </span>
+                            : <span style={{ color: '#D1D5DB' }}>—</span>}
+                        </td>
+                      )}
+                      {/* Parent organisation column */}
+                      {showFranchiseColumns && (
+                        <td className={styles.mutedCell}>
+                          {getRoleParentOrgName(role)
+                            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
+                                <Home size={11} style={{ opacity: 0.5 }} />{getRoleParentOrgName(role)}
+                              </span>
+                            : <span style={{ color: '#D1D5DB' }}>—</span>}
+                        </td>
+                      )}
                       {/* Assigned users — clickable */}
                       <td>
                         <button className={styles.countBtn} onClick={() => openUsersModal(role)}>
@@ -859,6 +1160,17 @@ const UsersRoles = () => {
                 })}
               </tbody>
             </table>
+          )}
+          {rolesTotalPages > 1 && (
+            <div className={styles.paginationArea}>
+              <Pagination
+                currentPage={rolesPage}
+                totalPages={rolesTotalPages}
+                totalItems={visibleRoles.length}
+                pageSize={ROLES_PAGE_SIZE}
+                onPageChange={setRolesPage}
+              />
+            </div>
           )}
         </div>
       )}

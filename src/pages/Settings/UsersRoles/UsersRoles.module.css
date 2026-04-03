@@ -813,3 +813,225 @@
   white-space: nowrap;
   margin-left: auto;
 }
+
+/* ─── Role filter button + popover panel ─────────────────────────────────────── */
+.roleFilterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  position: relative;
+}
+
+.roleFilterBtn:hover {
+  border-color: var(--ip-brand);
+  color: var(--ip-brand);
+  background: rgba(51, 174, 149, 0.05);
+}
+
+.roleFilterBtnActive {
+  border-color: var(--ip-brand);
+  color: var(--ip-brand);
+  background: rgba(51, 174, 149, 0.08);
+}
+
+/* Green dot indicator when filters are applied */
+.roleFilterDot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ip-brand);
+  border: 1.5px solid white;
+}
+
+/* Active filter summary badge next to the title */
+.roleFilterActiveBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 9px;
+  border-radius: 20px;
+  background: rgba(51, 174, 149, 0.10);
+  border: 1px solid rgba(51, 174, 149, 0.25);
+  color: var(--ip-brand);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* Floating filter panel */
+.roleFilterPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 200;
+  min-width: 256px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 18px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: filterPanelIn 0.15s ease;
+}
+
+@keyframes filterPanelIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* Each labelled section inside the panel */
+.roleFilterSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roleFilterSectionLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ip-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Pill row for Role Type */
+.roleFilterPills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.roleFilterPill {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.roleFilterPill:hover {
+  border-color: var(--ip-brand);
+  color: var(--ip-brand);
+  background: rgba(51, 174, 149, 0.06);
+}
+
+.roleFilterPillActive {
+  background: var(--ip-brand);
+  color: white;
+  border-color: var(--ip-brand);
+  font-weight: 600;
+}
+
+.roleFilterPillActive:hover {
+  background: var(--ip-brand-hover);
+  border-color: var(--ip-brand-hover);
+  color: white;
+}
+
+/* Select inside the filter panel */
+.roleFilterSelect {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+  appearance: auto;
+}
+
+.roleFilterSelect:focus {
+  border-color: var(--ip-brand);
+  box-shadow: 0 0 0 3px rgba(51, 174, 149, 0.12);
+}
+
+/* Thin divider above clear button */
+.roleFilterDivider {
+  height: 1px;
+  background: var(--ip-border);
+  margin: 0 -16px;
+}
+
+/* Apply button */
+.roleFilterApply {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: 8px;
+  border: none;
+  background: var(--ip-brand);
+  color: white;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.roleFilterApply:hover {
+  background: var(--ip-brand-hover);
+}
+
+/* Close button */
+.roleFilterClose {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: 8px;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.roleFilterClose:hover {
+  border-color: var(--ip-border-strong);
+  color: var(--ip-text-primary);
+}
+
+/* Clear all filters */
+.roleFilterClear {
+  width: 100%;
+  padding: 7px 0;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  background: rgba(239, 68, 68, 0.04);
+  color: #dc2626;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.roleFilterClear:hover {
+  background: rgba(239, 68, 68, 0.09);
+  border-color: rgba(239, 68, 68, 0.4);
+}

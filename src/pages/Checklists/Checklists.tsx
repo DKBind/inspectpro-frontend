@@ -238,9 +238,9 @@ export default function Checklists() {
         <div className={styles.panelHeader}>
           <span className={styles.panelTitle}>
             Templates
-            <span className={styles.panelCount}>{filtered.length}</span>
+            {/* <span className={styles.panelCount}>{filtered.length}</span> */}
           </span>
-          <div className={styles.searchBar}>
+          {/* <div className={styles.searchBar}>
             <Search size={13} className={styles.searchIcon} />
             <input
               className={styles.searchInput}
@@ -251,10 +251,14 @@ export default function Checklists() {
             {search && (
               <button className={styles.searchClear} onClick={() => setSearch('')}><X size={12} /></button>
             )}
-          </div>
+          </div> */}
+
+
           <button className={styles.refreshBtn} onClick={load} title="Refresh">
             <RefreshCw size={14} />
           </button>
+
+
         </div>
 
         {loading ? (
