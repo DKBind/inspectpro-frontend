@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0px 14px;
   background: var(--ip-header-bg);
   border-bottom: 1px solid var(--ip-header-border);
   box-shadow: var(--ip-shadow-xs);

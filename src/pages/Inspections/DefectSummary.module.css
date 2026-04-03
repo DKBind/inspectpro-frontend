@@ -12,7 +12,7 @@
   border: 1px solid #E2E8F0;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .heroContent {
@@ -78,7 +78,7 @@
   padding: 9px 20px;
   border-radius: 10px;
   border: none;
-  background: #33AE95;
+  background: #1a7bbd;
   color: white;
   font-size: 13px;
   font-weight: 700;
@@ -101,11 +101,15 @@
 }
 
 @media (max-width: 1024px) {
-  .statsGrid { grid-template-columns: repeat(2, 1fr); }
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 640px) {
-  .statsGrid { grid-template-columns: 1fr; }
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .statCard {
@@ -160,7 +164,7 @@
   border: 1px solid #E2E8F0;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .sectionHead {
@@ -324,11 +328,13 @@
 }
 
 .spinner {
-  color: #33AE95;
+  color: #1a7bbd;
   margin-bottom: 12px;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }

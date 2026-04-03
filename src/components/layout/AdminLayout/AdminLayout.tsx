@@ -29,6 +29,14 @@ const AdminLayout = () => {
     }
   }, [isAuthenticated, user?.id]);
 
+  // Keep --ip-sidebar-offset in sync so the fixed Pagination bar shifts with the sidebar
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--ip-sidebar-offset',
+      collapsed ? '72px' : '260px'
+    );
+  }, [collapsed]);
+
   const handleToggleSidebar = () => {
     setCollapsed((prev) => !prev);
   };

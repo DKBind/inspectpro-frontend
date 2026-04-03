@@ -55,7 +55,7 @@ function Sec({ icon, label, children }: { icon: React.ReactNode; label: string; 
   return (
     <section>
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-[#33AE95]">{icon}</span>
+        <span className="text-[#1a7bbd]">{icon}</span>
         <span className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">{label}</span>
       </div>
       {children}
@@ -116,7 +116,7 @@ const Users = () => {
   const [franchisesForUser, setFranchisesForUser] = useState<OrganisationResponse[]>([]);
   const [orgAdminFranchises, setOrgAdminFranchises] = useState<OrganisationResponse[]>([]);
 
-  const totalPages = Math.ceil(total / pageSize);
+  const totalPages = total > 0 ? Math.ceil(total / pageSize) : 0;
 
   const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY });
   const { reset, handleSubmit, control, setValue, watch, formState: { errors } } = methods;
@@ -424,6 +424,7 @@ const Users = () => {
               pageSize={pageSize}
               onPageChange={setCurrentPage}
               onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+              pageSizeOptions={[10, 20, 50]}
             />
           </div>
         </div>
@@ -434,8 +435,8 @@ const Users = () => {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
-                <UsersIcon size={18} className="text-[#33AE95]" />
+              <div className="h-9 w-9 rounded-xl bg-[#1a7bbd]/10 border border-[#1a7bbd]/30 flex items-center justify-center">
+                <UsersIcon size={18} className="text-[#1a7bbd]" />
               </div>
               <DialogTitle className="text-xl font-bold text-[#263B4F]">
                 {modalMode === 'create' ? 'Add User' : 'Edit User'}
@@ -474,10 +475,10 @@ const Users = () => {
                           padding: '10px 20px 12px',
                           fontSize: 13,
                           fontWeight: accountType === opt.value ? 700 : 500,
-                          color: accountType === opt.value ? '#33AE95' : '#6B7280',
+                          color: accountType === opt.value ? '#1a7bbd' : '#6B7280',
                           background: 'transparent',
                           border: 'none',
-                          borderBottom: accountType === opt.value ? '2.5px solid #33AE95' : '2.5px solid transparent',
+                          borderBottom: accountType === opt.value ? '2.5px solid #1a7bbd' : '2.5px solid transparent',
                           cursor: 'pointer',
                           transition: 'all 0.15s',
                           lineHeight: 1.3,
@@ -532,7 +533,7 @@ const Users = () => {
                             type="button"
                             onClick={generatePassword}
                             title="Generate password"
-                            className="shrink-0 h-10 px-3 rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#33AE95] hover:border-[#33AE95] transition-all flex items-center gap-1.5 text-xs font-medium"
+                            className="shrink-0 h-10 px-3 rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#1a7bbd] hover:border-[#1a7bbd] transition-all flex items-center gap-1.5 text-xs font-medium"
                           >
                             <Wand2 size={13} />
                             Generate
@@ -736,7 +737,7 @@ const Users = () => {
                     (accountType === 'franchise' && (!parentOrgIdForUser || !selectedOrgId))
                   )
                 ) || (isOrgAdmin && modalMode === 'create' && !selectedOrgId)}
-                  className="flex-1 sm:flex-none sm:min-w-44 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95">
+                  className="flex-1 sm:flex-none sm:min-w-44 bg-[#1a7bbd] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95">
                   {submitting ? (
                     <span className="flex items-center gap-2">
                       <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -755,8 +756,8 @@ const Users = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
-                <UserCircle size={18} className="text-[#33AE95]" />
+              <div className="h-9 w-9 rounded-xl bg-[#1a7bbd]/10 border border-[#1a7bbd]/30 flex items-center justify-center">
+                <UserCircle size={18} className="text-[#1a7bbd]" />
               </div>
               <DialogTitle className="text-[#263B4F] text-lg font-bold">User Details</DialogTitle>
             </div>

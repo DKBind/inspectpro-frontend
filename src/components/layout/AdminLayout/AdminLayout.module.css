@@ -21,6 +21,7 @@
 .content {
   flex: 1;
   padding: 24px;
+  padding-bottom: 60px; /* clearance for fixed pagination bar */
   overflow-y: auto;
 }
 
@@ -35,6 +36,7 @@
 
   .content {
     padding: 20px;
+    padding-bottom: 76px;
   }
 }
 
@@ -49,6 +51,7 @@
 
   .content {
     padding: 16px;
+    padding-bottom: 76px;
   }
 }
 

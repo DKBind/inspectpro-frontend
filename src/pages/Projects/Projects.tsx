@@ -35,15 +35,16 @@ import {
 } from '@/components/shared-ui/DropdownMenu/dropdown-menu';
 import { ROUTES } from '@/components/Constant/Route';
 import styles from './Projects.module.css';
+import Pagination from '@/components/shared-ui/Pagination/Pagination';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 6;
 
 const PROJECT_STATUSES = ['PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'] as const;
 type ProjectStatus = typeof PROJECT_STATUSES[number];
 
 const STATUS_META: Record<ProjectStatus, { label: string; color: string; bg: string; gradient: string }> = {
   PLANNING: { label: 'Planning', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', gradient: 'linear-gradient(135deg,#3b82f6,#2563eb)' },
-  IN_PROGRESS: { label: 'In Progress', color: '#33AE95', bg: 'rgba(51,174,149,0.1)', gradient: 'linear-gradient(135deg,#33AE95,#2a9a84)' },
+  IN_PROGRESS: { label: 'In Progress', color: '#1a7bbd', bg: 'rgba(51,174,149,0.1)', gradient: 'linear-gradient(135deg,#1a7bbd,#2a9a84)' },
   ON_HOLD: { label: 'On Hold', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', gradient: 'linear-gradient(135deg,#f59e0b,#d97706)' },
   COMPLETED: { label: 'Completed', color: '#22c55e', bg: 'rgba(34,197,94,0.1)', gradient: 'linear-gradient(135deg,#22c55e,#16a34a)' },
   CANCELLED: { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.1)', gradient: 'linear-gradient(135deg,#ef4444,#dc2626)' },
@@ -129,6 +130,7 @@ const Projects = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ProjectResponse | null>(null);
@@ -151,10 +153,10 @@ const Projects = () => {
 
   // ─── Fetch ────────────────────────────────────────────────────────────────
 
-  const fetchProjects = async (page = currentPage) => {
+  const fetchProjects = async (page = currentPage, size = pageSize) => {
     setLoading(true);
     try {
-      const data = await projectService.listProjects(page, PAGE_SIZE);
+      const data = await projectService.listProjects(page, size);
       setProjects(data.content ?? []);
       setTotalPages(data.totalPages ?? 0);
       setTotalItems(data.totalElements ?? 0);
@@ -165,7 +167,7 @@ const Projects = () => {
     }
   };
 
-  useEffect(() => { fetchProjects(currentPage); }, [currentPage, user?.id]);
+  useEffect(() => { fetchProjects(currentPage, pageSize); }, [currentPage, pageSize, user?.id]);
 
   useEffect(() => {
     propertyTypeService.listPropertyTypes().then(setPropertyTypes).catch(() => setPropertyTypes([]));
@@ -345,7 +347,7 @@ const Projects = () => {
           {/* <p className={styles.subtitle}>{totalItems} project{totalItems !== 1 ? 's' : ''}</p> */}
         </div>
         <div className={styles.headerActions}>
-          <button className={styles.refreshBtn} onClick={() => fetchProjects(currentPage)} title="Refresh">
+          <button className={styles.refreshBtn} onClick={() => fetchProjects(currentPage, pageSize)} title="Refresh">
             <RefreshCw style={{ width: 15, height: 15 }} />
           </button>
           <button className={styles.createBtn} onClick={openCreate}>
@@ -398,7 +400,7 @@ const Projects = () => {
                       <div className={styles.cardLeft}>
                         {p.clientName && (
                           <div className={styles.infoRow}>
-                            <User style={{ width: 12, height: 12, color: '#33AE95', flexShrink: 0 }} />
+                            <User style={{ width: 12, height: 12, color: '#1a7bbd', flexShrink: 0 }} />
                             <span>{p.clientName}</span>
                           </div>
                         )}
@@ -453,26 +455,19 @@ const Projects = () => {
             })}
           </div>
 
-          {totalPages > 1 && (
-            <div className={styles.pagination}>
-              <span className={styles.paginationInfo}>
-                Showing {currentPage * PAGE_SIZE + 1}–{Math.min((currentPage + 1) * PAGE_SIZE, totalItems)} of {totalItems}
-              </span>
-              <div className={styles.paginationControls}>
-                <button className={styles.pageBtn} disabled={currentPage === 0} onClick={() => setCurrentPage(p => p - 1)}>
-                  <ChevronLeft size={14} />
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <button key={i} className={`${styles.pageBtn} ${i === currentPage ? styles.pageBtnActive : ''}`} onClick={() => setCurrentPage(i)}>
-                    {i + 1}
-                  </button>
-                ))}
-                <button className={styles.pageBtn} disabled={currentPage === totalPages - 1} onClick={() => setCurrentPage(p => p + 1)}>
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          )}
+          <div className={styles.paginationArea}>
+            <Pagination
+              currentPage={currentPage + 1}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={(p) => setCurrentPage(p - 1)}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(0); }}
+              pageSizeOptions={[6, 12, 24]}
+            />
+          </div>
+
+
         </>
       )}
 
@@ -483,8 +478,8 @@ const Projects = () => {
         <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/15 border border-[#33AE95]/30 flex items-center justify-center">
-                <FolderOpen size={18} className="text-[#33AE95]" />
+              <div className="h-9 w-9 rounded-xl bg-[#1a7bbd]/15 border border-[#1a7bbd]/30 flex items-center justify-center">
+                <FolderOpen size={18} className="text-[#1a7bbd]" />
               </div>
               <DialogTitle className="text-xl font-bold text-[#263B4F]">
                 {editTarget ? 'Edit Project' : 'New Project'}
@@ -503,7 +498,7 @@ const Projects = () => {
                 <div className={styles.formSection}>
                   <div className={styles.formSectionHead}>
                     <div className={styles.formSectionIcon} style={{ background: '#F0FDF9' }}>
-                      <FolderOpen size={13} color="#33AE95" />
+                      <FolderOpen size={13} color="#1a7bbd" />
                     </div>
                     <span className={styles.formSectionTitle}>Basic Information</span>
                   </div>
@@ -642,7 +637,7 @@ const Projects = () => {
 
                     <Fld label="Description" hint="Optional">
                       <textarea rows={2} placeholder="Brief description…" {...register('description')}
-                        className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 text-sm px-3 py-2 resize-none outline-none transition-all" />
+                        className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#1a7bbd] focus:ring-1 focus:ring-[#1a7bbd]/20 text-sm px-3 py-2 resize-none outline-none transition-all" />
                     </Fld>
                   </div>
                 </div>
@@ -651,7 +646,7 @@ const Projects = () => {
                 <div className={styles.formSection}>
                   <div className={styles.formSectionHead}>
                     <div className={styles.formSectionIcon} style={{ background: '#F0FDF9' }}>
-                      <ClipboardList size={13} color="#33AE95" />
+                      <ClipboardList size={13} color="#1a7bbd" />
                     </div>
                     <span className={styles.formSectionTitle}>Property Details</span>
                   </div>
@@ -705,7 +700,7 @@ const Projects = () => {
                                     <DropdownMenuTrigger asChild>
                                       <button
                                         type="button"
-                                        className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none data-[state=open]:border-[#33AE95] data-[state=open]:ring-1 data-[state=open]:ring-[#33AE95]/20 ${inputCls(false)}`}
+                                        className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none data-[state=open]:border-[#1a7bbd] data-[state=open]:ring-1 data-[state=open]:ring-[#1a7bbd]/20 ${inputCls(false)}`}
                                       >
                                         <span className={specValues[f.label] ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
                                           {specValues[f.label] || 'Select…'}
@@ -722,7 +717,7 @@ const Projects = () => {
                                         <DropdownMenuItem
                                           key={o}
                                           onSelect={() => setSpecValues(prev => ({ ...prev, [f.label]: o }))}
-                                          className={specValues[f.label] === o ? 'bg-[#F0FDF9] text-[#33AE95] font-medium' : ''}
+                                          className={specValues[f.label] === o ? 'bg-[#F0FDF9] text-[#1a7bbd] font-medium' : ''}
                                         >
                                           {o}
                                         </DropdownMenuItem>
@@ -901,7 +896,7 @@ const Projects = () => {
                 <Button type="button" variant="ghost" onClick={closeForm} disabled={submitting}
                   className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Cancel</Button>
                 <Button type="submit" disabled={submitting}
-                  className="flex-1 sm:flex-none sm:min-w-40 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg">
+                  className="flex-1 sm:flex-none sm:min-w-40 bg-[#1a7bbd] hover:bg-[#2a9a84] text-white font-semibold shadow-lg">
                   {submitting
                     ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />{editTarget ? 'Saving…' : 'Creating…'}</span>
                     : editTarget ? 'Save Changes' : 'Create Project'}
@@ -986,7 +981,7 @@ const Projects = () => {
                     <div className={styles.viewSection}>
                       <div className={styles.viewSectionHead}>
                         <div className={styles.viewSectionIcon} style={{ background: '#F0FDF9' }}>
-                          <ClipboardList size={13} color="#33AE95" />
+                          <ClipboardList size={13} color="#1a7bbd" />
                         </div>
                         <span className={styles.viewSectionTitle}>Property Details</span>
                       </div>
@@ -1122,7 +1117,7 @@ const Projects = () => {
                   <Button variant="ghost" onClick={() => setViewTarget(null)}
                     className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Close</Button>
                   <Button onClick={() => { openEdit(viewTarget); setViewTarget(null); }}
-                    className="bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold">
+                    className="bg-[#1a7bbd] hover:bg-[#2a9a84] text-white font-semibold">
                     <Pencil size={14} className="mr-2" /> Edit
                   </Button>
                 </DialogFooter>

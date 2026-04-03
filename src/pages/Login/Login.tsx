@@ -94,7 +94,7 @@ const Login = () => {
       }}>
         <div style={{
           width: 40, height: 40, borderRadius: '50%',
-          border: '4px solid #E4E8EC', borderTopColor: '#33AE95',
+          border: '4px solid #E4E8EC', borderTopColor: '#1a7bbd',
           animation: 'spin 0.7s linear infinite',
         }} />
         <p style={{ fontSize: 14, color: '#263B4F', fontWeight: 500 }}>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, useController, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import {
   Shield, Loader2, Eye, Pencil, Trash2, Plus, UserCircle,
   Mail, Lock, User, ChevronDown, Wand2, AlertTriangle,
-  Phone, FileText, Home, Package, Users,
+  Phone, FileText, Home, Package, Users, SlidersHorizontal,
 } from 'lucide-react';
 
 import { userService } from '@/services/userService';
@@ -96,6 +96,7 @@ const selectCls = (hasError = false) =>
   `w-full inline-flex items-center justify-between h-10 rounded-md border bg-white px-3 text-sm font-normal text-[#263B4F] hover:bg-[#F3F4F6] focus:outline-none transition-all ${hasError ? 'border-red-500' : 'border-[#E5E7EB]'}`;
 
 const PAGE_SIZE = 10;
+const ROLES_PAGE_SIZE = 10;
 type SubTab = 'users' | 'roles';
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -125,6 +126,25 @@ const UsersRoles = () => {
   const [roleList, setRoleList] = useState<RoleResponse[]>([]);
   const [roleModules, setRoleModules] = useState<Record<number, RoleModuleAssignment[]>>({});
   const [rolesLoading, setRolesLoading] = useState(false);
+
+  // Role type filter for the Roles tab
+  const [roleTypeFilter, setRoleTypeFilter] = useState<'own' | 'organisation' | 'franchise'>('own');
+  const [roleFilterOrgId, setRoleFilterOrgId] = useState('');
+  const [roleFilterFranchiseId, setRoleFilterFranchiseId] = useState('');
+  const [roleFilterFranchises, setRoleFilterFranchises] = useState<OrganisationResponse[]>([]);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  // Pending (uncommitted) filter values — only applied when user clicks Apply
+  const [pendingTypeFilter, setPendingTypeFilter] = useState<'own' | 'organisation' | 'franchise'>('own');
+  const [pendingOrgId, setPendingOrgId] = useState('');
+  const [pendingFranchiseId, setPendingFranchiseId] = useState('');
+  const [pendingFranchises, setPendingFranchises] = useState<OrganisationResponse[]>([]);
+
+  // Roles table pagination
+  const [rolesPage, setRolesPage] = useState(1);
+  const [usersPageSize, setUsersPageSize] = useState(PAGE_SIZE);
+  const [rolesPageSize, setRolesPageSize] = useState(ROLES_PAGE_SIZE);
 
   // Role create/edit modal
   const [roleModalOpen, setRoleModalOpen] = useState(false);
@@ -184,7 +204,7 @@ const UsersRoles = () => {
   const selectedOrgId = watch('orgId');
   const selectedRole = roles.find((r) => String(r.roleId) === selectedRoleId);
   const selectedUserOrg = allOrgs.find(o => o.uuid === selectedOrgId);
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const totalPages = Math.ceil(total / usersPageSize);
 
   // Computed: is the logged-in user an Org Admin (top-level org)?
   const authOrgInList = allOrgs.find(o => o.uuid === authUser?.orgId);
@@ -210,11 +230,11 @@ const UsersRoles = () => {
   };
 
   // ── Fetch users ───────────────────────────────────────────────────────────
-  const fetchUsers = async (page = currentPage) => {
+  const fetchUsers = async (page = currentPage, size = usersPageSize) => {
     setUsersLoading(true);
     try {
       const [userData, rolesData, orgsData] = await Promise.all([
-        userService.listUsers(page - 1, PAGE_SIZE),
+        userService.listUsers(page - 1, size),
         userService.listRoles(),
         organisationService.getOrganisations(0, 1000),
       ]);
@@ -236,8 +256,8 @@ const UsersRoles = () => {
   };
 
   useEffect(() => {
-    if (subTab === 'users') fetchUsers(currentPage);
-  }, [subTab, currentPage]);
+    if (subTab === 'users') fetchUsers(currentPage, usersPageSize);
+  }, [subTab, currentPage, usersPageSize]);
 
   // Load franchises when a parent org is selected in role modal (Part D)
   useEffect(() => {
@@ -255,13 +275,76 @@ const UsersRoles = () => {
       .catch(() => setFranchisesForUser2([]));
   }, [parentOrgForUser]);
 
+  // Load franchises for the pending org selection in the filter panel (super admin)
+  useEffect(() => {
+    if (!isSuperAdmin || pendingTypeFilter !== 'franchise' || !pendingOrgId) {
+      setPendingFranchises([]);
+      setPendingFranchiseId('');
+      return;
+    }
+    organisationService.getFranchises(0, 500, pendingOrgId)
+      .then(d => setPendingFranchises(d.content ?? []))
+      .catch(() => setPendingFranchises([]));
+  }, [pendingOrgId, pendingTypeFilter]);
+
+  // Reset roles pagination when filter changes
+  useEffect(() => {
+    setRolesPage(1);
+  }, [roleTypeFilter, roleFilterOrgId, roleFilterFranchiseId]);
+
+  // Close filter panel on outside click (without applying)
+  useEffect(() => {
+    if (!filterPanelOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterPanelOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [filterPanelOpen]);
+
+  // ── Filter panel actions ──────────────────────────────────────────────────
+  const openFilterPanel = () => {
+    // Initialise pending state from currently applied state
+    setPendingTypeFilter(roleTypeFilter);
+    setPendingOrgId(roleFilterOrgId);
+    setPendingFranchiseId(roleFilterFranchiseId);
+    setPendingFranchises(roleFilterFranchises);
+    setFilterPanelOpen(true);
+  };
+
+  const applyRoleFilter = () => {
+    setRoleTypeFilter(pendingTypeFilter);
+    setRoleFilterOrgId(pendingOrgId);
+    setRoleFilterFranchiseId(pendingFranchiseId);
+    setRoleFilterFranchises(pendingFranchises);
+    setRolesPage(1);
+    setFilterPanelOpen(false);
+  };
+
+  const clearRoleFilter = () => {
+    const own = 'own' as const;
+    setRoleTypeFilter(own);
+    setRoleFilterOrgId('');
+    setRoleFilterFranchiseId('');
+    setRoleFilterFranchises([]);
+    setPendingTypeFilter(own);
+    setPendingOrgId('');
+    setPendingFranchiseId('');
+    setPendingFranchises([]);
+    setRolesPage(1);
+    setFilterPanelOpen(false);
+  };
+
   // ── Fetch roles ───────────────────────────────────────────────────────────
   const fetchRoles = async () => {
     setRolesLoading(true);
     try {
-      const [fetched, withModules] = await Promise.all([
+      const [fetched, withModules, orgsData] = await Promise.all([
         userService.listRoles(),
         userService.listRolesWithModules(),
+        allOrgs.length === 0 ? organisationService.getOrganisations(0, 1000) : Promise.resolve(null),
       ]);
       setRoleList(fetched);
       const entries: Record<number, RoleModuleAssignment[]> = {};
@@ -269,6 +352,19 @@ const UsersRoles = () => {
         entries[entry.roleId] = entry.modules ?? [];
       }
       setRoleModules(entries);
+      if (orgsData) {
+        const fetchedOrgs = orgsData.content ?? [];
+        setAllOrgs(fetchedOrgs);
+        // Also load org admin's franchises if not yet loaded
+        if (!isSuperAdmin && authUser?.orgId && orgAdminFranchises.length === 0) {
+          const authOrgData = fetchedOrgs.find((o: OrganisationResponse) => o.uuid === authUser.orgId);
+          if (authOrgData && !authOrgData.parentOrgId) {
+            organisationService.getFranchises(0, 500, authUser.orgId)
+              .then(d => setOrgAdminFranchises(d.content ?? []))
+              .catch(() => { });
+          }
+        }
+      }
     } catch { /* silent */ }
     finally { setRolesLoading(false); }
   };
@@ -606,7 +702,7 @@ const UsersRoles = () => {
         toast.success('User updated successfully');
       }
       closeModal();
-      fetchUsers(currentPage);
+      fetchUsers(currentPage, usersPageSize);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Something went wrong');
     } finally { setSubmitting(false); }
@@ -619,7 +715,7 @@ const UsersRoles = () => {
       await userService.deleteUser(deleteTarget.id);
       toast.success('User deleted');
       setDeleteTarget(null);
-      fetchUsers(currentPage);
+      fetchUsers(currentPage, usersPageSize);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete');
     } finally { setDeleting(false); }
@@ -648,8 +744,56 @@ const UsersRoles = () => {
     } finally { setToggling(false); setToggleTarget(null); }
   };
 
-  // Backend already filters roleList by createdBy for non-admin users.
-  const visibleRoles = roleList;
+  // ── Role type filter logic ────────────────────────────────────────────────
+  // Available Role Type options depend on auth level
+  const roleTypeOptions: Array<{ value: 'own' | 'organisation' | 'franchise'; label: string }> = isSuperAdmin
+    ? [{ value: 'own', label: 'Own' }, { value: 'organisation', label: 'Organisation' }, { value: 'franchise', label: 'Franchise' }]
+    : isOrgAdmin
+      ? [{ value: 'own', label: 'Own' }, { value: 'franchise', label: 'Franchise' }]
+      : [{ value: 'own', label: 'Own' }];
+
+  // Top-level orgs for the organisation/franchise dropdown (super admin only)
+  const topLevelOrgs = allOrgs.filter(o => !o.parentOrgId);
+
+  // Whether any non-default filter is active (drives the indicator dot)
+  const isFilterActive = roleTypeFilter !== 'own' || !!roleFilterOrgId || !!roleFilterFranchiseId;
+
+  // Filter roleList by type + selected org/franchise
+  const visibleRoles = roleList.filter(role => {
+    if (isSuperAdmin) {
+      if (roleTypeFilter === 'own') return role.scope === 'PLATFORM';
+      if (roleTypeFilter === 'organisation') {
+        if (role.scope !== 'ORGANISATION') return false;
+        return roleFilterOrgId ? role.orgId === roleFilterOrgId : true;
+      }
+      // franchise
+      if (role.scope !== 'FRANCHISE') return false;
+      if (roleFilterFranchiseId) return role.orgId === roleFilterFranchiseId;
+      if (roleFilterOrgId) {
+        const parentName = allOrgs.find(o => o.uuid === roleFilterOrgId)?.name;
+        return parentName ? role.parentOrgName === parentName : true;
+      }
+      return true;
+    } else if (isOrgAdmin) {
+      if (roleTypeFilter === 'own') return role.scope === 'ORGANISATION';
+      // franchise
+      if (role.scope !== 'FRANCHISE') return false;
+      return roleFilterFranchiseId ? role.orgId === roleFilterFranchiseId : true;
+    }
+    // Franchise user: only their own franchise roles
+    return role.scope === 'FRANCHISE';
+  });
+
+  // Extra columns based on filter
+  const showOrgColumn = roleTypeFilter === 'organisation';
+  const showFranchiseColumns = roleTypeFilter === 'franchise';
+
+  // Helper: get parent org name for a franchise-scoped role
+  const getRoleParentOrgName = (role: RoleResponse) => role.parentOrgName ?? null;
+
+  // Roles table pagination
+  const rolesTotalPages = Math.ceil(visibleRoles.length / rolesPageSize);
+  const paginatedRoles = visibleRoles.slice((rolesPage - 1) * rolesPageSize, rolesPage * rolesPageSize);
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
@@ -705,7 +849,7 @@ const UsersRoles = () => {
                         </td>
                         <td className={styles.mutedCell}>
                           {u.employeeId
-                            ? <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 5, background: 'rgba(51,174,149,0.08)', border: '1px solid rgba(51,174,149,0.2)', fontSize: 12, fontWeight: 600, color: '#33AE95', fontFamily: 'monospace' }}>{u.employeeId}</span>
+                            ? <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 5, background: 'rgba(51,174,149,0.08)', border: '1px solid rgba(51,174,149,0.2)', fontSize: 12, fontWeight: 600, color: '#1a7bbd', fontFamily: 'monospace' }}>{u.employeeId}</span>
                             : <span style={{ color: '#D1D5DB' }}>—</span>}
                         </td>
                         <td className={styles.mutedCell}>
@@ -752,8 +896,12 @@ const UsersRoles = () => {
               </table>
               <div className={styles.paginationArea}>
                 <Pagination
-                  currentPage={currentPage} totalPages={totalPages}
-                  totalItems={total} pageSize={PAGE_SIZE} onPageChange={setCurrentPage}
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={total}
+                  pageSize={usersPageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={(size) => { setUsersPageSize(size); setCurrentPage(1); }}
                 />
               </div>
             </>
@@ -766,23 +914,149 @@ const UsersRoles = () => {
         <div className={styles.panel}>
           <div className={styles.panelHeader}>
             <h3 className={styles.panelTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Shield size={15} style={{ color: '#33AE95' }} />
+              <Shield size={15} style={{ color: '#1a7bbd' }} />
               Roles &amp; Permissions
+              {isFilterActive && (
+                <span className={styles.roleFilterActiveBadge}>
+                  {roleTypeFilter === 'own' ? 'Own' : roleTypeFilter === 'organisation' ? 'Organisation' : 'Franchise'}
+                  {roleFilterOrgId && ` · ${allOrgs.find(o => o.uuid === roleFilterOrgId)?.name ?? ''}`}
+                  {roleFilterFranchiseId && ` · ${[...roleFilterFranchises, ...orgAdminFranchises].find(f => f.uuid === roleFilterFranchiseId)?.name ?? ''}`}
+                </span>
+              )}
             </h3>
-            <button className={styles.addBtn} onClick={openCreateRole}>
-              <Plus size={14} style={{ marginRight: 5 }} /> Create Role
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* Filter icon button — only shown when more than one option exists */}
+              {roleTypeOptions.length > 1 && (
+                <div ref={filterRef} style={{ position: 'relative' }}>
+                  <button
+                    className={`${styles.roleFilterBtn} ${isFilterActive ? styles.roleFilterBtnActive : ''}`}
+                    onClick={openFilterPanel}
+                    title="Filter roles"
+                  >
+                    <SlidersHorizontal size={14} />
+                    Filter
+                    {isFilterActive && <span className={styles.roleFilterDot} />}
+                  </button>
+
+                  {filterPanelOpen && (
+                    <div className={styles.roleFilterPanel}>
+                      {/* Role Type dropdown */}
+                      <div className={styles.roleFilterSection}>
+                        <span className={styles.roleFilterSectionLabel}>Role Type</span>
+                        <select
+                          className={styles.roleFilterSelect}
+                          value={pendingTypeFilter}
+                          onChange={e => {
+                            setPendingTypeFilter(e.target.value as 'own' | 'organisation' | 'franchise');
+                            setPendingOrgId('');
+                            setPendingFranchiseId('');
+                            setPendingFranchises([]);
+                          }}
+                        >
+                          {roleTypeOptions.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Organisation select — super admin only */}
+                      {isSuperAdmin && (pendingTypeFilter === 'organisation' || pendingTypeFilter === 'franchise') && (
+                        <div className={styles.roleFilterSection}>
+                          <span className={styles.roleFilterSectionLabel}>Organisation</span>
+                          <select
+                            className={styles.roleFilterSelect}
+                            value={pendingOrgId}
+                            onChange={e => { setPendingOrgId(e.target.value); setPendingFranchiseId(''); }}
+                          >
+                            <option value=''>All Organisations</option>
+                            {topLevelOrgs.map(o => <option key={o.uuid} value={o.uuid}>{o.name}</option>)}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Franchise select */}
+                      {pendingTypeFilter === 'franchise' && (
+                        isSuperAdmin ? (
+                          pendingOrgId ? (
+                            <div className={styles.roleFilterSection}>
+                              <span className={styles.roleFilterSectionLabel}>Franchise</span>
+                              {pendingFranchises.length === 0 ? (
+                                <span style={{ fontSize: 12, color: 'var(--ip-text-muted)', fontStyle: 'italic', padding: '4px 2px' }}>
+                                  Loading franchises…
+                                </span>
+                              ) : (
+                                <select
+                                  className={styles.roleFilterSelect}
+                                  value={pendingFranchiseId}
+                                  onChange={e => setPendingFranchiseId(e.target.value)}
+                                >
+                                  <option value=''>All Franchises</option>
+                                  {pendingFranchises.map(f => <option key={f.uuid} value={f.uuid}>{f.name}</option>)}
+                                </select>
+                              )}
+                            </div>
+                          ) : (
+                            <div className={styles.roleFilterSection}>
+                              <span className={styles.roleFilterSectionLabel}>Franchise</span>
+                              <span style={{ fontSize: 12, color: 'var(--ip-text-muted)', fontStyle: 'italic', padding: '4px 2px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <Home size={11} style={{ opacity: 0.5 }} /> Select an organisation first
+                              </span>
+                            </div>
+                          )
+                        ) : isOrgAdmin && orgAdminFranchises.length > 0 ? (
+                          <div className={styles.roleFilterSection}>
+                            <span className={styles.roleFilterSectionLabel}>Franchise</span>
+                            <select
+                              className={styles.roleFilterSelect}
+                              value={pendingFranchiseId}
+                              onChange={e => setPendingFranchiseId(e.target.value)}
+                            >
+                              <option value=''>All Franchises</option>
+                              {orgAdminFranchises.map(f => <option key={f.uuid} value={f.uuid}>{f.name}</option>)}
+                            </select>
+                          </div>
+                        ) : null
+                      )}
+
+                      {/* Divider */}
+                      <div className={styles.roleFilterDivider} />
+
+                      {/* Apply + Close buttons */}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className={styles.roleFilterClose} onClick={() => setFilterPanelOpen(false)}>
+                          Close
+                        </button>
+                        <button className={styles.roleFilterApply} onClick={applyRoleFilter}>
+                          Apply
+                        </button>
+                      </div>
+
+                      {/* Clear all filters — only when a filter is currently applied */}
+                      {isFilterActive && (
+                        <button className={styles.roleFilterClear} onClick={clearRoleFilter}>
+                          Clear Filters
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <button className={styles.addBtn} onClick={openCreateRole}>
+                <Plus size={14} style={{ marginRight: 5 }} /> Create Role
+              </button>
+            </div>
           </div>
 
           {rolesLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '56px 24px', gap: 12 }}>
-              <Loader2 size={28} style={{ color: '#33AE95', animation: 'spin 1s linear infinite' }} />
+              <Loader2 size={28} style={{ color: '#1a7bbd', animation: 'spin 1s linear infinite' }} />
               <span style={{ fontSize: 13, color: '#9CA3AF' }}>Loading roles…</span>
             </div>
           ) : visibleRoles.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '56px 24px', gap: 12 }}>
               <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(51,174,149,0.10)', border: '1px solid rgba(51,174,149,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Shield size={24} style={{ color: '#33AE95', opacity: 0.7 }} />
+                <Shield size={24} style={{ color: '#1a7bbd', opacity: 0.7 }} />
               </div>
               <span style={{ fontSize: 13.5, color: '#6B7280' }}>No roles yet. Click "Create Role" to add one.</span>
             </div>
@@ -791,6 +1065,9 @@ const UsersRoles = () => {
               <thead>
                 <tr>
                   <th>Role Name</th>
+                  {showOrgColumn && <th>Organisation</th>}
+                  {showFranchiseColumns && <th>Franchise</th>}
+                  {showFranchiseColumns && <th>Parent Organisation</th>}
                   <th>Assigned Users</th>
                   <th>Modules</th>
                   <th>Status</th>
@@ -800,7 +1077,7 @@ const UsersRoles = () => {
                 </tr>
               </thead>
               <tbody>
-                {visibleRoles.map((role) => {
+                {paginatedRoles.map((role) => {
                   const grouped = groupByModule(roleModules[role.roleId] ?? []);
                   const isActive = role.isActive !== false;
                   // Use the larger of the DB-reported count and the locally derived count
@@ -811,11 +1088,41 @@ const UsersRoles = () => {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(51,174,149,0.10)', border: '1px solid rgba(51,174,149,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Shield size={14} style={{ color: '#33AE95' }} />
+                            <Shield size={14} style={{ color: '#1a7bbd' }} />
                           </div>
                           <span className={styles.userName}>{role.name}</span>
                         </div>
                       </td>
+                      {/* Organisation column (super admin + organisation filter) */}
+                      {showOrgColumn && (
+                        <td className={styles.mutedCell}>
+                          {role.orgName
+                            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
+                              <Home size={11} style={{ opacity: 0.5 }} />{role.orgName}
+                            </span>
+                            : <span style={{ color: '#D1D5DB' }}>—</span>}
+                        </td>
+                      )}
+                      {/* Franchise name column */}
+                      {showFranchiseColumns && (
+                        <td className={styles.mutedCell}>
+                          {role.orgName
+                            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
+                              <Home size={11} style={{ opacity: 0.5 }} />{role.orgName}
+                            </span>
+                            : <span style={{ color: '#D1D5DB' }}>—</span>}
+                        </td>
+                      )}
+                      {/* Parent organisation column */}
+                      {showFranchiseColumns && (
+                        <td className={styles.mutedCell}>
+                          {getRoleParentOrgName(role)
+                            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
+                              <Home size={11} style={{ opacity: 0.5 }} />{getRoleParentOrgName(role)}
+                            </span>
+                            : <span style={{ color: '#D1D5DB' }}>—</span>}
+                        </td>
+                      )}
                       {/* Assigned users — clickable */}
                       <td>
                         <button className={styles.countBtn} onClick={() => openUsersModal(role)}>
@@ -860,6 +1167,16 @@ const UsersRoles = () => {
               </tbody>
             </table>
           )}
+          <div className={styles.paginationArea}>
+            <Pagination
+              currentPage={rolesPage}
+              totalPages={rolesTotalPages}
+              totalItems={visibleRoles.length}
+              pageSize={rolesPageSize}
+              onPageChange={setRolesPage}
+              onPageSizeChange={(size) => { setRolesPageSize(size); setRolesPage(1); }}
+            />
+          </div>
         </div>
       )}
 
@@ -870,7 +1187,7 @@ const UsersRoles = () => {
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
                 style={{ background: 'rgba(51,174,149,0.12)', border: '1px solid rgba(51,174,149,0.3)' }}>
-                <Package size={16} style={{ color: '#33AE95' }} />
+                <Package size={16} style={{ color: '#1a7bbd' }} />
               </div>
               <div>
                 <DialogTitle className="text-base font-bold text-[#263B4F]">Module Permissions</DialogTitle>
@@ -886,7 +1203,7 @@ const UsersRoles = () => {
                 : grouped.map((m) => (
                   <div key={m.moduleId} style={{ marginBottom: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#33AE95', display: 'inline-block', flexShrink: 0 }} />
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#1a7bbd', display: 'inline-block', flexShrink: 0 }} />
                       <span style={{ fontSize: 13, fontWeight: 600, color: '#263B4F' }}>{m.moduleName}</span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, paddingLeft: 14 }}>
@@ -928,7 +1245,7 @@ const UsersRoles = () => {
           <div className="overflow-y-auto flex-1 px-4 py-3">
             {usersModalLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
-                <Loader2 size={20} style={{ color: '#33AE95', animation: 'spin 1s linear infinite' }} />
+                <Loader2 size={20} style={{ color: '#1a7bbd', animation: 'spin 1s linear infinite' }} />
               </div>
             ) : usersModalList.length === 0 ? (
               <p style={{ fontSize: 13, color: '#9CA3AF', fontStyle: 'italic', textAlign: 'center', padding: '24px 0' }}>No users assigned to this role.</p>
@@ -969,7 +1286,7 @@ const UsersRoles = () => {
             <div className="flex items-center gap-3 mb-1">
               <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
                 style={{ background: 'rgba(51,174,149,0.12)', border: '1px solid rgba(51,174,149,0.3)' }}>
-                <Shield size={18} style={{ color: '#33AE95' }} />
+                <Shield size={18} style={{ color: '#1a7bbd' }} />
               </div>
               <DialogTitle className="text-xl font-bold text-[#263B4F]">
                 {editRole ? 'Edit Role' : 'Create Role'}
@@ -996,7 +1313,7 @@ const UsersRoles = () => {
                 placeholder="Brief description of this role…"
                 value={roleDesc}
                 onChange={(e) => setRoleDesc(e.target.value)}
-                className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 text-sm px-3 py-2 resize-none outline-none"
+                className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#1a7bbd] focus:ring-1 focus:ring-[#1a7bbd]/20 text-sm px-3 py-2 resize-none outline-none"
               />
             </Fld>
 
@@ -1119,7 +1436,7 @@ const UsersRoles = () => {
 
               {modulesLoading ? (
                 <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
-                  <Loader2 size={20} style={{ color: '#33AE95', animation: 'spin 1s linear infinite' }} />
+                  <Loader2 size={20} style={{ color: '#1a7bbd', animation: 'spin 1s linear infinite' }} />
                 </div>
               ) : (
                 <div className={styles.modulePickerList}>
@@ -1177,7 +1494,7 @@ const UsersRoles = () => {
               className="text-[#6B7280] hover:text-[#263B4F] hover:bg-white border border-[#E5E7EB]">Cancel</Button>
             <Button onClick={submitRole} disabled={roleSubmitting}
               className="flex-1 sm:flex-none sm:min-w-44 font-semibold text-white shadow-md active:scale-95"
-              style={{ background: '#33AE95' }}>
+              style={{ background: '#1a7bbd' }}>
               {roleSubmitting
                 ? <span className="flex items-center gap-2"><span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{editRole ? 'Saving…' : 'Creating…'}</span>
                 : editRole ? 'Save Changes' : 'Create Role'}
@@ -1283,9 +1600,9 @@ const UsersRoles = () => {
                         style={{
                           padding: '10px 20px 12px', fontSize: 13,
                           fontWeight: userAccountType === opt.value ? 700 : 500,
-                          color: userAccountType === opt.value ? '#33AE95' : '#6B7280',
+                          color: userAccountType === opt.value ? '#1a7bbd' : '#6B7280',
                           background: 'transparent', border: 'none',
-                          borderBottom: userAccountType === opt.value ? '2.5px solid #33AE95' : '2.5px solid transparent',
+                          borderBottom: userAccountType === opt.value ? '2.5px solid #1a7bbd' : '2.5px solid transparent',
                           cursor: 'pointer', transition: 'all 0.15s', lineHeight: 1.3, marginBottom: -1,
                           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                         }}>
@@ -1330,7 +1647,7 @@ const UsersRoles = () => {
                           {...passwordField} className={inputCls(false)} />
                       </IcoInput>
                       <button type="button" onClick={generatePassword} title="Generate password"
-                        className="shrink-0 h-10 px-3 rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#33AE95] hover:border-[#33AE95] transition-all flex items-center gap-1.5 text-xs font-medium">
+                        className="shrink-0 h-10 px-3 rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#1a7bbd] hover:border-[#1a7bbd] transition-all flex items-center gap-1.5 text-xs font-medium">
                         <Wand2 size={13} />
                       </button>
                     </div>
@@ -1505,12 +1822,12 @@ const UsersRoles = () => {
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-slate-400 pointer-events-none z-10"><FileText size={14} /></span>
                       <textarea rows={2} placeholder="Short bio…" {...register('bio')}
-                        className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 text-sm px-3 py-2 pl-9 resize-none outline-none" />
+                        className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#1a7bbd] focus:ring-1 focus:ring-[#1a7bbd]/20 text-sm px-3 py-2 pl-9 resize-none outline-none" />
                     </div>
                   </Fld>
                   <Fld label="Remark" hint="Optional">
                     <textarea rows={2} placeholder="Internal notes…" {...register('remark')}
-                      className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 text-sm px-3 py-2 resize-none outline-none" />
+                      className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#1a7bbd] focus:ring-1 focus:ring-[#1a7bbd]/20 text-sm px-3 py-2 resize-none outline-none" />
                   </Fld>
                 </div>
               </div>

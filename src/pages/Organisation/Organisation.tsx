@@ -284,6 +284,7 @@ const Organisation = () => {
                   pageSize={pageSize}
                   onPageChange={setCurrentPage}
                   onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+                  pageSizeOptions={[10, 20, 50]}
                 />
               </div>
             </>

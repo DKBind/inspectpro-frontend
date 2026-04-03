@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, RefreshCw, AlertTriangle, CheckCircle2,
-  Layers, FileText, AlertOctagon, Printer, Calendar, 
+  Layers, FileText, AlertOctagon, Printer, Calendar,
   ClipboardList, Info
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,29 +13,29 @@ import styles from './DefectSummary.module.css';
 
 // ─── Severity meta ────────────────────────────────────────────────────────────
 const SEV_META: Record<string, { bg: string; color: string; border: string }> = {
-  LOW:      { bg: '#F0FDF4', color: '#16A34A', border: '#DCFCE7' },
-  MEDIUM:   { bg: '#FFFBEB', color: '#B45309', border: '#FEF3C7' },
-  HIGH:     { bg: '#FEF2F2', color: '#DC2626', border: '#FEE2E2' },
+  LOW: { bg: '#F0FDF4', color: '#16A34A', border: '#DCFCE7' },
+  MEDIUM: { bg: '#FFFBEB', color: '#B45309', border: '#FEF3C7' },
+  HIGH: { bg: '#FEF2F2', color: '#DC2626', border: '#FEE2E2' },
   CRITICAL: { bg: '#FEF2F2', color: '#991B1B', border: '#FCA5A5' },
 };
 
 const STATUS_META: Record<string, { bg: string; color: string; border: string }> = {
-  OPEN:        { bg: '#FEF2F2', color: '#EF4444', border: '#FEE2E2' },
+  OPEN: { bg: '#FEF2F2', color: '#EF4444', border: '#FEE2E2' },
   IN_PROGRESS: { bg: '#EFF6FF', color: '#2563EB', border: '#DBEAFE' },
-  RESOLVED:    { bg: '#F0FDF4', color: '#16A34A', border: '#DCFCE7' },
-  VERIFIED:    { bg: '#F5F3FF', color: '#7C3AED', border: '#EDE9FE' },
+  RESOLVED: { bg: '#F0FDF4', color: '#16A34A', border: '#DCFCE7' },
+  VERIFIED: { bg: '#F5F3FF', color: '#7C3AED', border: '#EDE9FE' },
 };
 
 function Badge({ label, type, value }: { label: string; type: 'sev' | 'status'; value: string }) {
-  const meta = type === 'sev' 
+  const meta = type === 'sev'
     ? (SEV_META[value] ?? SEV_META.MEDIUM)
     : (STATUS_META[value] ?? STATUS_META.OPEN);
-    
+
   return (
-    <span className={styles.badge} style={{ 
-      background: meta.bg, 
-      color: meta.color, 
-      border: `1px solid ${meta.border}` 
+    <span className={styles.badge} style={{
+      background: meta.bg,
+      color: meta.color,
+      border: `1px solid ${meta.border}`
     }}>
       {label}
     </span>
@@ -182,7 +182,7 @@ export default function DefectSummary() {
             label: 'Generation Date',
             value: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }),
             icon: <Calendar size={18} />,
-            color: '#33AE95',
+            color: '#1a7bbd',
             bg: '#F0FDF9'
           }
         ].map((s) => (

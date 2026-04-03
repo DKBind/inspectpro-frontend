@@ -623,7 +623,7 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
       {/* ═══ TEMPLATE TITLE CARD ═══ */}
       <div className={css.titleCard}>
         <div className={css.titleCardIcon}>
-          <LayoutTemplate size={22} color="#33AE95" />
+          <LayoutTemplate size={22} color="#1a7bbd" />
         </div>
         <div className={css.titleCardBody}>
           <div className={css.titleCardMeta} style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
@@ -653,7 +653,7 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
         <nav className={css.sidebar}>
           <div className={css.sidebarHead}>
             <div className={css.sidebarHeadIcon}>
-              <FolderOpen size={14} color="#33AE95" />
+              <FolderOpen size={14} color="#1a7bbd" />
             </div>
             <span className={css.sidebarHeadTitle}>Template Menu</span>
           </div>
@@ -786,7 +786,7 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
                   <div className={css.cgGrid}>
                     {nodes.filter(n => n.type === 'FOLDER').map(node => (
                       <button key={node.id} className={css.cgCard} onClick={() => setSelectedId(node.id)}>
-                        <div className={css.cgCardIcon}><FolderOpen size={22} color="#33AE95" /></div>
+                        <div className={css.cgCardIcon}><FolderOpen size={22} color="#1a7bbd" /></div>
                         <div className={css.cgCardName}>{node.name}</div>
                         <div className={css.cgCardMeta}>{countItems(node.children ?? [])} item{countItems(node.children ?? []) !== 1 ? 's' : ''}</div>
                       </button>
@@ -1096,7 +1096,7 @@ function RecursiveTreeNode({
         {/* Icon */}
         <span style={{ flexShrink: 0, marginRight: 7, display: 'flex', alignItems: 'center' }}>
           {isFolder
-            ? (isExpanded ? <FolderOpen size={14} color={isSelected ? '#33AE95' : '#6B7280'} /> : <Folder size={14} color={isSelected ? '#33AE95' : '#6B7280'} />)
+            ? (isExpanded ? <FolderOpen size={14} color={isSelected ? '#1a7bbd' : '#6B7280'} /> : <Folder size={14} color={isSelected ? '#1a7bbd' : '#6B7280'} />)
             : isSel
               ? <CheckCircle2 size={12} color={isSelected ? '#16A34A' : '#9CA3AF'} />
               : <AlertTriangle size={12} color={isSelected ? '#DC2626' : '#9CA3AF'} />}
@@ -1495,7 +1495,7 @@ function OverallsModal({ initialOveralls, onConfirm, onCancel }: {
 }) {
   const [list, setList] = useState([...initialOveralls]);
   const [val, setVal] = useState('');
-  
+
   const add = () => {
     const trimmed = val.trim();
     if (trimmed && !list.includes(trimmed)) {
@@ -1526,7 +1526,7 @@ function OverallsModal({ initialOveralls, onConfirm, onCancel }: {
 
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <input value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add(); }} placeholder="Add new rating..." className={css.modalInput} style={{ flex: 1 }} />
-          <button onClick={add} disabled={!val.trim() || list.includes(val.trim())} style={{ background: '#33AE95', color: 'white', border: 'none', borderRadius: 8, padding: '0 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add</button>
+          <button onClick={add} disabled={!val.trim() || list.includes(val.trim())} style={{ background: '#1a7bbd', color: 'white', border: 'none', borderRadius: 8, padding: '0 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add</button>
         </div>
 
         <div className={css.modalActions} style={{ marginTop: 16 }}>

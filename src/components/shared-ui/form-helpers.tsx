@@ -11,7 +11,7 @@ import { Label } from './Label/label';
  *  @param hasError  highlights border in red when true
  */
 export const inputCls = (hasError?: boolean) => {
-  return `h-10 bg-white border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 transition-all ${hasError ? '!border-[#DF453A]' : ''}`;
+  return `h-10 bg-white border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#1a7bbd] focus:ring-1 focus:ring-[#1a7bbd]/20 transition-all ${hasError ? '!border-[#DF453A]' : ''}`;
 };
 
 // ─── Section header ─────────────────────────────────────────────────────────
@@ -20,7 +20,7 @@ export function Sec({
   icon,
   label,
   children,
-  iconColor = 'text-[#33AE95]',
+  iconColor = 'text-[#1a7bbd]',
 }: {
   icon?: React.ReactNode;
   label: string;

@@ -390,15 +390,15 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
   };
 
   const inputCls = (hasError: boolean) =>
-    `border border-[#E5E7EB] rounded-lg px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-[#33AE95]/30 focus:border-[#33AE95] text-[#263B4F] bg-white text-sm placeholder:text-[#9CA3AF] ${hasError ? 'border-[#DF453A]' : ''}`;
+    `border border-[#E5E7EB] rounded-lg px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-[#1a7bbd]/30 focus:border-[#1a7bbd] text-[#263B4F] bg-white text-sm placeholder:text-[#9CA3AF] ${hasError ? 'border-[#DF453A]' : ''}`;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
         <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
           <div className="flex items-center gap-3 mb-1">
-            <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
-              <Building2 size={18} className="text-[#33AE95]" />
+            <div className="h-9 w-9 rounded-xl bg-[#1a7bbd]/10 border border-[#1a7bbd]/30 flex items-center justify-center">
+              <Building2 size={18} className="text-[#1a7bbd]" />
             </div>
             <DialogTitle className="text-xl font-bold text-[#263B4F]">
               {isEditMode ? 'Edit Organisation' : 'Create Organisation'}
@@ -477,7 +477,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
                           <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280] pointer-events-none z-10" />
                             <Input type="date" {...register('subscriptionStartDate')}
-                              className={`pl-9 h-10 border-[#E5E7EB] text-[#263B4F] bg-white focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 ${(errors as any).subscriptionStartDate ? 'border-[#DF453A]' : ''}`} />
+                              className={`pl-9 h-10 border-[#E5E7EB] text-[#263B4F] bg-white focus:border-[#1a7bbd] focus:ring-1 focus:ring-[#1a7bbd]/20 ${(errors as any).subscriptionStartDate ? 'border-[#DF453A]' : ''}`} />
                           </div>
                         </Fld>
                         <Fld label="End Date">
@@ -524,7 +524,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
               {/* Primary Contact */}
               <Sec icon={<User size={13} />} label="Primary Contact">
                 <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5 space-y-3">
-                  <div className="flex items-center gap-2 text-xs text-[#33AE95] font-medium bg-[#33AE95]/8 border border-[#33AE95]/20 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 text-xs text-[#1a7bbd] font-medium bg-[#1a7bbd]/8 border border-[#1a7bbd]/20 rounded-lg px-3 py-2">
                     <Info size={13} />
                     This contact person will become the Admin for this organisation.
                   </div>
@@ -589,7 +589,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
                   <button
                     type="button"
                     onClick={addExtraRow}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-[#33AE95]/50 text-[#33AE95] text-sm font-medium hover:bg-[#33AE95]/8 transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-[#1a7bbd]/50 text-[#1a7bbd] text-sm font-medium hover:bg-[#1a7bbd]/8 transition-colors"
                   >
                     <Plus size={14} />
                     Add Question
@@ -656,7 +656,7 @@ export function OrganisationCreateModal({ open, onOpenChange, onSuccess, editOrg
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}
-                className="flex-1 sm:flex-none sm:min-w-44 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95">
+                className="flex-1 sm:flex-none sm:min-w-44 bg-[#1a7bbd] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95">
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -684,7 +684,7 @@ function ExtraInfoRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const inputBase = 'h-9 rounded-md border border-[#E5E7EB] px-3 text-sm text-[#263B4F] bg-white focus:outline-none focus:ring-1 focus:ring-[#33AE95]/30 focus:border-[#33AE95] placeholder:text-[#9CA3AF]';
+  const inputBase = 'h-9 rounded-md border border-[#E5E7EB] px-3 text-sm text-[#263B4F] bg-white focus:outline-none focus:ring-1 focus:ring-[#1a7bbd]/30 focus:border-[#1a7bbd] placeholder:text-[#9CA3AF]';
 
   if (row.saved) {
     return (
@@ -720,7 +720,7 @@ function ExtraInfoRow({
         className={`${inputBase} flex-1`}
       />
       <button type="button" onClick={onSave}
-        className="inline-flex items-center gap-1.5 px-3 h-9 rounded-md bg-[#33AE95] text-white text-xs font-semibold hover:bg-[#2a9a84] transition-colors shrink-0">
+        className="inline-flex items-center gap-1.5 px-3 h-9 rounded-md bg-[#1a7bbd] text-white text-xs font-semibold hover:bg-[#2a9a84] transition-colors shrink-0">
         <Save size={12} />
         Save
       </button>
@@ -739,7 +739,7 @@ function Sec({ icon, label, children }: { icon: React.ReactNode; label: string; 
     <section>
       {label && (
         <div className="flex items-center gap-2 mb-3">
-          {icon && <span className="text-[#33AE95]">{icon}</span>}
+          {icon && <span className="text-[#1a7bbd]">{icon}</span>}
           <span className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">{label}</span>
         </div>
       )}
@@ -783,7 +783,7 @@ function PhoneInput({ field, hasError }: { field: React.InputHTMLAttributes<HTML
     if (!/^[0-9]+$/.test(text)) e.preventDefault();
   };
   return (
-    <div className={`flex items-center border rounded-lg bg-white h-10 overflow-hidden ${hasError ? 'border-[#DF453A]' : 'border-[#E5E7EB]'} focus-within:ring-2 focus-within:ring-[#33AE95]/30 focus-within:border-[#33AE95]`}>
+    <div className={`flex items-center border rounded-lg bg-white h-10 overflow-hidden ${hasError ? 'border-[#DF453A]' : 'border-[#E5E7EB]'} focus-within:ring-2 focus-within:ring-[#1a7bbd]/30 focus-within:border-[#1a7bbd]`}>
       <span className="px-3 text-sm font-medium text-[#6B7280] border-r border-[#E5E7EB] h-full flex items-center select-none bg-[#F9FAFB]">+91</span>
       <input
         {...field}

@@ -14,11 +14,11 @@ import { ROUTES } from '@/components/Constant/Route';
 import styles from './ProjectDetail.module.css';
 
 const PROJECT_STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-  PLANNING:    { label: 'Planning',    color: '#3b82f6', bg: 'rgba(59,130,246,0.1)'  },
-  IN_PROGRESS: { label: 'In Progress', color: '#10b981', bg: 'rgba(16,185,129,0.1)'  },
-  ON_HOLD:     { label: 'On Hold',     color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
-  COMPLETED:   { label: 'Completed',   color: '#22c55e', bg: 'rgba(34,197,94,0.1)'   },
-  CANCELLED:   { label: 'Cancelled',   color: '#ef4444', bg: 'rgba(239,68,68,0.1)'   },
+  PLANNING: { label: 'Planning', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+  IN_PROGRESS: { label: 'In Progress', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+  ON_HOLD: { label: 'On Hold', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+  COMPLETED: { label: 'Completed', color: '#22c55e', bg: 'rgba(34,197,94,0.1)' },
+  CANCELLED: { label: 'Cancelled', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
 };
 
 const fmt = (date?: string) =>
@@ -76,7 +76,7 @@ const ProjectDetail = () => {
           setProjectTemplate(projectScoped ?? projTpls[0]);
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setTemplatesLoading(false));
   }, [id]);
 
@@ -117,20 +117,20 @@ const ProjectDetail = () => {
   const statusMeta = PROJECT_STATUS_META[project.projectStatus ?? ''] ??
     { label: project.projectStatus ?? 'Unknown', color: '#64748B', bg: '#F1F5F9' };
 
-  const managerAssignment  = project.assignments?.find(a => a.roleName?.toLowerCase() === 'manager');
-  const qaAssignment       = project.assignments?.find(a => a.roleName?.toLowerCase() === 'qa');
-  const inspectorAssignment  = project.assignments?.find(a => a.roleName?.toLowerCase() === 'inspector');
+  const managerAssignment = project.assignments?.find(a => a.roleName?.toLowerCase() === 'manager');
+  const qaAssignment = project.assignments?.find(a => a.roleName?.toLowerCase() === 'qa');
+  const inspectorAssignment = project.assignments?.find(a => a.roleName?.toLowerCase() === 'inspector');
   const contractorAssignment = project.assignments?.find(a => a.roleName?.toLowerCase() === 'contractor');
 
-  const hasAddress   = [project.addressLine1, project.addressLine2, project.street, project.city, project.state, project.country, project.pincode].some(Boolean);
-  const hasTimeline  = [project.startDatePlanned, project.startDateActual, project.estimatedCompletionDate, project.actualCompletionDate].some(Boolean);
+  const hasAddress = [project.addressLine1, project.addressLine2, project.street, project.city, project.state, project.country, project.pincode].some(Boolean);
+  const hasTimeline = [project.startDatePlanned, project.startDateActual, project.estimatedCompletionDate, project.actualCompletionDate].some(Boolean);
   const hasFinancials = project.totalBudget != null || project.contractValue != null;
 
   const allAssignments = [
     ...(project.managerName ? [{ role: 'Manager', name: project.managerName }] : []),
     ...(managerAssignment && !project.managerName ? [{ role: 'Manager', name: managerAssignment.userName ?? '' }] : []),
-    ...(qaAssignment         ? [{ role: 'QA',         name: qaAssignment.userName ?? '' }] : []),
-    ...(inspectorAssignment  ? [{ role: 'Inspector',  name: inspectorAssignment.userName ?? '' }] : []),
+    ...(qaAssignment ? [{ role: 'QA', name: qaAssignment.userName ?? '' }] : []),
+    ...(inspectorAssignment ? [{ role: 'Inspector', name: inspectorAssignment.userName ?? '' }] : []),
     ...(contractorAssignment ? [{ role: 'Contractor', name: contractorAssignment.userName ?? '' }] : []),
   ];
 
@@ -145,7 +145,7 @@ const ProjectDetail = () => {
         <button
           className={styles.backBtn}
           onClick={() => navigate(`/projects/edit/${project.id}`)}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', borderColor: '#33AE95', color: '#33AE95', fontWeight: 600 }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'white', borderColor: '#1a7bbd', color: '#1a7bbd', fontWeight: 600 }}
         >
           <Pencil size={13} /> Edit Project
         </button>
@@ -163,9 +163,9 @@ const ProjectDetail = () => {
               <span className={styles.statusDot} style={{ background: statusMeta.color }} />
               {statusMeta.label}
             </span>
-              <span className={styles.heroPropType}>
-                <Building2 size={11} /> {project.propertySubTypeName || project.propertyTypeName}
-              </span>
+            <span className={styles.heroPropType}>
+              <Building2 size={11} /> {project.propertySubTypeName || project.propertyTypeName}
+            </span>
             {project.organisationName && (
               <span className={styles.heroPropType}>
                 <Building2 size={11} /> {project.organisationName}
@@ -183,7 +183,7 @@ const ProjectDetail = () => {
 
         <Section icon={<Users size={14} color="#3B82F6" />} title="Team & Client">
           <div className={styles.grid}>
-            <Field label="Client"  value={project.clientName} />
+            <Field label="Client" value={project.clientName} />
             <Field label="Company" value={project.clientCompany} />
             {allAssignments.map(({ role, name }, i) => (
               <Field
@@ -218,7 +218,7 @@ const ProjectDetail = () => {
               {project.addressLine1 && <Field label="Line 1" value={project.addressLine1} full />}
               {project.addressLine2 && <Field label="Line 2" value={project.addressLine2} full />}
               {project.city && <Field label="District / City" value={project.city} />}
-              {project.state   && <Field label="State"   value={project.state} />}
+              {project.state && <Field label="State" value={project.state} />}
               {project.country && <Field label="Country" value={project.country} />}
               {project.pincode && <Field label="Pincode" value={project.pincode} />}
             </div>
@@ -228,9 +228,9 @@ const ProjectDetail = () => {
         {(hasTimeline || Object.keys(project.projectSpecs || {}).some(k => k.startsWith('Timeline: '))) && (
           <Section icon={<Calendar size={14} color="#7C3AED" />} title="Timeline">
             <div className={styles.grid}>
-              <Field label="Planned Start"     value={fmt(project.startDatePlanned)} />
-              <Field label="Actual Start"      value={fmt(project.startDateActual)} />
-              <Field label="Est. Completion"   value={fmt(project.estimatedCompletionDate)} />
+              <Field label="Planned Start" value={fmt(project.startDatePlanned)} />
+              <Field label="Actual Start" value={fmt(project.startDateActual)} />
+              <Field label="Est. Completion" value={fmt(project.estimatedCompletionDate)} />
               <Field label="Actual Completion" value={fmt(project.actualCompletionDate)} />
               {Object.entries(project.projectSpecs as Record<string, string> || {})
                 .filter(([k]) => k.startsWith('Timeline: '))
@@ -244,7 +244,7 @@ const ProjectDetail = () => {
         {(hasFinancials || Object.keys(project.projectSpecs || {}).some(k => k.startsWith('Finance: '))) && (
           <Section icon={<IndianRupee size={14} color="#16A34A" />} title="Financials">
             <div className={styles.grid}>
-              <Field label="Total Budget"   value={fmtMoney(project.totalBudget)} />
+              <Field label="Total Budget" value={fmtMoney(project.totalBudget)} />
               <Field label="Contract Value" value={fmtMoney(project.contractValue)} />
               {Object.entries(project.projectSpecs as Record<string, string> || {})
                 .filter(([k]) => k.startsWith('Finance: '))
@@ -256,7 +256,7 @@ const ProjectDetail = () => {
         )}
 
         {/* ── Inspection Template (view-only) ─────────────────────────────── */}
-        <Section icon={<ClipboardList size={14} color="#33AE95" />} title="Inspection Template">
+        <Section icon={<ClipboardList size={14} color="#1a7bbd" />} title="Inspection Template">
           {templatesLoading ? (
             <div className={styles.tplLoading}>
               <Loader2 size={16} className={styles.tplSpinner} /> Loading…
@@ -265,7 +265,7 @@ const ProjectDetail = () => {
             /* Template assigned — show info + Create Inspection button */
             <div className={styles.tplAssigned}>
               <div className={styles.tplAssignedIcon}>
-                <CheckCircle2 size={22} color="#33AE95" />
+                <CheckCircle2 size={22} color="#1a7bbd" />
               </div>
               <div className={styles.tplAssignedInfo}>
                 <p className={styles.tplAssignedTitle}>{projectTemplate.title}</p>
@@ -277,7 +277,7 @@ const ProjectDetail = () => {
               </div>
               <button
                 className={styles.tplReassignBtn}
-                style={{ background: 'linear-gradient(135deg,#33AE95,#2a9a84)', color: '#fff', borderColor: 'transparent' }}
+                style={{ background: 'linear-gradient(135deg,#1a7bbd,#2a9a84)', color: '#fff', borderColor: 'transparent' }}
                 onClick={handleCreateInspection}
                 disabled={creatingInspection}
               >
