@@ -239,7 +239,7 @@ export default function InspectionExecution() {
     } finally {
       setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inspectionId, localEmptyFolders]);
 
   useEffect(() => { load(); }, [load]);
@@ -496,14 +496,14 @@ export default function InspectionExecution() {
       {/* ═══ TITLE CARD ═══ */}
       <div className={tbCss.titleCard}>
         <div className={tbCss.titleCardIcon}>
-          <ClipboardCheck size={22} color="#33AE95" />
+          <ClipboardCheck size={22} color="#1a7bbd" />
         </div>
         <div className={tbCss.titleCardBody}>
           <div className={tbCss.titleCardMeta}>
             <span className={tbCss.titleCardBadge}>{isCompleted ? 'Completed' : 'In Progress'}</span>
             {/* Progress bar */}
             <div style={{ flex: 1, height: 5, background: '#F1F5F9', borderRadius: 10, overflow: 'hidden', margin: '0 12px', maxWidth: 220 }}>
-              <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? '#22c55e' : 'linear-gradient(90deg,#33AE95,#298E7A)', borderRadius: 10, transition: 'width 0.5s' }} />
+              <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? '#22c55e' : 'linear-gradient(90deg,#1a7bbd,#298E7A)', borderRadius: 10, transition: 'width 0.5s' }} />
             </div>
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#1E293B', marginTop: 4 }}>
@@ -524,7 +524,7 @@ export default function InspectionExecution() {
           {/* Sidebar header */}
           <div className={tbCss.sidebarHead}>
             <div className={tbCss.sidebarHeadIcon}>
-              <FolderOpen size={14} color="#33AE95" />
+              <FolderOpen size={14} color="#1a7bbd" />
             </div>
             <span className={tbCss.sidebarHeadTitle}>Sections</span>
           </div>
@@ -602,8 +602,8 @@ export default function InspectionExecution() {
                       {/* Icon */}
                       <span style={{ flexShrink: 0, marginRight: 7, display: 'flex', alignItems: 'center' }}>
                         {isNavOpen || isActive
-                          ? <FolderOpen size={14} color={isDone ? '#33AE95' : isActive ? '#298E7A' : '#6B7280'} />
-                          : <Folder size={14} color={isDone ? '#33AE95' : '#6B7280'} />}
+                          ? <FolderOpen size={14} color={isDone ? '#1a7bbd' : isActive ? '#298E7A' : '#6B7280'} />
+                          : <Folder size={14} color={isDone ? '#1a7bbd' : '#6B7280'} />}
                       </span>
 
                       {/* Label (inline rename) */}
@@ -816,7 +816,7 @@ export default function InspectionExecution() {
                     return (
                       <button key={node.fullPath} className={tbCss.cgCard} onClick={() => goToNode(node.fullPath.split(' › '))}>
                         <div className={tbCss.cgCardIcon}>
-                          <FolderOpen size={22} color={isDone ? '#22c55e' : '#33AE95'} />
+                          <FolderOpen size={22} color={isDone ? '#22c55e' : '#1a7bbd'} />
                         </div>
                         <div className={tbCss.cgCardName}>{node.name}</div>
                         <div className={tbCss.cgCardMeta}>{s.answered}/{s.total} answered</div>
@@ -907,7 +907,7 @@ export default function InspectionExecution() {
                             return (
                               <button key={child.fullPath} className={tbCss.cgCard} onClick={() => goToNode(child.fullPath.split(' › '))}>
                                 <div className={tbCss.cgCardIcon}>
-                                  <FolderOpen size={22} color={isDone ? '#22c55e' : '#33AE95'} />
+                                  <FolderOpen size={22} color={isDone ? '#22c55e' : '#1a7bbd'} />
                                 </div>
                                 <div className={tbCss.cgCardName}>{child.name}</div>
                                 <div className={tbCss.cgCardMeta}>{s.answered}/{s.total} answered</div>
@@ -1178,7 +1178,7 @@ export default function InspectionExecution() {
                 {/* All done banner */}
                 {pct === 100 && !readOnly && (
                   <div className="ie-all-done" style={{ marginTop: 16 }}>
-                    <CheckCircle2 size={20} style={{ color: '#33AE95' }} />
+                    <CheckCircle2 size={20} style={{ color: '#1a7bbd' }} />
                     <span>All items answered! Ready to submit.</span>
                   </div>
                 )}
@@ -1372,7 +1372,7 @@ export default function InspectionExecution() {
 
       {/* ═══ ADD ITEM MODAL ═══ */}
       {addItemModalOpen && currentNode && (
-        <AddItemModal 
+        <AddItemModal
           existingNames={activeNodeResults.map(r => r.itemLabel)}
           onCancel={() => setAddItemModalOpen(false)}
           onConfirm={async (itemName) => {
@@ -1439,11 +1439,11 @@ export default function InspectionExecution() {
             const { pattern, mode } = sectionMoveCopyModal;
             const panelName = pattern.split(' › ').pop()!;
             const newPath = targetFolder ? `${targetFolder} › ${panelName}` : panelName;
-            
+
             setResults(prev => {
               let next = [...prev];
               const toMove = next.filter(r => r.sectionName === pattern || r.sectionName?.startsWith(pattern + ' › '));
-              
+
               if (mode === 'move') {
                 next = next.map(r => {
                   if (r.sectionName === pattern || r.sectionName?.startsWith(pattern + ' › ')) {
@@ -1652,7 +1652,7 @@ function MoveSectionModal({ mode: initialMode, item, tree, onConfirm, onCancel }
                     textAlign: 'left', cursor: 'pointer', transition: 'all 0.12s',
                   }}
                 >
-                  <Layers size={13} style={{ color: isActive ? '#33AE95' : '#94A3B8', flexShrink: 0 }} />
+                  <Layers size={13} style={{ color: isActive ? '#1a7bbd' : '#94A3B8', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? '#298E7A' : '#263B4F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {leaf.name}
@@ -1663,7 +1663,7 @@ function MoveSectionModal({ mode: initialMode, item, tree, onConfirm, onCancel }
                       </div>
                     )}
                   </div>
-                  {isActive && <CheckCircle2 size={14} style={{ color: '#33AE95', flexShrink: 0 }} />}
+                  {isActive && <CheckCircle2 size={14} style={{ color: '#1a7bbd', flexShrink: 0 }} />}
                 </button>
               );
             })}
@@ -1696,8 +1696,8 @@ function MoveFolderSectionModal({ mode, pattern, tree, onConfirm, onCancel }: {
   onCancel: () => void;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
-  
-  const folders: {name: string, fullPath: string}[] = [{ name: 'Inspection Root (Top Level)', fullPath: '' }];
+
+  const folders: { name: string, fullPath: string }[] = [{ name: 'Inspection Root (Top Level)', fullPath: '' }];
   function traverse(nodes: Record<string, NavNode>) {
     for (const node of Object.values(nodes)) {
       if (!node.isLeaf) {
@@ -1716,7 +1716,7 @@ function MoveFolderSectionModal({ mode, pattern, tree, onConfirm, onCancel }: {
         <h3 className={tbCss.modalTitle}>
           {mode === 'move' ? 'Move Section to Folder' : 'Copy Section to Folder'}
         </h3>
-        
+
         <p style={{ fontSize: 13, color: '#64748B', margin: '4px 0 12px' }}>
           Select the destination folder for <strong>{pattern.split(' › ').pop()}</strong>.
         </p>
@@ -1730,7 +1730,7 @@ function MoveFolderSectionModal({ mode, pattern, tree, onConfirm, onCancel }: {
                 background: selected === f.fullPath ? 'rgba(51,174,149,0.08)' : '#FAFAFA',
                 textAlign: 'left', borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s'
               }}>
-              <FolderOpen size={16} color={selected === f.fullPath ? '#33AE95' : '#9CA3AF'} style={{ flexShrink: 0 }} />
+              <FolderOpen size={16} color={selected === f.fullPath ? '#1a7bbd' : '#9CA3AF'} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: selected === f.fullPath ? '#298E7A' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {f.name}
@@ -1741,17 +1741,17 @@ function MoveFolderSectionModal({ mode, pattern, tree, onConfirm, onCancel }: {
                   </div>
                 )}
               </div>
-              {selected === f.fullPath && <CheckCircle2 size={16} color="#33AE95" style={{ flexShrink: 0 }} />}
+              {selected === f.fullPath && <CheckCircle2 size={16} color="#1a7bbd" style={{ flexShrink: 0 }} />}
             </button>
           ))}
           {available.length === 0 && <p style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', padding: '16px 0' }}>No valid folders found.</p>}
         </div>
-        
+
         <div className={tbCss.modalActions} style={{ marginTop: 16 }}>
-           <button className={tbCss.modalCancelBtn} onClick={onCancel}>Cancel</button>
-           <button className={tbCss.modalConfirmBtn} disabled={selected === null} onClick={() => onConfirm(selected!)}>
-             {mode === 'move' ? 'Move Here' : 'Copy Here'}
-           </button>
+          <button className={tbCss.modalCancelBtn} onClick={onCancel}>Cancel</button>
+          <button className={tbCss.modalConfirmBtn} disabled={selected === null} onClick={() => onConfirm(selected!)}>
+            {mode === 'move' ? 'Move Here' : 'Copy Here'}
+          </button>
         </div>
       </div>
     </div>

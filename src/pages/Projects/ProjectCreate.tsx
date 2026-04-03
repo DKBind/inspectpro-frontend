@@ -366,7 +366,7 @@ const ProjectCreate = () => {
       {/* Page header — hero card matching ProjectDetail style */}
       <div className={styles.pageHeader}>
         <div className={styles.pageHeaderIcon}>
-          <FolderOpen size={26} color="#33AE95" />
+          <FolderOpen size={26} color="#1a7bbd" />
         </div>
         <div className={styles.pageHeaderText}>
           <h1>New Project</h1>
@@ -638,7 +638,7 @@ const ProjectCreate = () => {
                         onClick={() => setDynamicAssignments(prev => [...prev, { roleId: 0, userIds: [] }])}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 5, fontSize: 12,
-                          color: '#33AE95', background: 'rgba(51,174,149,0.08)',
+                          color: '#1a7bbd', background: 'rgba(51,174,149,0.08)',
                           border: '1px solid rgba(51,174,149,0.3)', borderRadius: 6,
                           cursor: 'pointer', fontWeight: 500, padding: '4px 10px', lineHeight: 1,
                         }}
@@ -657,7 +657,7 @@ const ProjectCreate = () => {
                       <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
                         <Users size={22} color="#D1D5DB" style={{ margin: '0 auto 6px', display: 'block' }} />
                         <p style={{ fontSize: 12, color: '#9CA3AF', margin: 0 }}>
-                          No role assignments yet — click <strong style={{ color: '#33AE95' }}>Map Role & User</strong> to begin.
+                          No role assignments yet — click <strong style={{ color: '#1a7bbd' }}>Map Role & User</strong> to begin.
                         </p>
                       </div>
                     )}
@@ -773,7 +773,7 @@ const ProjectCreate = () => {
                               <DropdownMenuTrigger asChild>
                                 <button
                                   type="button"
-                                  className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none data-[state=open]:border-[#33AE95] data-[state=open]:ring-1 data-[state=open]:ring-[#33AE95]/20 ${inputCls(false)}`}
+                                  className={`h-10 w-full rounded-md border px-3 flex items-center justify-between text-sm transition-all outline-none data-[state=open]:border-[#1a7bbd] data-[state=open]:ring-1 data-[state=open]:ring-[#1a7bbd]/20 ${inputCls(false)}`}
                                 >
                                   <span className={specValues[f.label] ? 'text-[#263B4F]' : 'text-[#9CA3AF]'}>
                                     {specValues[f.label] || 'Select…'}
@@ -790,7 +790,7 @@ const ProjectCreate = () => {
                                   <DropdownMenuItem
                                     key={o}
                                     onSelect={() => setSpecValues(prev => ({ ...prev, [f.label]: o }))}
-                                    className={specValues[f.label] === o ? 'bg-[#EFF6FF] text-[#33AE95] font-medium' : ''}
+                                    className={specValues[f.label] === o ? 'bg-[#EFF6FF] text-[#1a7bbd] font-medium' : ''}
                                   >
                                     {o}
                                   </DropdownMenuItem>
@@ -823,12 +823,12 @@ const ProjectCreate = () => {
                                 onChange={e => setCustomFields(prev => prev.map((f, i) => i === idx ? { ...f, label: e.target.value } : f))}
                                 onBlur={() => setEditingLabelIdx(null)}
                                 onKeyDown={e => e.key === 'Enter' && setEditingLabelIdx(null)}
-                                className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#33AE95] outline-none w-full"
+                                className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#1a7bbd] outline-none w-full"
                               />
                             ) : (
                               <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingLabelIdx(idx)}>
                                 <label
-                                  className="text-[#263B4F] text-sm font-medium group-hover:text-[#33AE95] transition-colors truncate cursor-pointer"
+                                  className="text-[#263B4F] text-sm font-medium group-hover:text-[#1a7bbd] transition-colors truncate cursor-pointer"
                                   title="Click to rename"
                                 >
                                   {cf.label || 'Unnamed Detail'}
@@ -878,7 +878,7 @@ const ProjectCreate = () => {
             {/* ── Inspection Template (required) — shown first ─────────── */}
             {/* <div className={styles.sectionCard}>
               <div className={styles.sectionHead}>
-                <span className={styles.sectionIcon}><ClipboardList size={13} color="#33AE95" /></span>
+                <span className={styles.sectionIcon}><ClipboardList size={13} color="#1a7bbd" /></span>
                 <span className={styles.sectionTitle}>
                   Inspection Template <span style={{ color: '#EF4444', marginLeft: 2 }}>*</span>
                 </span>
@@ -935,7 +935,7 @@ const ProjectCreate = () => {
                 {selectedTpl && (
                   <div className={styles.tplPreviewCard}>
                     <div className={styles.tplPreviewRow}>
-                      <div className={styles.tplPreviewIcon}><Globe size={15} color="#33AE95" /></div>
+                      <div className={styles.tplPreviewIcon}><Globe size={15} color="#1a7bbd" /></div>
                       <div>
                         <p className={styles.tplPreviewTitle}>{selectedTpl.title}</p>
                         {selectedTpl.description && <p className={styles.tplPreviewDesc}>{selectedTpl.description}</p>}
@@ -1038,12 +1038,12 @@ const ProjectCreate = () => {
                               onChange={e => setExtraTimelines(prev => prev.map((t, ti) => ti === i ? { ...t, label: e.target.value } : t))}
                               onBlur={() => setEditingMilestoneIdx(null)}
                               onKeyDown={e => e.key === 'Enter' && setEditingMilestoneIdx(null)}
-                              className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#33AE95] outline-none w-full"
+                              className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#1a7bbd] outline-none w-full"
                             />
                           ) : (
                             <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingMilestoneIdx(i)}>
                               <label
-                                className="text-[#263B4F] text-sm font-medium group-hover:text-[#33AE95] transition-colors truncate cursor-pointer"
+                                className="text-[#263B4F] text-sm font-medium group-hover:text-[#1a7bbd] transition-colors truncate cursor-pointer"
                                 title="Click to rename"
                               >
                                 {entry.label || 'Unnamed Milestone'}
@@ -1125,12 +1125,12 @@ const ProjectCreate = () => {
                               onChange={e => setExtraFinancials(prev => prev.map((f, fi) => fi === i ? { ...f, label: e.target.value } : f))}
                               onBlur={() => setEditingFinancialIdx(null)}
                               onKeyDown={e => e.key === 'Enter' && setEditingFinancialIdx(null)}
-                              className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#33AE95] outline-none w-full"
+                              className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#1a7bbd] outline-none w-full"
                             />
                           ) : (
                             <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingFinancialIdx(i)}>
                               <label
-                                className="text-[#263B4F] text-sm font-medium group-hover:text-[#33AE95] transition-colors truncate cursor-pointer"
+                                className="text-[#263B4F] text-sm font-medium group-hover:text-[#1a7bbd] transition-colors truncate cursor-pointer"
                                 title="Click to rename"
                               >
                                 {entry.label || 'Unnamed Line Item'}
@@ -1183,7 +1183,7 @@ const ProjectCreate = () => {
 
             <div className={styles.sectionCard}>
               <div className={styles.sectionHead}>
-                <span className={styles.sectionIcon}><ClipboardList size={13} color="#33AE95" /></span>
+                <span className={styles.sectionIcon}><ClipboardList size={13} color="#1a7bbd" /></span>
                 <span className={styles.sectionTitle}>
                   Inspection Template <span style={{ color: '#EF4444', marginLeft: 2 }}>*</span>
                 </span>
@@ -1240,7 +1240,7 @@ const ProjectCreate = () => {
                 {selectedTpl && (
                   <div className={styles.tplPreviewCard}>
                     <div className={styles.tplPreviewRow}>
-                      <div className={styles.tplPreviewIcon}><Globe size={15} color="#33AE95" /></div>
+                      <div className={styles.tplPreviewIcon}><Globe size={15} color="#1a7bbd" /></div>
                       <div>
                         <p className={styles.tplPreviewTitle}>{selectedTpl.title}</p>
                         {selectedTpl.description && <p className={styles.tplPreviewDesc}>{selectedTpl.description}</p>}

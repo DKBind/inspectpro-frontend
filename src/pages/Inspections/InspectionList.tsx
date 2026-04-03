@@ -1,9 +1,10 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   RefreshCw, MapPin,
   User, Calendar, Rocket,
   ChevronRight, Building2,
+  LayoutGrid, Clock, CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { checklistService } from '@/services/checklistService';
@@ -77,16 +78,21 @@ export default function InspectionList() {
     <div className={styles.page}>
       {/* ── Tab Bar ───────────────────────────────────────────────────── */}
       <div className={styles.tabBar}>
-        {(['all', 'pending', 'completed'] as Filter[]).map((f) => (
+        {(
+          [
+            { key: 'all',       label: 'All',       icon: LayoutGrid,    count: inspections.length },
+            { key: 'pending',   label: 'Pending',   icon: Clock,         count: pendingCount       },
+            { key: 'completed', label: 'Completed', icon: CheckCircle2,  count: completedCount     },
+          ] as { key: Filter; label: string; icon: React.ElementType; count: number }[]
+        ).map(({ key, label, icon: Icon, count }) => (
           <button
-            key={f}
-            className={`${styles.tab} ${filter === f ? styles.tabActive : ''}`}
-            onClick={() => setFilter(f)}
+            key={key}
+            className={`${styles.tab} ${filter === key ? styles.tabActive : ''}`}
+            onClick={() => setFilter(key)}
           >
-            {f === 'all' ? 'All' : f === 'pending' ? 'Pending' : 'Completed'}
-            <span className={styles.tabCount}>
-              {f === 'all' ? inspections.length : f === 'pending' ? pendingCount : completedCount}
-            </span>
+            <Icon size={14} className={styles.tabIcon} />
+            {label}
+            <span className={styles.tabCount}>{count}</span>
           </button>
         ))}
       </div>
@@ -118,8 +124,8 @@ export default function InspectionList() {
           const badgeClass = isComplete
             ? styles.statusComplete
             : isInProgress
-            ? styles.statusInProgress
-            : styles.statusNotStarted;
+              ? styles.statusInProgress
+              : styles.statusNotStarted;
           const badgeLabel = isComplete ? 'Completed' : isInProgress ? 'In Progress' : 'Not Started';
 
           return (
@@ -146,7 +152,7 @@ export default function InspectionList() {
                 {/* Organisation */}
                 {item.organisationName && (
                   <div className={styles.addressRow}>
-                    <Building2 size={11} style={{ flexShrink: 0, color: '#33AE95' }} />
+                    <Building2 size={11} style={{ flexShrink: 0, color: '#1a7bbd' }} />
                     <span>{item.organisationName}</span>
                   </div>
                 )}
@@ -155,7 +161,7 @@ export default function InspectionList() {
                 <div className={styles.cardMeta}>
                   {item.clientName && (
                     <div className={styles.infoRow}>
-                      <User size={11} style={{ color: '#33AE95', flexShrink: 0 }} />
+                      <User size={11} style={{ color: '#1a7bbd', flexShrink: 0 }} />
                       <span>{item.clientName}</span>
                     </div>
                   )}
@@ -178,7 +184,7 @@ export default function InspectionList() {
                   <div className={styles.progressBar}>
                     <div
                       className={styles.progressFill}
-                      style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #33AE95, #2a9a84)' }}
+                      style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #1a7bbd, #2a9a84)' }}
                     />
                   </div>
                   <span className={styles.progressPct}>{pct}%</span>

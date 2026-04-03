@@ -22,7 +22,7 @@ const Franchise = () => {
   const [franchises, setFranchises] = useState<OrganisationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(6);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -209,14 +209,18 @@ const Franchise = () => {
                 </tbody>
               </table>
 
-              <div className={styles.paginationArea}>
+              <div className={styles.paginationRow}>
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
                   totalItems={totalItems}
                   pageSize={pageSize}
-                  onPageChange={setCurrentPage}
-                  onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+                  onPageChange={(p) => setCurrentPage(p)}
+                  onPageSizeChange={(s) => {
+                    setPageSize(s);
+                    setCurrentPage(1);
+                  }}
+                  pageSizeOptions={[6, 12, 24]}
                 />
               </div>
             </>

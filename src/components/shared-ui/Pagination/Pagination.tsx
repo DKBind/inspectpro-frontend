@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
 import styles from './Pagination.module.css';
 
 interface PaginationProps {
@@ -61,78 +62,76 @@ const Pagination = ({
             <span className={styles.separator}>|</span>
             <div className={styles.pageSizeSelect}>
               <span>Show</span>
-              <select
-                value={pageSize}
-                onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              >
-                {pageSizeOptions.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
+              <div className={styles.pageSizeDropdown}>
+                <DropdownSelect
+                  options={pageSizeOptions.map((s) => ({ value: s, label: String(s) }))}
+                  value={pageSize}
+                  onChange={(val) => val != null && onPageSizeChange(Number(val))}
+                  searchable={false}
+                  clearable={false}
+                  dropUp
+                />
+              </div>
               <span>per page</span>
             </div>
           </>
         )}
       </div>
 
-      {/* Right Side: Navigation Controls — only shown when there are multiple pages */}
-      {totalPages > 1 && (
-        <div className={styles.controls}>
-          <button
-            className={styles.pageBtn}
-            onClick={() => onPageChange(1)}
-            disabled={currentPage === 1}
-            title="First page"
-          >
-            <ChevronsLeft />
-          </button>
+      {/* Right Side: Navigation Controls — always visible */}
+      <div className={styles.controls}>
+        <button
+          className={styles.pageBtn}
+          onClick={() => onPageChange(1)}
+          disabled={currentPage === 1}
+          title="First page"
+        >
+          <ChevronsLeft />
+        </button>
 
-          <button
-            className={styles.pageBtn}
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            title="Previous page"
-          >
-            <ChevronLeft />
-          </button>
+        <button
+          className={styles.pageBtn}
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          title="Previous page"
+        >
+          <ChevronLeft />
+        </button>
 
-          {getPageNumbers().map((page, idx) =>
-            page === 'ellipsis' ? (
-              <span key={`ellipsis-${idx}`} className={styles.ellipsis}>
-                …
-              </span>
-            ) : (
-              <button
-                key={page}
-                className={`${styles.pageBtn} ${page === currentPage ? styles.pageBtnActive : ''}`}
-                onClick={() => onPageChange(page)}
-              >
-                {page}
-              </button>
-            )
-          )}
+        {getPageNumbers().map((page, idx) =>
+          page === 'ellipsis' ? (
+            <span key={`ellipsis-${idx}`} className={styles.ellipsis}>
+              …
+            </span>
+          ) : (
+            <button
+              key={page}
+              className={`${styles.pageBtn} ${page === currentPage ? styles.pageBtnActive : ''}`}
+              onClick={() => onPageChange(page)}
+            >
+              {page}
+            </button>
+          )
+        )}
 
-          <button
-            className={styles.pageBtn}
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            title="Next page"
-          >
-            <ChevronRight />
-          </button>
+        <button
+          className={styles.pageBtn}
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          title="Next page"
+        >
+          <ChevronRight />
+        </button>
 
-          <button
-            className={styles.pageBtn}
-            onClick={() => onPageChange(totalPages)}
-            disabled={currentPage === totalPages}
-            title="Last page"
-          >
-            <ChevronsRight />
-          </button>
-        </div>
-      )}
+        <button
+          className={styles.pageBtn}
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage === totalPages}
+          title="Last page"
+        >
+          <ChevronsRight />
+        </button>
+      </div>
     </div>
   );
 };

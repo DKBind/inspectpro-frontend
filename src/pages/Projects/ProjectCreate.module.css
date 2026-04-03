@@ -44,8 +44,8 @@
   border-radius: 14px;
   background: white;
   border: 1px solid #E2E8F0;
-  border-top: 4px solid #33AE95;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  border-top: 4px solid #1a7bbd;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
 .pageHeaderIcon {
@@ -89,7 +89,7 @@
   font-weight: 700;
   letter-spacing: 0.03em;
   background: rgba(51, 174, 149, 0.08);
-  color: #33AE95;
+  color: #1a7bbd;
   border: 1.5px solid rgba(51, 174, 149, 0.25);
 }
 
@@ -97,7 +97,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #33AE95;
+  background: #1a7bbd;
   flex-shrink: 0;
 }
 
@@ -384,9 +384,9 @@
 
 .forToggleBtnActive {
   background: white;
-  color: #33AE95;
+  color: #1a7bbd;
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
 }
 
 /* ── Footer bar ──────────────────────────────────────────────────────────── */
@@ -426,7 +426,7 @@
   padding: 9px 28px;
   border-radius: 9px;
   border: none;
-  background: linear-gradient(135deg, #33AE95, #2a9a84);
+  background: linear-gradient(135deg, #1a7bbd, #2a9a84);
   color: white;
   font-size: 13px;
   font-weight: 700;
@@ -452,7 +452,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Template Picker ─────────────────────────────────────────────────────── */
@@ -481,7 +483,7 @@
 }
 
 .tplDropdownTrigger:focus-within {
-  border-color: #33AE95;
+  border-color: #1a7bbd;
   box-shadow: 0 0 0 3px rgba(51, 174, 149, 0.1);
 }
 
@@ -584,7 +586,7 @@
   padding: 2px 7px;
   border-radius: 10px;
   background: rgba(51, 174, 149, 0.1);
-  color: #33AE95;
+  color: #1a7bbd;
   flex-shrink: 0;
 }
 
@@ -661,7 +663,7 @@
   align-items: center;
   gap: 7px;
   padding: 8px 18px;
-  background: linear-gradient(135deg, #33AE95, #1e8e78);
+  background: linear-gradient(135deg, #1a7bbd, #1e8e78);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -699,7 +701,7 @@
 
 .mappingReady {
   font-size: 11px;
-  color: #33AE95;
+  color: #1a7bbd;
   margin-top: 8px;
   font-weight: 500;
 }

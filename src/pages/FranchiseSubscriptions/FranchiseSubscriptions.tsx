@@ -35,7 +35,6 @@ import { Label } from '@/components/shared-ui/Label/label';
 import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
 import styles from '@/pages/Subscriptions/Subscriptions.module.css';
 
-const PAGE_SIZE = 10;
 
 const schema = z.object({
   planName: z.string().min(1, 'Plan name is required'),
@@ -76,6 +75,8 @@ const FranchiseSubscriptions = () => {
   const [selectedModuleIds, setSelectedModuleIds] = useState<number[]>([]);
   const [allDbModules, setAllDbModules] = useState<ModuleResponse[]>([]);
   const [modulesLoading, setModulesLoading] = useState(false);
+  const PAGE_SIZE = 6;
+
 
   const { register, reset, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -375,8 +376,8 @@ const FranchiseSubscriptions = () => {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
-                <Sparkles size={18} className="text-[#33AE95]" />
+              <div className="h-9 w-9 rounded-xl bg-[#1a7bbd]/10 border border-[#1a7bbd]/30 flex items-center justify-center">
+                <Sparkles size={18} className="text-[#1a7bbd]" />
               </div>
               <DialogTitle className="text-xl font-bold text-[#263B4F]">
                 {modalMode === 'edit' ? 'Edit Plan' : 'Create Subscription Plan'}
@@ -446,7 +447,7 @@ const FranchiseSubscriptions = () => {
                   <div className="flex gap-2">
                     {(['MONTHLY', 'YEARLY'] as const).map((cycle) => (
                       <button key={cycle} type="button" onClick={() => setValue('billingCycle', cycle)}
-                        className={`flex-1 h-10 rounded-md text-sm font-medium border transition-all ${watch('billingCycle') === cycle ? 'bg-[#33AE95]/10 border-[#33AE95]/60 text-[#33AE95]' : 'bg-white border-[#E5E7EB] text-[#6B7280] hover:border-[#33AE95]/40'}`}>
+                        className={`flex-1 h-10 rounded-md text-sm font-medium border transition-all ${watch('billingCycle') === cycle ? 'bg-[#1a7bbd]/10 border-[#1a7bbd]/60 text-[#1a7bbd]' : 'bg-white border-[#E5E7EB] text-[#6B7280] hover:border-[#1a7bbd]/40'}`}>
                         {cycle.charAt(0) + cycle.slice(1).toLowerCase()}
                       </button>
                     ))}
@@ -461,7 +462,7 @@ const FranchiseSubscriptions = () => {
                       onClick={() => setValue('isActive', !watchIsActive)}
                       className={`${styles.statusToggle} ${watchIsActive ? styles.toggleOn : styles.toggleOff}`}
                     />
-                    <span className={`text-sm font-medium ${watchIsActive ? 'text-[#33AE95]' : 'text-[#6B7280]'}`}>
+                    <span className={`text-sm font-medium ${watchIsActive ? 'text-[#1a7bbd]' : 'text-[#6B7280]'}`}>
                       {watchIsActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
@@ -479,7 +480,7 @@ const FranchiseSubscriptions = () => {
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, padding: '8px 12px', borderRadius: 8, background: '#F0FDF9', border: '1px solid #CCFBEF' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 28, height: 22, padding: '0 7px', borderRadius: 11, background: selectedModuleIds.length > 0 ? '#33AE95' : '#D1FAF0', color: selectedModuleIds.length > 0 ? 'white' : '#9CA3AF', fontSize: 11, fontWeight: 700, transition: 'all 0.15s' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 28, height: 22, padding: '0 7px', borderRadius: 11, background: selectedModuleIds.length > 0 ? '#1a7bbd' : '#D1FAF0', color: selectedModuleIds.length > 0 ? 'white' : '#9CA3AF', fontSize: 11, fontWeight: 700, transition: 'all 0.15s' }}>
                           {selectedModuleIds.length}
                         </span>
                         <span style={{ fontSize: 12, color: '#374151' }}>
@@ -491,7 +492,7 @@ const FranchiseSubscriptions = () => {
                         onClick={() => selectedModuleIds.length === allDbModules.length
                           ? setSelectedModuleIds([])
                           : setSelectedModuleIds(allDbModules.map((m) => m.id))}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: selectedModuleIds.length === allDbModules.length ? '#6B7280' : '#33AE95', background: selectedModuleIds.length === allDbModules.length ? '#E5E7EB' : 'rgba(51,174,149,0.1)', border: `1px solid ${selectedModuleIds.length === allDbModules.length ? '#D1D5DB' : 'rgba(51,174,149,0.35)'}`, borderRadius: 6, cursor: 'pointer', padding: '4px 10px', transition: 'all 0.15s' }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: selectedModuleIds.length === allDbModules.length ? '#6B7280' : '#1a7bbd', background: selectedModuleIds.length === allDbModules.length ? '#E5E7EB' : 'rgba(51,174,149,0.1)', border: `1px solid ${selectedModuleIds.length === allDbModules.length ? '#D1D5DB' : 'rgba(51,174,149,0.35)'}`, borderRadius: 6, cursor: 'pointer', padding: '4px 10px', transition: 'all 0.15s' }}
                       >
                         {selectedModuleIds.length === allDbModules.length ? 'Deselect All' : 'Select All'}
                       </button>
@@ -502,10 +503,10 @@ const FranchiseSubscriptions = () => {
                         return (
                           <button key={m.id} type="button" onClick={() => toggleModule(m.id)}
                             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${checked ? 'rgba(51,174,149,0.4)' : '#E5E7EB'}`, background: checked ? 'rgba(51,174,149,0.08)' : '#F3F4F6', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
-                            <span style={{ flexShrink: 0, width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? '#33AE95' : '#E5E7EB'}`, background: checked ? '#33AE95' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ flexShrink: 0, width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? '#1a7bbd' : '#E5E7EB'}`, background: checked ? '#1a7bbd' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {checked && <CheckCircle size={10} color="white" />}
                             </span>
-                            <p style={{ fontSize: 12, fontWeight: 600, color: checked ? '#33AE95' : '#6B7280', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
+                            <p style={{ fontSize: 12, fontWeight: 600, color: checked ? '#1a7bbd' : '#6B7280', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
                           </button>
                         );
                       })}
@@ -518,7 +519,7 @@ const FranchiseSubscriptions = () => {
                 <div className="relative">
                   <span className="absolute left-3 top-3 text-[#6B7280] pointer-events-none z-10"><FileText size={14} /></span>
                   <textarea rows={3} placeholder="Description or notes..." {...register('notes')}
-                    className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#6B7280] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 transition-all text-sm px-3 py-2 pl-9 resize-none outline-none" />
+                    className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#6B7280] focus:border-[#1a7bbd] focus:ring-1 focus:ring-[#1a7bbd]/20 transition-all text-sm px-3 py-2 pl-9 resize-none outline-none" />
                 </div>
               </Fld>
             </div>
@@ -526,7 +527,7 @@ const FranchiseSubscriptions = () => {
             <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] bg-[#F3F4F6] rounded-b-2xl flex gap-3">
               <Button type="button" variant="outline" onClick={() => setModalMode(null)} disabled={submitting}>Cancel</Button>
               <Button type="submit" disabled={submitting}
-                className="flex-1 sm:flex-none sm:min-w-40 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95">
+                className="flex-1 sm:flex-none sm:min-w-40 bg-[#1a7bbd] hover:bg-[#2a9a84] text-white font-semibold shadow-lg active:scale-95">
                 {submitting ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />{modalMode === 'edit' ? 'Saving...' : 'Creating...'}</span>
                   : modalMode === 'edit' ? 'Save Changes' : 'Create Plan'}
               </Button>
@@ -540,8 +541,8 @@ const FranchiseSubscriptions = () => {
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
-                <Sparkles size={18} className="text-[#33AE95]" />
+              <div className="h-9 w-9 rounded-xl bg-[#1a7bbd]/10 border border-[#1a7bbd]/30 flex items-center justify-center">
+                <Sparkles size={18} className="text-[#1a7bbd]" />
               </div>
               <DialogTitle className="text-xl font-bold text-[#263B4F]">Plan Details</DialogTitle>
             </div>
@@ -567,7 +568,7 @@ const FranchiseSubscriptions = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                     {viewPlan.modules!.map((m) => (
                       <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 12px' }}>
-                        <Package size={13} color="#33AE95" style={{ flexShrink: 0 }} />
+                        <Package size={13} color="#1a7bbd" style={{ flexShrink: 0 }} />
                         <p style={{ fontSize: 12, fontWeight: 600, color: '#263B4F', margin: 0 }}>{m.name}</p>
                       </div>
                     ))}
@@ -587,8 +588,8 @@ const FranchiseSubscriptions = () => {
         <DialogContent className="sm:max-w-sm shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${toggleTarget?.newActive ? 'bg-[#33AE95]/10 border border-[#33AE95]/30' : 'bg-[#E7970E]/10 border border-[#E7970E]/30'}`}>
-                {toggleTarget?.newActive ? <CheckCircle size={18} className="text-[#33AE95]" /> : <XCircle size={18} className="text-[#E7970E]" />}
+              <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${toggleTarget?.newActive ? 'bg-[#1a7bbd]/10 border border-[#1a7bbd]/30' : 'bg-[#E7970E]/10 border border-[#E7970E]/30'}`}>
+                {toggleTarget?.newActive ? <CheckCircle size={18} className="text-[#1a7bbd]" /> : <XCircle size={18} className="text-[#E7970E]" />}
               </div>
               <DialogTitle className="text-xl font-bold text-[#263B4F]">{toggleTarget?.newActive ? 'Activate Plan' : 'Deactivate Plan'}</DialogTitle>
             </div>
@@ -599,7 +600,7 @@ const FranchiseSubscriptions = () => {
           <DialogFooter className="px-7 py-5 border-t border-[#E5E7EB] flex gap-3">
             <Button variant="outline" onClick={() => setToggleTarget(null)} disabled={!!togglingId}>Cancel</Button>
             <Button onClick={confirmToggleStatus} disabled={!!togglingId}
-              className={toggleTarget?.newActive ? 'bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold' : 'bg-[#E7970E] hover:bg-[#d08a0d] text-white font-semibold'}>
+              className={toggleTarget?.newActive ? 'bg-[#1a7bbd] hover:bg-[#2a9a84] text-white font-semibold' : 'bg-[#E7970E] hover:bg-[#d08a0d] text-white font-semibold'}>
               {togglingId ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Updating...</span> : toggleTarget?.newActive ? 'Activate' : 'Deactivate'}
             </Button>
           </DialogFooter>
@@ -637,7 +638,7 @@ export default FranchiseSubscriptions;
 // ─── Micro helpers ─────────────────────────────────────────────────────────────
 
 const inputCls = (hasError?: boolean) =>
-  `border border-[#E5E7EB] rounded-lg px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-[#33AE95]/30 focus:border-[#33AE95] text-[#263B4F] bg-white text-sm ${hasError ? 'border-[#DF453A]' : ''}`;
+  `border border-[#E5E7EB] rounded-lg px-3 h-10 w-full focus:outline-none focus:ring-2 focus:ring-[#1a7bbd]/30 focus:border-[#1a7bbd] text-[#263B4F] bg-white text-sm ${hasError ? 'border-[#DF453A]' : ''}`;
 
 function Fld({ label, required, hint, error, children }: {
   label: string; required?: boolean; hint?: string; error?: string; children: ReactNode;

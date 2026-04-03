@@ -16,7 +16,7 @@
 }
 
 .iconColor {
-  color: #33AE95;
+  color: #1a7bbd;
 }
 
 .modalTitle {
@@ -53,7 +53,7 @@
 }
 
 .formInput:focus {
-  border-color: #33AE95;
+  border-color: #1a7bbd;
   box-shadow: 0 0 0 3px rgba(51, 174, 149, 0.15);
 }
 
@@ -83,7 +83,7 @@
 }
 
 .textarea:focus {
-  border-color: #33AE95;
+  border-color: #1a7bbd;
   box-shadow: 0 0 0 1px rgba(51, 174, 149, 0.2);
 }
 
@@ -140,7 +140,7 @@
 .submitBtn {
   flex: 1;
   min-width: 176px;
-  background: #33AE95 !important;
+  background: #1a7bbd !important;
   color: white !important;
 }
 

@@ -173,6 +173,7 @@ function PlanTable({
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          pageSizeOptions={[10, 20, 50]}
         />
       </div>
     </>
@@ -419,8 +420,8 @@ const Subscriptions = () => {
               border: 'none',
               background: 'none',
               cursor: 'pointer',
-              borderBottom: activeTab === 'org' ? '2px solid #33AE95' : '2px solid transparent',
-              color: activeTab === 'org' ? '#33AE95' : '#6B7280',
+              borderBottom: activeTab === 'org' ? '2px solid #1a7bbd' : '2px solid transparent',
+              color: activeTab === 'org' ? '#1a7bbd' : '#6B7280',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
@@ -429,9 +430,9 @@ const Subscriptions = () => {
           >
             <Building2 size={15} />
             Organisation
-            <span style={{ background: activeTab === 'org' ? '#dbeafe' : '#F3F4F6', color: activeTab === 'org' ? '#33AE95' : '#6B7280', borderRadius: 12, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>
+            {/* <span style={{ background: activeTab === 'org' ? '#dbeafe' : '#F3F4F6', color: activeTab === 'org' ? '#1a7bbd' : '#6B7280', borderRadius: 12, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>
               {orgPlans.length}
-            </span>
+            </span> */}
           </button>
           <button
             onClick={() => setActiveTab('franchise')}
@@ -442,8 +443,8 @@ const Subscriptions = () => {
               border: 'none',
               background: 'none',
               cursor: 'pointer',
-              borderBottom: activeTab === 'franchise' ? '2px solid #33AE95' : '2px solid transparent',
-              color: activeTab === 'franchise' ? '#33AE95' : '#6B7280',
+              borderBottom: activeTab === 'franchise' ? '2px solid #1a7bbd' : '2px solid transparent',
+              color: activeTab === 'franchise' ? '#1a7bbd' : '#6B7280',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
@@ -452,9 +453,9 @@ const Subscriptions = () => {
           >
             <Sparkles size={15} />
             Franchise
-            <span style={{ background: activeTab === 'franchise' ? '#d1fae5' : '#F3F4F6', color: activeTab === 'franchise' ? '#059669' : '#6B7280', borderRadius: 12, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>
+            {/* <span style={{ background: activeTab === 'franchise' ? '#d1fae5' : '#F3F4F6', color: activeTab === 'franchise' ? '#059669' : '#6B7280', borderRadius: 12, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>
               {franchisePlans.length}
-            </span>
+            </span> */}
           </button>
 
         </div>
@@ -509,10 +510,10 @@ const Subscriptions = () => {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${modalTab === 'org' ? 'bg-blue-600/20 border border-blue-500/30' : 'bg-[#33AE95]/15 border border-[#33AE95]/30'}`}>
+              <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${modalTab === 'org' ? 'bg-blue-600/20 border border-blue-500/30' : 'bg-[#1a7bbd]/15 border border-[#1a7bbd]/30'}`}>
                 {modalTab === 'org'
                   ? <CreditCard size={18} className="text-blue-400" />
-                  : <Sparkles size={18} className="text-[#33AE95]" />}
+                  : <Sparkles size={18} className="text-[#1a7bbd]" />}
               </div>
               <DialogTitle className="text-xl font-bold text-[#263B4F]">
                 {modalMode === 'edit' ? 'Edit Subscription Plan' : `Create ${modalTab === 'org' ? 'Organisation' : 'Franchise'} Plan`}
@@ -673,7 +674,7 @@ const Subscriptions = () => {
                     rows={3}
                     placeholder="Description or notes..."
                     {...register('notes')}
-                    className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#33AE95] focus:ring-1 focus:ring-[#33AE95]/20 transition-all text-sm px-3 py-2 pl-9 resize-none outline-none"
+                    className="w-full rounded-md bg-white border border-[#E5E7EB] text-[#263B4F] placeholder:text-[#9CA3AF] focus:border-[#1a7bbd] focus:ring-1 focus:ring-[#1a7bbd]/20 transition-all text-sm px-3 py-2 pl-9 resize-none outline-none"
                   />
                 </div>
               </Fld>

@@ -365,10 +365,7 @@
 }
 
 /* ─── Pagination wrapper ─────────────────────────────────────────────────────── */
-.paginationArea {
-  padding: 12px 24px;
-  border-top: 1px solid var(--ip-border);
-}
+.paginationArea {}
 
 /* ─── Address section in user form ──────────────────────────────────────────── */
 .addressSection {
@@ -411,7 +408,7 @@
   padding: 4px 12px;
   border-radius: 20px;
   background: rgba(51, 174, 149, 0.10);
-  color: #33AE95;
+  color: #1a7bbd;
   border: 1px solid rgba(51, 174, 149, 0.22);
   letter-spacing: 0.02em;
 }
@@ -808,7 +805,7 @@
   padding: 1px 7px;
   border-radius: 10px;
   background: rgba(51, 174, 149, 0.12);
-  color: #33AE95;
+  color: #1a7bbd;
   border: 1px solid rgba(51, 174, 149, 0.25);
   white-space: nowrap;
   margin-left: auto;
@@ -891,8 +888,15 @@
 }
 
 @keyframes filterPanelIn {
-  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Each labelled section inside the panel */

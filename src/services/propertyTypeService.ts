@@ -17,6 +17,8 @@ export interface SpecField {
 export interface PropertyTypeResponse {
   id: number;
   name: string;
+  specTemplate?: SpecField[] | string;
+
 }
 
 export interface PropertySubTypeResponse {

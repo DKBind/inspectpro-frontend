@@ -291,39 +291,39 @@ export default function InspectionImageUpload({ resultId, initialImages = [], re
                   )}
                 </div>
 
-                  {/* Processing Tray (Premium Glassmorphism) */}
-                  {!readOnly && (
-                    <div className="tray-overlay opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <div className="tray-actions flex gap-2">
-                        <button
-                          onClick={() => triggerEdit(img)}
-                          className="hover:scale-110 active:scale-95 transition-transform"
-                          title="Markup"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => triggerRetake(img.id)}
-                          className="hover:scale-110 active:scale-95 transition-transform"
-                          title="Retake"
-                        >
-                          <RefreshCw size={16} />
-                        </button>
-                      </div>
+                {/* Processing Tray (Premium Glassmorphism) */}
+                {!readOnly && (
+                  <div className="tray-overlay opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <div className="tray-actions flex gap-2">
                       <button
-                        className="delete-btn hover:scale-110 active:scale-95 transition-transform"
-                        onClick={() => handleDelete(img.id)}
-                        title="Delete"
+                        onClick={() => triggerEdit(img)}
+                        className="hover:scale-110 active:scale-95 transition-transform"
+                        title="Markup"
                       >
-                        <Trash2 size={16} />
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => triggerRetake(img.id)}
+                        className="hover:scale-110 active:scale-95 transition-transform"
+                        title="Retake"
+                      >
+                        <RefreshCw size={16} />
                       </button>
                     </div>
-                  )}
+                    <button
+                      className="delete-btn hover:scale-110 active:scale-95 transition-transform"
+                      onClick={() => handleDelete(img.id)}
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {!readOnly && (
                 <input
-                  className="caption-field focus:ring-2 focus:ring-[#33AE95]/20"
+                  className="caption-field focus:ring-2 focus:ring-[#1a7bbd]/20"
                   type="text"
                   placeholder="Add caption..."
                   value={img.caption}
@@ -338,11 +338,11 @@ export default function InspectionImageUpload({ resultId, initialImages = [], re
           <motion.button
             whileHover={{ scale: 1.02, boxShadow: "0 10px 15px -3px rgba(51, 174, 149, 0.1)" }}
             whileTap={{ scale: 0.98 }}
-            className="add-photo-btn border-[#33AE95]/30 hover:border-[#33AE95]"
+            className="add-photo-btn border-[#1a7bbd]/30 hover:border-[#1a7bbd]"
             onClick={() => fileInputRef.current?.click()}
           >
-            <div className="add-icon-circle shadow-sm border-[#33AE95]/20 group-hover:border-[#33AE95]/40 transition-colors">
-              <Plus size={24} className="text-[#33AE95]" />
+            <div className="add-icon-circle shadow-sm border-[#1a7bbd]/20 group-hover:border-[#1a7bbd]/40 transition-colors">
+              <Plus size={24} className="text-[#1a7bbd]" />
             </div>
             <span className="text-sm font-semibold text-[#263B4F]">Add Photo</span>
           </motion.button>
@@ -375,19 +375,19 @@ export default function InspectionImageUpload({ resultId, initialImages = [], re
         if (!src) {
           return (
             <div className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center gap-4 text-white">
-               <p>Image source could not be resolved. Please reload.</p>
-               <button className="px-4 py-2 bg-white text-black font-semibold rounded" onClick={() => setEditorOpen(false)}>Close</button>
+              <p>Image source could not be resolved. Please reload.</p>
+              <button className="px-4 py-2 bg-white text-black font-semibold rounded" onClick={() => setEditorOpen(false)}>Close</button>
             </div>
           );
         }
 
         return (
-          <div 
-            className="editor-full-screen-wrapper" 
-            style={{ 
-              position: 'fixed', 
-              inset: 0, 
-              zIndex: 999999, 
+          <div
+            className="editor-full-screen-wrapper"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 999999,
               background: '#000',
               display: 'flex',
               flexDirection: 'column'

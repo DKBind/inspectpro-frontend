@@ -140,13 +140,13 @@ content = content.replace("""  /* ── Copy folder ── */
 # 6. Remove + icon from template menu
 content = content.replace("""          <div className={css.sidebarHead}>
             <div className={css.sidebarHeadIcon}>
-              <FolderOpen size={14} color="#33AE95" />
+              <FolderOpen size={14} color="#1a7bbd" />
             </div>
             <span className={css.sidebarHeadTitle}>Template Menu</span>
             <NodeActionBtn icon={<Plus size={11} />} title="Add Section" onClick={() => openModal('FOLDER', 'SELECTION', null)} />
           </div>""", """          <div className={css.sidebarHead}>
             <div className={css.sidebarHeadIcon}>
-              <FolderOpen size={14} color="#33AE95" />
+              <FolderOpen size={14} color="#1a7bbd" />
             </div>
             <span className={css.sidebarHeadTitle}>Template Menu</span>
           </div>""")

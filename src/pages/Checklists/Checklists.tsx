@@ -6,7 +6,7 @@ import {
   Check, BookOpen, AlertTriangle,
   Layers, Eye, Copy, Download, Search,
   Home, Warehouse, Zap, Droplets, X, Pencil,
-  ShieldAlert,
+  ShieldAlert, Store,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -38,7 +38,7 @@ function getCategoryIcon(title: string, scope: TemplateScope): { icon: React.Rea
   if (/plumbing|pipe|water|drainage/.test(t)) return { icon: <Droplets size={15} />, color: '#0891b2', bg: 'rgba(8,145,178,0.1)' };
   if (/building|office|apartment|unit/.test(t)) return { icon: <Building2 size={15} />, color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' };
   if (scope === 'GLOBAL') return { icon: <Globe size={15} />, color: '#2563eb', bg: 'rgba(37,99,235,0.1)' };
-  return { icon: <BookOpen size={15} />, color: '#33AE95', bg: 'rgba(51,174,149,0.1)' };
+  return { icon: <BookOpen size={15} />, color: '#1a7bbd', bg: 'rgba(51,174,149,0.1)' };
 }
 
 function formatDate(d?: string) {
@@ -48,7 +48,7 @@ function formatDate(d?: string) {
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 6;
 type TabKey = 'global' | 'organisation' | 'franchise';
 
 export default function Checklists() {
@@ -62,6 +62,7 @@ export default function Checklists() {
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<TabKey>('global');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [search, setSearch] = useState('');
 
   const [deleteTarget, setDeleteTarget] = useState<TemplateResponse | null>(null);
@@ -89,11 +90,15 @@ export default function Checklists() {
   useEffect(() => { load(); }, []);
 
   // ── Role-based tab visibility ──────────────────────────────────────────────
-  type TabDef = { key: TabKey; label: string };
+  const globalCount      = templates.filter(t => t.scope === 'GLOBAL').length;
+  const orgCount         = templates.filter(t => t.scope === 'ORGANISATION' && !t.parentOrgId).length;
+  const franchiseCount   = templates.filter(t => t.scope === 'ORGANISATION' && !!t.parentOrgId).length;
+
+  type TabDef = { key: TabKey; label: string; icon: React.ElementType; count: number };
   const allTabs: TabDef[] = [
-    { key: 'global', label: '🌐 Global' },
-    { key: 'organisation', label: '🏢 Organisation' },
-    { key: 'franchise', label: '🏪 Franchise' },
+    { key: 'global',       label: 'Global',       icon: Globe,     count: globalCount    },
+    { key: 'organisation', label: 'Organisation',  icon: Building2, count: orgCount       },
+    { key: 'franchise',    label: 'Franchise',     icon: Store,     count: franchiseCount },
   ];
 
   // Org Admin: Global + Organisation. Franchise Admin / Super Admin: all 3
@@ -120,8 +125,8 @@ export default function Checklists() {
     })
     : byTab;
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const canCreate = !isParentOrgTab;
   const canEdit = (t: TemplateResponse) => !isParentOrgTab && !t.isLocked;
@@ -202,19 +207,24 @@ export default function Checklists() {
     <div className={styles.page}>
       {/* Tabs + New Template */}
       <div className={styles.tabs}>
-        {visibleTabs.map((t) => (
-          <button key={t.key} className={`${styles.tab} ${tab === t.key ? styles.tabActive : ''}`}
-            onClick={() => { setTab(t.key); setCurrentPage(1); setSearch(''); }}>
-            {t.label}
+        {visibleTabs.map(({ key, label, icon: Icon, count }) => (
+          <button
+            key={key}
+            className={`${styles.tab} ${tab === key ? styles.tabActive : ''}`}
+            onClick={() => { setTab(key); setCurrentPage(1); setSearch(''); }}
+          >
+            <Icon size={14} className={styles.tabIcon} />
+            {label}
+            <span className={styles.tabCount}>{count}</span>
           </button>
         ))}
-        {canCreate && (
-          <button className={styles.createBtn}
-            onClick={() => navigate(`/templates/new/builder?scope=${isSuperAdmin ? 'GLOBAL' : 'ORGANISATION'}`)}>
-            <Plus size={15} /> New Template
-          </button>
-        )}
       </div>
+      {canCreate && (
+        <button className={styles.createBtn}
+          onClick={() => navigate(`/templates/new/builder?scope=${isSuperAdmin ? 'GLOBAL' : 'ORGANISATION'}`)}>
+          <Plus size={15} /> New Template
+        </button>
+      )}
 
       {/* Read-only notice for Franchise Admin on Parent Org tab */}
       {isParentOrgTab && (
@@ -386,18 +396,17 @@ export default function Checklists() {
           </table>
         )}
 
-        {totalPages > 1 && (
-          <div className={styles.paginationArea}>
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filtered.length}
-              pageSize={PAGE_SIZE}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={() => { }}
-            />
-          </div>
-        )}
+        <div className={styles.paginationArea}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filtered.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[6, 12, 24]}
+          />
+        </div>
       </div>
 
       {/* Quick Preview Popup */}

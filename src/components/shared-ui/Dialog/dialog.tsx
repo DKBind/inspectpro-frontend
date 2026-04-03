@@ -93,7 +93,7 @@ function DialogContent({
               "text-[#74879A] hover:text-[#263B4F]",
               "hover:bg-[#F3F4F6] hover:border-[#CFD5DE]",
               "transition-all duration-150",
-              "focus:outline-none focus:ring-2 focus:ring-[#33AE95]/30",
+              "focus:outline-none focus:ring-2 focus:ring-[#1a7bbd]/30",
               "disabled:pointer-events-none",
               "[&_svg]:w-3.5 [&_svg]:h-3.5"
             )}

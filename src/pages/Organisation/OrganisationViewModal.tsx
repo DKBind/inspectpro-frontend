@@ -64,8 +64,8 @@ export function OrganisationViewModal({ org, onClose }: Props) {
           </button>
 
           <div className="flex items-start gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center shrink-0">
-              <Building2 size={22} className="text-[#33AE95]" />
+            <div className="h-12 w-12 rounded-2xl bg-[#1a7bbd]/10 border border-[#1a7bbd]/30 flex items-center justify-center shrink-0">
+              <Building2 size={22} className="text-[#1a7bbd]" />
             </div>
             <div className="min-w-0 flex-1 pr-10">
               <h2 className="text-xl font-bold text-[#263B4F] truncate">{org.name}</h2>
@@ -75,7 +75,7 @@ export function OrganisationViewModal({ org, onClose }: Props) {
                   {planName ?? '—'}
                 </span>
                 {org.isActive ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-[#33AE95]/10 border border-[#33AE95]/30 text-[#33AE95]">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold bg-[#1a7bbd]/10 border border-[#1a7bbd]/30 text-[#1a7bbd]">
                     <CheckCircle2 size={11} /> Active
                   </span>
                 ) : (
@@ -149,7 +149,7 @@ export function OrganisationViewModal({ org, onClose }: Props) {
           {hasAddress && (
             <ViewSection title="Registered Address">
               <div className="flex items-start gap-3 bg-[#F3F4F6] border border-[#E5E7EB] rounded-xl p-4">
-                <MapPin size={16} className="text-[#33AE95] mt-0.5 shrink-0" />
+                <MapPin size={16} className="text-[#1a7bbd] mt-0.5 shrink-0" />
                 <div className="space-y-0.5">
                   {addressLines.map((line, i) => (
                     <p key={i} className={`text-sm ${i === 0 ? 'text-[#263B4F] font-medium' : 'text-[#6B7280]'}`}>

@@ -605,7 +605,7 @@ const ProjectEdit = () => {
                         onClick={() => setDynamicAssignments(prev => [...prev, { roleId: 0, userIds: [] }])}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 5, fontSize: 12,
-                          color: '#33AE95', background: 'rgba(51,174,149,0.08)',
+                          color: '#1a7bbd', background: 'rgba(51,174,149,0.08)',
                           border: '1px solid rgba(51,174,149,0.3)', borderRadius: 6,
                           cursor: 'pointer', fontWeight: 500, padding: '4px 10px', lineHeight: 1,
                         }}
@@ -619,7 +619,7 @@ const ProjectEdit = () => {
                       <div style={{ textAlign: 'center', padding: '12px 0 4px' }}>
                         <Users size={22} color="#D1D5DB" style={{ margin: '0 auto 6px', display: 'block' }} />
                         <p style={{ fontSize: 12, color: '#9CA3AF', margin: 0 }}>
-                          No role assignments — click <strong style={{ color: '#33AE95' }}>Add Role</strong> to begin.
+                          No role assignments — click <strong style={{ color: '#1a7bbd' }}>Add Role</strong> to begin.
                         </p>
                       </div>
                     )}
@@ -706,7 +706,7 @@ const ProjectEdit = () => {
             {/* ── Inspection Template Management ──────────────────────────── */}
             <div className={styles.sectionCard}>
               <div className={styles.sectionHead}>
-                <span className={styles.sectionIcon}><ClipboardList size={13} color="#33AE95" /></span>
+                <span className={styles.sectionIcon}><ClipboardList size={13} color="#1a7bbd" /></span>
                 <span className={styles.sectionTitle}>Inspection Template</span>
               </div>
               <div className={styles.sectionBody}>
@@ -718,7 +718,7 @@ const ProjectEdit = () => {
                   /* Template already assigned */
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-                      <CheckCircle2 size={18} color="#33AE95" style={{ flexShrink: 0 }} />
+                      <CheckCircle2 size={18} color="#1a7bbd" style={{ flexShrink: 0 }} />
                       <div style={{ minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1E293B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{projectTemplate.title}</p>
                         {/* <p style={{ margin: 0, fontSize: 11, color: '#64748B', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -730,7 +730,7 @@ const ProjectEdit = () => {
                       <button
                         type="button"
                         className={styles.cancelBtn}
-                        style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5, borderColor: '#33AE95', color: '#33AE95' }}
+                        style={{ padding: '6px 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5, borderColor: '#1a7bbd', color: '#1a7bbd' }}
                         onClick={() => navigate(`/templates/${projectTemplate.id}/builder?back=/projects/${id}`)}
                       >
                         <Pencil size={11} /> Edit Template
@@ -985,63 +985,63 @@ const ProjectEdit = () => {
                   </Fld>
                 </div>
 
-                  {/* Extra milestone entries — in the same grid */}
-                  {extraTimelines.map((entry, i) => (
-                    <div key={i} className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-1.5 h-[20px]">
-                        <div className="flex items-center gap-1.5 overflow-hidden flex-1">
-                          {editingMilestoneIdx === i ? (
-                            <input
-                              autoFocus
-                              placeholder="Type milestone…"
-                              value={entry.label}
-                              onChange={e => setExtraTimelines(prev => prev.map((t, ti) => ti === i ? { ...t, label: e.target.value } : t))}
-                              onBlur={() => setEditingMilestoneIdx(null)}
-                              onKeyDown={e => e.key === 'Enter' && setEditingMilestoneIdx(null)}
-                              className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#33AE95] outline-none w-full"
-                            />
-                          ) : (
-                            <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingMilestoneIdx(i)}>
-                              <label
-                                className="text-[#263B4F] text-sm font-medium group-hover:text-[#33AE95] transition-colors truncate cursor-pointer"
-                                title="Click to rename"
-                              >
-                                {entry.label || 'Unnamed Milestone'}
-                              </label>
-                              <Pencil size={10} className="text-[#9CA3AF] opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setExtraTimelines(prev => prev.filter((_, ti) => ti !== i))}
-                          className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors p-1"
-                          title="Remove milestone"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                {/* Extra milestone entries — in the same grid */}
+                {extraTimelines.map((entry, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-1.5 h-[20px]">
+                      <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                        {editingMilestoneIdx === i ? (
+                          <input
+                            autoFocus
+                            placeholder="Type milestone…"
+                            value={entry.label}
+                            onChange={e => setExtraTimelines(prev => prev.map((t, ti) => ti === i ? { ...t, label: e.target.value } : t))}
+                            onBlur={() => setEditingMilestoneIdx(null)}
+                            onKeyDown={e => e.key === 'Enter' && setEditingMilestoneIdx(null)}
+                            className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#1a7bbd] outline-none w-full"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingMilestoneIdx(i)}>
+                            <label
+                              className="text-[#263B4F] text-sm font-medium group-hover:text-[#1a7bbd] transition-colors truncate cursor-pointer"
+                              title="Click to rename"
+                            >
+                              {entry.label || 'Unnamed Milestone'}
+                            </label>
+                            <Pencil size={10} className="text-[#9CA3AF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        )}
                       </div>
-                      <Input
-                        type="date"
-                        value={entry.date}
-                        onChange={e => setExtraTimelines(prev => prev.map((t, ti) => ti === i ? { ...t, date: e.target.value } : t))}
-                        className={inputCls(false)}
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setExtraTimelines(prev => prev.filter((_, ti) => ti !== i))}
+                        className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors p-1"
+                        title="Remove milestone"
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
-                  ))}
+                    <Input
+                      type="date"
+                      value={entry.date}
+                      onChange={e => setExtraTimelines(prev => prev.map((t, ti) => ti === i ? { ...t, date: e.target.value } : t))}
+                      className={inputCls(false)}
+                    />
+                  </div>
+                ))}
 
-                  <button
-                    type="button"
-                    className={styles.addCustomBtn}
-                    style={{ alignSelf: 'end', minHeight: 42 }}
-                    onClick={() => {
-                      const newIdx = extraTimelines.length;
-                      setExtraTimelines(prev => [...prev, { label: '', date: '' }]);
-                      setEditingMilestoneIdx(newIdx);
-                    }}
-                  >
-                    <PlusCircle size={14} /> Add Milestone
-                  </button>
+                <button
+                  type="button"
+                  className={styles.addCustomBtn}
+                  style={{ alignSelf: 'end', minHeight: 42 }}
+                  onClick={() => {
+                    const newIdx = extraTimelines.length;
+                    setExtraTimelines(prev => [...prev, { label: '', date: '' }]);
+                    setEditingMilestoneIdx(newIdx);
+                  }}
+                >
+                  <PlusCircle size={14} /> Add Milestone
+                </button>
               </div>
             </div>
 
@@ -1067,68 +1067,68 @@ const ProjectEdit = () => {
                   </Fld>
                 </div>
 
-                  {/* Extra financial entries — in the same grid */}
-                  {extraFinancials.map((entry, i) => (
-                    <div key={i} className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-1.5 h-[20px]">
-                        <div className="flex items-center gap-1.5 overflow-hidden flex-1">
-                          {editingFinancialIdx === i ? (
-                            <input
-                              autoFocus
-                              placeholder="Type label…"
-                              value={entry.label}
-                              onChange={e => setExtraFinancials(prev => prev.map((f, fi) => fi === i ? { ...f, label: e.target.value } : f))}
-                              onBlur={() => setEditingFinancialIdx(null)}
-                              onKeyDown={e => e.key === 'Enter' && setEditingFinancialIdx(null)}
-                              className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#33AE95] outline-none w-full"
-                            />
-                          ) : (
-                            <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingFinancialIdx(i)}>
-                              <label
-                                className="text-[#263B4F] text-sm font-medium group-hover:text-[#33AE95] transition-colors truncate cursor-pointer"
-                                title="Click to rename"
-                              >
-                                {entry.label || 'Unnamed Line Item'}
-                              </label>
-                              <Pencil size={10} className="text-[#9CA3AF] opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setExtraFinancials(prev => prev.filter((_, fi) => fi !== i))}
-                          className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors p-1"
-                          title="Remove line item"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                {/* Extra financial entries — in the same grid */}
+                {extraFinancials.map((entry, i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-1.5 h-[20px]">
+                      <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                        {editingFinancialIdx === i ? (
+                          <input
+                            autoFocus
+                            placeholder="Type label…"
+                            value={entry.label}
+                            onChange={e => setExtraFinancials(prev => prev.map((f, fi) => fi === i ? { ...f, label: e.target.value } : f))}
+                            onBlur={() => setEditingFinancialIdx(null)}
+                            onKeyDown={e => e.key === 'Enter' && setEditingFinancialIdx(null)}
+                            className="text-xs font-medium text-[#263B4F] bg-transparent border-b border-[#1a7bbd] outline-none w-full"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-1.5 group cursor-pointer" onClick={() => setEditingFinancialIdx(i)}>
+                            <label
+                              className="text-[#263B4F] text-sm font-medium group-hover:text-[#1a7bbd] transition-colors truncate cursor-pointer"
+                              title="Click to rename"
+                            >
+                              {entry.label || 'Unnamed Line Item'}
+                            </label>
+                            <Pencil size={10} className="text-[#9CA3AF] opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        )}
                       </div>
-                      <div className="relative">
-                        <IndianRupee style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
-                        <Input
-                          type="number"
-                          step="any"
-                          placeholder="0.00"
-                          value={entry.amount}
-                          onChange={e => setExtraFinancials(prev => prev.map((f, fi) => fi === i ? { ...f, amount: e.target.value } : f))}
-                          className={inputCls(false) + ' pl-9'}
-                        />
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setExtraFinancials(prev => prev.filter((_, fi) => fi !== i))}
+                        className="text-[#9CA3AF] hover:text-[#EF4444] transition-colors p-1"
+                        title="Remove line item"
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
-                  ))}
+                    <div className="relative">
+                      <IndianRupee style={{ width: 13, height: 13 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
+                      <Input
+                        type="number"
+                        step="any"
+                        placeholder="0.00"
+                        value={entry.amount}
+                        onChange={e => setExtraFinancials(prev => prev.map((f, fi) => fi === i ? { ...f, amount: e.target.value } : f))}
+                        className={inputCls(false) + ' pl-9'}
+                      />
+                    </div>
+                  </div>
+                ))}
 
-                  <button
-                    type="button"
-                    className={styles.addCustomBtn}
-                    style={{ alignSelf: 'end', minHeight: 42 }}
-                    onClick={() => {
-                      const newIdx = extraFinancials.length;
-                      setExtraFinancials(prev => [...prev, { label: '', amount: '' }]);
-                      setEditingFinancialIdx(newIdx);
-                    }}
-                  >
-                    <PlusCircle size={14} /> Add Line Item
-                  </button>
+                <button
+                  type="button"
+                  className={styles.addCustomBtn}
+                  style={{ alignSelf: 'end', minHeight: 42 }}
+                  onClick={() => {
+                    const newIdx = extraFinancials.length;
+                    setExtraFinancials(prev => [...prev, { label: '', amount: '' }]);
+                    setEditingFinancialIdx(newIdx);
+                  }}
+                >
+                  <PlusCircle size={14} /> Add Line Item
+                </button>
               </div>
             </div>
 

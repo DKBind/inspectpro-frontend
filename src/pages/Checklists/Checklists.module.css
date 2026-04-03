@@ -41,7 +41,7 @@
   border-radius: 10px;
   border: none;
   cursor: pointer;
-  background: #33AE95;
+  background: #1a7bbd;
   color: white;
   font-size: 13px;
   font-weight: 600;
@@ -84,32 +84,72 @@
 
 /* ─── Tabs ──────────────────────────────────────────────────────────────────── */
 .tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid #F3F4F6;
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: #F1F5F9;
+  border-radius: 12px;
   margin-bottom: 20px;
+  border: 1px solid #E2E8F0;
 }
 
 .tab {
-  padding: 9px 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
   font-size: 13px;
-  font-weight: 600;
-  color: #4B5563;
-  border: none;
+  font-weight: 500;
+  color: #64748B;
   background: transparent;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: color 0.15s, border-color 0.15s;
+  transition: all 0.18s ease;
+  white-space: nowrap;
 }
 
-.tab:hover {
-  color: #374151;
+.tab:hover:not(.tabActive) {
+  background: rgba(255, 255, 255, 0.6);
+  color: #334155;
 }
 
 .tabActive {
-  color: #33AE95;
-  border-bottom-color: #33AE95;
+  background: #ffffff;
+  color: #1a7bbd;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+.tabIcon {
+  opacity: 0.7;
+  transition: opacity 0.18s ease;
+}
+
+.tabActive .tabIcon {
+  opacity: 1;
+}
+
+.tabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: #E2E8F0;
+  color: #64748B;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.tabActive .tabCount {
+  background: rgba(26, 123, 189, 0.12);
+  color: #1a7bbd;
 }
 
 /* ─── Panel ──────────────────────────────────────────────────────────────────── */
@@ -210,7 +250,7 @@
 
 .tplIconOrg {
   background: rgba(51, 174, 149, 0.10);
-  color: #33AE95;
+  color: #1a7bbd;
 }
 
 .tplIconProject {
@@ -252,7 +292,7 @@
 
 .scopeOrg {
   background: rgba(51, 174, 149, 0.10);
-  color: #33AE95;
+  color: #1a7bbd;
   border: 1px solid rgba(51, 174, 149, 0.22);
 }
 
@@ -373,7 +413,7 @@
 .spinner {
   width: 26px;
   height: 26px;
-  color: #33AE95;
+  color: #1a7bbd;
   margin-bottom: 12px;
   animation: spin 0.8s linear infinite;
 }
@@ -460,7 +500,7 @@
 }
 
 .itemLabelInput:focus {
-  border-bottom-color: #33AE95;
+  border-bottom-color: #1a7bbd;
 }
 
 .itemLabelInput::placeholder {
@@ -496,7 +536,7 @@
 .responseTypeBtnActive {
   background: rgba(51, 174, 149, 0.10);
   border-color: rgba(51, 174, 149, 0.35);
-  color: #33AE95;
+  color: #1a7bbd;
 }
 
 .commentsRow {
@@ -555,7 +595,7 @@
 }
 
 .addCommentInput:focus {
-  border-color: #33AE95;
+  border-color: #1a7bbd;
   border-style: solid;
 }
 
@@ -575,14 +615,14 @@
   background: transparent;
   font-size: 12px;
   font-weight: 600;
-  color: #33AE95;
+  color: #1a7bbd;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .addItemBtn:hover {
   background: #F0FDF9;
-  border-color: #33AE95;
+  border-color: #1a7bbd;
 }
 
 .addSectionBtn {
@@ -597,7 +637,7 @@
   background: transparent;
   font-size: 13px;
   font-weight: 600;
-  color: #33AE95;
+  color: #1a7bbd;
   cursor: pointer;
   transition: all 0.15s;
   margin-top: 4px;
@@ -605,7 +645,7 @@
 
 .addSectionBtn:hover {
   background: #F0FDF9;
-  border-color: #33AE95;
+  border-color: #1a7bbd;
 }
 
 /* ─── Scope Selector ─────────────────────────────────────────────────────────── */
@@ -632,7 +672,7 @@
 }
 
 .scopeOptionActive {
-  background: #33AE95;
+  background: #1a7bbd;
   color: white;
 }
 
@@ -746,7 +786,7 @@
   background: #ffffff;
   border: 1px solid #E5E7EB;
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
   padding: 12px 14px;
   min-width: 240px;
   max-width: 280px;
@@ -855,8 +895,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .viewPanel {
@@ -875,8 +920,13 @@
 }
 
 @keyframes slideIn {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
 }
 
 .viewPanelHeader {
@@ -1022,7 +1072,7 @@
   height: 18px;
   border-radius: 4px;
   background: rgba(51, 174, 149, 0.1);
-  color: #33AE95;
+  color: #1a7bbd;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1078,7 +1128,7 @@
   padding: 8px 18px;
   border-radius: 8px;
   border: none;
-  background: #33AE95;
+  background: #1a7bbd;
   color: white;
   font-size: 13px;
   font-weight: 600;

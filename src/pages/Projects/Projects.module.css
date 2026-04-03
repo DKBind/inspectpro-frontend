@@ -56,17 +56,17 @@
   border-radius: 10px;
   border: none;
   cursor: pointer;
-  background: #33AE95;
+  background: #1a7bbd;
   color: white;
   font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(51, 174, 149, 0.3);
+  box-shadow: #76bcec;
   transition: all 0.15s;
 }
 
 .createBtn:hover {
-  background: #2a9a84;
-  box-shadow: 0 4px 12px rgba(51, 174, 149, 0.4);
+  background: #5db0e9;
+  box-shadow: #76bcec;
 }
 
 /* ── Empty / Loading State ───────────────────────────────────────────────── */
@@ -107,7 +107,7 @@
 .spinner {
   width: 28px;
   height: 28px;
-  color: #33AE95;
+  color: #1a7bbd;
   animation: spin 0.8s linear infinite;
   margin-bottom: 12px;
 }
@@ -181,7 +181,7 @@
   height: 34px;
   border-radius: 10px;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #33AE95, #2a9a84);
+  background: linear-gradient(135deg, #1a7bbd, #2a9a84);
   color: white;
   display: flex;
   align-items: center;
@@ -243,7 +243,7 @@
 
 /* "…more" link in truncated description */
 .descMore {
-  color: #33AE95;
+  color: #1a7bbd;
   font-weight: 600;
   margin-left: 1px;
 }
@@ -395,15 +395,15 @@
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
-  border: 1px solid #33AE95;
+  border: 1px solid #1a7bbd;
   background: rgba(51, 174, 149, 0.06);
-  color: #33AE95;
+  color: #1a7bbd;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .viewBtn:hover {
-  background: #33AE95;
+  background: #1a7bbd;
   color: white;
 }
 
@@ -446,6 +446,8 @@
   padding: 4px 0;
 }
 
+.paginationArea {}
+
 .paginationInfo {
   font-size: 12px;
   color: #4B5563;
@@ -482,9 +484,9 @@
 }
 
 .pageBtnActive {
-  background: #33AE95 !important;
+  background: #1a7bbd !important;
   color: white !important;
-  border-color: #33AE95 !important;
+  border-color: #1a7bbd !important;
 }
 
 /* ── View Modal ───────────────────────────────────────────────────────────── */
@@ -498,7 +500,7 @@
   position: absolute;
   inset: 0;
   opacity: 0.08;
-  background: linear-gradient(135deg, #33AE95, #2a9a84);
+  background: linear-gradient(135deg, #1a7bbd, #2a9a84);
 }
 
 .viewHeroContent {
@@ -512,7 +514,7 @@
   width: 48px;
   height: 48px;
   border-radius: 14px;
-  background: linear-gradient(135deg, #33AE95, #2a9a84);
+  background: linear-gradient(135deg, #1a7bbd, #2a9a84);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -550,7 +552,7 @@
   background: #F0FDF9;
   font-size: 11px;
   font-weight: 600;
-  color: #33AE95;
+  color: #1a7bbd;
 }
 
 /* Info sections */
@@ -681,7 +683,7 @@
 
 .viewSpecsHead {
   padding: 10px 14px;
-  background: linear-gradient(135deg, #33AE95, #2a9a84);
+  background: linear-gradient(135deg, #1a7bbd, #2a9a84);
   font-size: 11px;
   font-weight: 700;
   color: white;
@@ -782,7 +784,7 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, #33AE95 0%, #2a9a84 100%);
+  background: linear-gradient(135deg, #1a7bbd 0%, #2a9a84 100%);
 }
 
 .specsHeaderIcon {
@@ -842,7 +844,7 @@
 .customFieldLabelInput {
   flex: 1;
   border: none;
-  border-bottom: 1.5px solid #33AE95;
+  border-bottom: 1.5px solid #1a7bbd;
   background: transparent;
   font-size: 12px;
   font-weight: 600;
@@ -901,12 +903,12 @@
   background: transparent;
   font-size: 12px;
   font-weight: 600;
-  color: #33AE95;
+  color: #1a7bbd;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
 
 .addCustomBtn:hover {
   background: #F0FDF9;
-  border-color: #33AE95;
+  border-color: #1a7bbd;
 }

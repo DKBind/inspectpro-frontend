@@ -21,6 +21,10 @@ interface BaseProps {
   className?: string
   label?: string
   error?: string
+  /** Opens the dropdown panel upward instead of downward */
+  dropUp?: boolean
+  /** Show the clear (×) button when a value is selected. Default: true */
+  clearable?: boolean
   /** Async fetch options on search change */
   onSearch?: (query: string) => void | Promise<void>
   /** Called when dropdown opens */
@@ -55,6 +59,8 @@ const DropdownSelect = React.forwardRef<HTMLDivElement, DropdownSelectProps>(
       className,
       label,
       error,
+      dropUp = false,
+      clearable = true,
       onSearch,
       onOpen,
       multiple,
@@ -218,7 +224,7 @@ const DropdownSelect = React.forwardRef<HTMLDivElement, DropdownSelectProps>(
           </div>
 
           <div className={styles.triggerRight}>
-            {hasValue && !disabled && (
+            {hasValue && !disabled && clearable && (
               <button
                 type="button"
                 className={styles.clearBtn}
@@ -240,7 +246,7 @@ const DropdownSelect = React.forwardRef<HTMLDivElement, DropdownSelectProps>(
 
         {/* Dropdown */}
         {open && (
-          <div className={styles.dropdown} ref={ref}>
+          <div className={cn(styles.dropdown, dropUp && styles.dropdownUp)} ref={ref}>
             {/* Search */}
             {searchable && (
               <div className={styles.searchBox}>

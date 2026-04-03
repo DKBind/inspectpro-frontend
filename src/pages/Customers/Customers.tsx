@@ -27,8 +27,6 @@ import { Input } from '@/components/shared-ui/Input/input';
 import { Fld, ViewRow, inputCls } from '@/components/shared-ui/form-helpers';
 import styles from './Customers.module.css';
 
-const PAGE_SIZE = 10;
-
 // Super admin must pick 'org' or 'franchise'. Org admin may also pick 'own'.
 type Ownership = 'own' | 'org' | 'franchise';
 
@@ -83,6 +81,7 @@ const Clients = () => {
   const [clients, setClients] = useState<CustomerResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
 
@@ -94,7 +93,6 @@ const Clients = () => {
   const [submitting, setSubmitting] = useState(false);
   const [statusToggleTarget, setStatusToggleTarget] = useState<CustomerResponse | null>(null);
   const [toggling, setToggling] = useState(false);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
 
   // ── "Who is this for?" state ────────────────────────────────────────────
   const [ownership, setOwnership] = useState<Ownership>('own');
@@ -365,7 +363,7 @@ const Clients = () => {
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <div className={styles.panelTitle}>
-            <Users style={{ width: 16, height: 16, color: '#33AE95' }} />
+            <Users style={{ width: 16, height: 16, color: '#1a7bbd' }} />
             All Clients
           </div>
           <button className={styles.createBtn} onClick={openCreate}>
@@ -444,6 +442,7 @@ const Clients = () => {
                   pageSize={pageSize}
                   onPageChange={setCurrentPage}
                   onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+                  pageSizeOptions={[10, 20, 50]}
                 />
               </div>
             </>
@@ -456,8 +455,8 @@ const Clients = () => {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/10 border border-[#33AE95]/30 flex items-center justify-center">
-                <User size={18} className="text-[#33AE95]" />
+              <div className="h-9 w-9 rounded-xl bg-[#1a7bbd]/10 border border-[#1a7bbd]/30 flex items-center justify-center">
+                <User size={18} className="text-[#1a7bbd]" />
               </div>
               <DialogTitle className="text-xl font-bold text-[#263B4F]">Add Client</DialogTitle>
             </div>
@@ -472,7 +471,7 @@ const Clients = () => {
               {/* ── STEP 1: Who is this for? (hidden for franchise admin) ─ */}
               {!isFranchiseAdmin && <section>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[#33AE95]"><Building2 size={13} /></span>
+                  <span className="text-[#1a7bbd]"><Building2 size={13} /></span>
                   <span className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">
                     Who is this client for?
                   </span>
@@ -485,8 +484,8 @@ const Clients = () => {
                       <button key={key} type="button"
                         onClick={() => { setOwnership(key); setSelectedTargetId(''); setSelectedParentOrgId(''); }}
                         className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${ownership === key
-                          ? 'bg-[#33AE95] text-white border-[#33AE95]'
-                          : 'bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#33AE95] hover:text-[#33AE95]'
+                          ? 'bg-[#1a7bbd] text-white border-[#1a7bbd]'
+                          : 'bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#1a7bbd] hover:text-[#1a7bbd]'
                           }`}>
                         {label}
                       </button>
@@ -560,7 +559,7 @@ const Clients = () => {
               {/* ── STEP 2: Personal Details ───────────────────────────── */}
               <section>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[#33AE95]"><User size={13} /></span>
+                  <span className="text-[#1a7bbd]"><User size={13} /></span>
                   <span className="text-xs font-semibold uppercase tracking-widest text-[#6B7280]">Client Details</span>
                 </div>
                 <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-5">
@@ -592,7 +591,7 @@ const Clients = () => {
                             {...regCreate('password')} className={`${inputCls(false)} pl-9`} />
                         </div>
                         <button type="button" onClick={() => setCreateValue('password', generatePassword())}
-                          className="shrink-0 h-10 px-3 rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#33AE95] hover:border-[#33AE95] transition-all flex items-center gap-1.5 text-xs font-medium">
+                          className="shrink-0 h-10 px-3 rounded-md border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#1a7bbd] hover:border-[#1a7bbd] transition-all flex items-center gap-1.5 text-xs font-medium">
                           <Wand2 size={13} /> Generate
                         </button>
                       </div>
@@ -610,7 +609,7 @@ const Clients = () => {
 
               {/* Role badge */}
               <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] px-5 py-3 flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#33AE95]/10 border border-[#33AE95]/30 text-[#33AE95] text-xs font-semibold">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1a7bbd]/10 border border-[#1a7bbd]/30 text-[#1a7bbd] text-xs font-semibold">
                   <User size={12} /> Client
                 </span>
                 <span className="text-xs text-[#9CA3AF]">Role is fixed — clients are end users of the organisation.</span>
@@ -621,7 +620,7 @@ const Clients = () => {
               <Button type="button" variant="ghost" onClick={closeCreate} disabled={submitting}
                 className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Cancel</Button>
               <Button type="submit" disabled={submitting}
-                className="flex-1 sm:flex-none sm:min-w-40 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg">
+                className="flex-1 sm:flex-none sm:min-w-40 bg-[#1a7bbd] hover:bg-[#2a9a84] text-white font-semibold shadow-lg">
                 {submitting
                   ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Adding…</span>
                   : 'Add Client'}
@@ -636,8 +635,8 @@ const Clients = () => {
         <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto shadow-xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/15 border border-[#33AE95]/30 flex items-center justify-center">
-                <User size={18} className="text-[#33AE95]" />
+              <div className="h-9 w-9 rounded-xl bg-[#1a7bbd]/15 border border-[#1a7bbd]/30 flex items-center justify-center">
+                <User size={18} className="text-[#1a7bbd]" />
               </div>
               <DialogTitle className="text-xl font-bold text-[#263B4F]">Edit Client</DialogTitle>
             </div>
@@ -666,7 +665,7 @@ const Clients = () => {
               <Button type="button" variant="ghost" onClick={closeEdit} disabled={submitting}
                 className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Cancel</Button>
               <Button type="submit" disabled={submitting}
-                className="flex-1 sm:flex-none sm:min-w-40 bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold shadow-lg">
+                className="flex-1 sm:flex-none sm:min-w-40 bg-[#1a7bbd] hover:bg-[#2a9a84] text-white font-semibold shadow-lg">
                 {submitting
                   ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Updating…</span>
                   : 'Update Client'}
@@ -681,8 +680,8 @@ const Clients = () => {
         <DialogContent className="sm:max-w-md shadow-xl rounded-2xl p-0">
           <DialogHeader className="px-7 pt-7 pb-5 border-b border-[#E5E7EB]">
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-9 w-9 rounded-xl bg-[#33AE95]/15 border border-[#33AE95]/30 flex items-center justify-center">
-                <User size={18} className="text-[#33AE95]" />
+              <div className="h-9 w-9 rounded-xl bg-[#1a7bbd]/15 border border-[#1a7bbd]/30 flex items-center justify-center">
+                <User size={18} className="text-[#1a7bbd]" />
               </div>
               <DialogTitle className="text-xl font-bold text-[#263B4F]">Client Details</DialogTitle>
             </div>
@@ -702,7 +701,7 @@ const Clients = () => {
               className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Close</Button>
             {viewTarget && (
               <Button onClick={() => { openEdit(viewTarget); setViewTarget(null); }}
-                className="bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold">
+                className="bg-[#1a7bbd] hover:bg-[#2a9a84] text-white font-semibold">
                 <Pencil size={14} className="mr-2" /> Edit
               </Button>
             )}
@@ -729,7 +728,7 @@ const Clients = () => {
             <Button variant="ghost" onClick={() => setStatusToggleTarget(null)} disabled={toggling}
               className="text-[#6B7280] hover:bg-[#F3F4F6] border border-[#E5E7EB]">Cancel</Button>
             <Button onClick={handleToggleStatus} disabled={toggling}
-              className="bg-[#33AE95] hover:bg-[#2a9a84] text-white font-semibold min-w-28">
+              className="bg-[#1a7bbd] hover:bg-[#2a9a84] text-white font-semibold min-w-28">
               {toggling
                 ? <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin" />Updating…</span>
                 : 'Confirm'}
