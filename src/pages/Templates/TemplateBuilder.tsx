@@ -791,7 +791,7 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
           </div>
 
           {/* Scrollable content */}
-          <div className={css.scrollArea} style={{ padding: 20 }}>
+          <div className={css.scrollArea}>
 
             {/* Root level — prompt user to pick a folder from the sidebar */}
             {selectedId === null && (() => {
@@ -936,7 +936,7 @@ function FolderChecklistView({
     const items = leaf.items ?? [];
 
     return (
-      <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minHeight: 0, padding: '16px 20px', overflow: 'hidden' }}>
         {/* Panel header strip */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
@@ -997,7 +997,7 @@ function FolderChecklistView({
 
   /* ── Level 1: Sub-folders + Panel rows ── */
   return (
-    <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 0, flex: 1, minHeight: 0 }}>
 
       {/* ── Sub-folder cards (if any) ── */}
 
@@ -1010,7 +1010,7 @@ function FolderChecklistView({
       )}
 
       {/* ── Panel rows ── */}
-      <div className={css.panelRowList}>
+      <div className={css.panelRowList} style={{ padding: '16px 20px' }}>
         {leaves.map((leaf) => {
           const isSel = leaf.panelType === 'SELECTION';
           const accent = isSel ? '#1a7bbd' : '#DF453A';

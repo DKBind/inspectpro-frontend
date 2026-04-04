@@ -527,7 +527,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 16px;
+  padding: 0;
 }
 
 /* Items list inside a leaf panel — gets its own scroll so the panel
@@ -943,24 +943,19 @@
   color: #fff;
 }
 
-/* ── Empty State — Soft Card ─────────────────────────────────────────────── */
+/* ── Empty State — full-bleed fill ──────────────────────────────────────── */
 .panelCardsEmpty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   flex: 1;
-  width: 100%;
-  min-height: 260px;
+  min-height: 0;
   gap: 12px;
   color: var(--ip-text-disabled);
   font-size: 14px;
   text-align: center;
-  border-radius: var(--ip-radius-xl);
   background: linear-gradient(145deg, var(--ip-surface) 0%, var(--ip-surface-raised) 100%);
-  border: 1px solid var(--ip-border);
-  box-shadow: var(--ip-shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  margin: 2px 0;
   padding: 40px;
 }
 
