@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm, useController, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -7,9 +7,10 @@ import {
   Users as UsersIcon, Plus, RefreshCw, Eye, Pencil, Trash2,
   UserCircle, Mail, Lock, User,
   ChevronDown, Building2, Shield, Wand2,
-  DeleteIcon,
+  DeleteIcon, SlidersHorizontal,
 } from 'lucide-react';
 import Pagination from '@/components/shared-ui/Pagination/Pagination';
+import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
 
 import { userService } from '@/services/userService';
 import { organisationService } from '@/services/organisationService';
@@ -110,6 +111,17 @@ const Users = () => {
   const [deleteTarget, setDeleteTarget] = useState<UserResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // ── Filter state ─────────────────────────────────────────────────────────
+  const filterRef = useRef<HTMLDivElement>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterRoleId, setFilterRoleId] = useState('');
+  const [filterOrgId, setFilterOrgId] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  // Pending (not applied yet)
+  const [pendingRoleId, setPendingRoleId] = useState('');
+  const [pendingOrgId, setPendingOrgId] = useState('');
+  const [pendingStatus, setPendingStatus] = useState('');
+
   // Account type for create modal (super admin only) — default: 'internal'
   const [accountType, setAccountType] = useState<'internal' | 'organisation' | 'franchise'>('internal');
   const [parentOrgIdForUser, setParentOrgIdForUser] = useState('');
@@ -179,6 +191,51 @@ const Users = () => {
       .then(d => setFranchisesForUser(d.content ?? []))
       .catch(() => setFranchisesForUser([]));
   }, [parentOrgIdForUser]);
+
+  // ── Filter helpers ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!filterOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [filterOpen]);
+
+  const isFilterActive = !!filterRoleId || !!filterOrgId || !!filterStatus;
+
+  const openFilter = () => {
+    setPendingRoleId(filterRoleId);
+    setPendingOrgId(filterOrgId);
+    setPendingStatus(filterStatus);
+    setFilterOpen(true);
+  };
+
+  const applyFilter = () => {
+    setFilterRoleId(pendingRoleId);
+    setFilterOrgId(pendingOrgId);
+    setFilterStatus(pendingStatus);
+    setCurrentPage(1);
+    setFilterOpen(false);
+  };
+
+  const clearFilter = () => {
+    setFilterRoleId(''); setFilterOrgId(''); setFilterStatus('');
+    setPendingRoleId(''); setPendingOrgId(''); setPendingStatus('');
+    setCurrentPage(1);
+    setFilterOpen(false);
+  };
+
+  const filteredUsers = users.filter(u => {
+    if (u.roleName?.toLowerCase() === 'client') return false;
+    if (filterRoleId && String(u.roleId) !== filterRoleId) return false;
+    if (filterOrgId && u.orgId !== filterOrgId) return false;
+    if (filterStatus === 'active' && (u.statusId ?? 1) !== 1) return false;
+    if (filterStatus === 'inactive' && (u.statusId ?? 1) === 1) return false;
+    return true;
+  });
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -345,11 +402,75 @@ const Users = () => {
           <span className={styles.panelTitle}>
             <UsersIcon size={16} style={{ marginRight: 8 }} />
             All Users
-            <span className={styles.countBadge}>{total}</span>
+            <span className={styles.countBadge}>{filteredUsers.length}</span>
+            {isFilterActive && <span className={styles.filterActiveBadge}>Filtered</span>}
           </span>
-          <button className={styles.refreshBtn} onClick={fetchAll} title="Refresh">
-            <RefreshCw size={14} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div ref={filterRef} style={{ position: 'relative' }}>
+              <button
+                className={`${styles.filterBtn} ${isFilterActive ? styles.filterBtnActive : ''}`}
+                onClick={openFilter}
+              >
+                <SlidersHorizontal size={14} />
+                Filter
+                {isFilterActive && <span className={styles.filterDot} />}
+              </button>
+              {filterOpen && (
+                <div className={styles.filterPanel}>
+                  <div className={styles.filterSection}>
+                    <span className={styles.filterSectionLabel}>Role</span>
+                    <DropdownSelect
+                      options={[{ value: '', label: 'All Roles' }, ...roles.map(r => ({ value: String(r.roleId), label: r.roleName ?? r.name }))]}
+                      value={pendingRoleId || null}
+                      onChange={v => setPendingRoleId(v == null ? '' : String(v))}
+                      searchable={false}
+                      clearable={false}
+                      dropUp
+                    />
+                  </div>
+                  {isSuperAdmin && (
+                    <div className={styles.filterSection}>
+                      <span className={styles.filterSectionLabel}>Organisation</span>
+                      <DropdownSelect
+                        options={[{ value: '', label: 'All Organisations' }, ...orgs.filter(o => !o.parentOrgId).map(o => ({ value: o.uuid, label: o.name }))]}
+                        value={pendingOrgId || null}
+                        onChange={v => setPendingOrgId(v == null ? '' : String(v))}
+                        searchable
+                        clearable={false}
+                        dropUp
+                      />
+                    </div>
+                  )}
+                  <div className={styles.filterSection}>
+                    <span className={styles.filterSectionLabel}>Status</span>
+                    <DropdownSelect
+                      options={[
+                        { value: '', label: 'All Statuses' },
+                        { value: 'active', label: 'Active' },
+                        { value: 'inactive', label: 'Inactive' },
+                      ]}
+                      value={pendingStatus || null}
+                      onChange={v => setPendingStatus(v == null ? '' : String(v))}
+                      searchable={false}
+                      clearable={false}
+                      dropUp
+                    />
+                  </div>
+                  <div className={styles.filterDivider} />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className={styles.filterClose} onClick={() => setFilterOpen(false)}>Close</button>
+                    <button className={styles.filterApply} onClick={applyFilter}>Apply</button>
+                  </div>
+                  {isFilterActive && (
+                    <button className={styles.filterClear} onClick={clearFilter}>Clear Filters</button>
+                  )}
+                </div>
+              )}
+            </div>
+            <button className={styles.refreshBtn} onClick={fetchAll} title="Refresh">
+              <RefreshCw size={14} />
+            </button>
+          </div>
         </div>
 
         <div className={styles.panelBody}>
@@ -357,63 +478,65 @@ const Users = () => {
             <div className={styles.emptyState}>
               <div className={styles.spinner} />
             </div>
-          ) : users.length === 0 ? (
+          ) : filteredUsers.length === 0 ? (
             <div className={styles.emptyState}>
-              No users found.
-              <span className={styles.emptySubtext}>Click "Add User" to create the first one.</span>
+              {isFilterActive ? 'No users match the current filters.' : 'No users found.'}
+              <span className={styles.emptySubtext}>{isFilterActive ? 'Try adjusting or clearing the filters.' : 'Click "Add User" to create the first one.'}</span>
             </div>
           ) : (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Organisation</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.filter(u => u.roleName?.toLowerCase() !== 'client').map((u) => (
-                  <tr key={u.id} className={styles.tableRow}>
-                    <td>
-                      <div className={styles.orgCell}>
-                        <div className={styles.orgIcon}><UserCircle size={16} /></div>
-                        <span className={styles.orgName}>{u.firstName} {u.lastName}</span>
-                      </div>
-                    </td>
-                    <td className={styles.mutedCell}>{u.email}</td>
-                    <td>
-                      {u.roleName
-                        ? <span className={`${styles.planBadge} ${styles.planPro}`}>{u.roleName}</span>
-                        : <span className={styles.mutedCell}>—</span>}
-                    </td>
-                    <td>{renderOrgBadge(u)}</td>
-                    <td>
-                      {u.statusName ? (
-                        <span
-                          className={styles.statusBadge}
-                          style={{
-                            background: u.statusColourCode ? `${u.statusColourCode}22` : undefined,
-                            color: u.statusColourCode ?? undefined,
-                          }}
-                        >
-                          {u.statusName}
-                        </span>
-                      ) : <span className={styles.mutedCell}>—</span>}
-                    </td>
-                    <td>
-                      <div className={styles.actionBtns} style={{ justifyContent: 'center' }}>
-                        <button className={styles.actionBtn} title="View" onClick={() => setViewUser(u)}><Eye size={14} /></button>
-                        <button className={styles.actionBtn} title="Edit" onClick={() => openEdit(u)}><Pencil size={14} /></button>
-                        <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} title="Delete" onClick={() => setDeleteTarget(u)}><Trash2 size={14} /></button>
-                      </div>
-                    </td>
+            <div className={styles.tableScroll}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Organisation</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: 'center' }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((u) => (
+                    <tr key={u.id} className={styles.tableRow}>
+                      <td>
+                        <div className={styles.orgCell}>
+                          <div className={styles.orgIcon}><UserCircle size={16} /></div>
+                          <span className={styles.orgName}>{u.firstName} {u.lastName}</span>
+                        </div>
+                      </td>
+                      <td className={styles.mutedCell}>{u.email}</td>
+                      <td>
+                        {u.roleName
+                          ? <span className={`${styles.planBadge} ${styles.planPro}`}>{u.roleName}</span>
+                          : <span className={styles.mutedCell}>—</span>}
+                      </td>
+                      <td>{renderOrgBadge(u)}</td>
+                      <td>
+                        {u.statusName ? (
+                          <span
+                            className={styles.statusBadge}
+                            style={{
+                              background: u.statusColourCode ? `${u.statusColourCode}22` : undefined,
+                              color: u.statusColourCode ?? undefined,
+                            }}
+                          >
+                            {u.statusName}
+                          </span>
+                        ) : <span className={styles.mutedCell}>—</span>}
+                      </td>
+                      <td>
+                        <div className={styles.actionBtns} style={{ justifyContent: 'center' }}>
+                          <button className={styles.actionBtn} title="View" onClick={() => setViewUser(u)}><Eye size={14} /></button>
+                          <button className={styles.actionBtn} title="Edit" onClick={() => openEdit(u)}><Pencil size={14} /></button>
+                          <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} title="Delete" onClick={() => setDeleteTarget(u)}><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           <div className={styles.paginationArea}>

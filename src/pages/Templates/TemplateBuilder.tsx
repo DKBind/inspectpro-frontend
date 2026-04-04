@@ -111,14 +111,6 @@ function isDuplicateName(nodes: TemplateNode[], parentId: string | null, name: s
 }
 
 /** Count total items under a subtree (for progress roll-up display). */
-function countItems(nodes: TemplateNode[]): number {
-  let count = 0;
-  for (const n of nodes) {
-    if (n.type === 'LEAF') count += n.items?.length ?? 0;
-    else if (n.children?.length) count += countItems(n.children);
-  }
-  return count;
-}
 
 /** Count leaf nodes (panels) under a subtree. */
 // function countLeaves(nodes: TemplateNode[]): number {
@@ -247,6 +239,49 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
   // Reset focused row when entering Level 2
   useEffect(() => { if (selectedLeafId) setFocusedLeafId(null); }, [selectedLeafId]);
 
+  // Neutralise AdminLayout's <main> padding + overflow-y AND lock .mainArea
+  // to exactly 100vh so the builder never causes the page to scroll.
+  // Everything is restored when this component unmounts.
+  useEffect(() => {
+    const main = document.querySelector('main') as HTMLElement | null;
+    if (!main) return;
+    const mainArea = main.parentElement as HTMLElement | null;
+
+    const prevMain = {
+      overflowY: main.style.overflowY,
+      padding: main.style.padding,
+      paddingBottom: main.style.paddingBottom,
+      height: main.style.height,
+    };
+    main.style.overflowY = 'hidden';
+    main.style.padding = '0';
+    main.style.paddingBottom = '0';
+    main.style.height = '100%';
+
+    const prevArea = mainArea ? {
+      minHeight: mainArea.style.minHeight,
+      height: mainArea.style.height,
+      overflowY: mainArea.style.overflowY,
+    } : null;
+    if (mainArea) {
+      mainArea.style.minHeight = '0';
+      mainArea.style.height = '100vh';
+      mainArea.style.overflowY = 'hidden';
+    }
+
+    return () => {
+      main.style.overflowY = prevMain.overflowY;
+      main.style.padding = prevMain.padding;
+      main.style.paddingBottom = prevMain.paddingBottom;
+      main.style.height = prevMain.height;
+      if (mainArea && prevArea) {
+        mainArea.style.minHeight = prevArea.minHeight;
+        mainArea.style.height = prevArea.height;
+        mainArea.style.overflowY = prevArea.overflowY;
+      }
+    };
+  }, []);
+
   /* load */
   useEffect(() => {
     if (isNew) { setGlobalOveralls(['Satisfactory', 'Marginal', 'Poor', 'Safety', 'None-N/A']); setLoading(false); return; }
@@ -276,10 +311,6 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
 
   /* ── Node CRUD ── */
   const addRootFolder = (name?: string) => {
-    if (nodes.filter(n => n.type === 'FOLDER').length >= 1) {
-      toast.error('Only one main root section is allowed.');
-      return;
-    }
     const node = emptyFolder(name ?? `Section ${nodes.length + 1}`);
     dirty(p => [...p, node]);
     setSelectedId(node.id);
@@ -370,13 +401,7 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
     const parentId = path && path.length > 1 ? path[path.length - 2].id : null;
     const copy = deepCloneNode(node, newName);
     if (parentId) dirty(p => addChildTo(p, parentId, copy));
-    else {
-      if (nodes.filter(n => n.type === 'FOLDER').length >= 1) {
-        toast.error('Cannot copy root folder as only one is allowed.');
-        return;
-      }
-      dirty(p => [...p, copy]);
-    }
+    else dirty(p => [...p, copy]);
     toast.success(`"${node.name}" copied to "${newName}".`);
   };
 
@@ -516,7 +541,7 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
   );
 
   return (
-    <div className={css.page}>
+    <div className={css.page} style={{ borderRadius: "10px" }}>
 
       {/* ═══ NAME MODAL ═══ */}
       {nameModal && (
@@ -628,7 +653,7 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
         <div className={css.titleCardBody}>
           <div className={css.titleCardMeta} style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
             <span className={css.titleCardBadge}>{isNew ? 'New Template' : 'Editing'}</span>
-            <button onClick={() => setOverallsModalOpen(true)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid #E2E8F0', borderRadius: 4, padding: '4px 8px', fontSize: 11, cursor: 'pointer', color: '#64748B' }}>Configure Global Ratings</button>
+            {/* <button onClick={() => setOverallsModalOpen(true)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid #E2E8F0', borderRadius: 4, padding: '4px 8px', fontSize: 11, cursor: 'pointer', color: '#64748B' }}>Configure Global Ratings</button> */}
           </div>
           <input
             autoFocus={isNew} value={title}
@@ -656,6 +681,13 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
               <FolderOpen size={14} color="#1a7bbd" />
             </div>
             <span className={css.sidebarHeadTitle}>Template Menu</span>
+            <button
+              className={css.sidebarHeadAddBtn}
+              title="Add root folder"
+              onClick={() => openModal('FOLDER', 'SELECTION', null)}
+            >
+              <Plus size={13} strokeWidth={2} />
+            </button>
           </div>
 
           {/* Search */}
@@ -700,18 +732,13 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
             ))}
           </div>
 
-          {/* Sidebar footer */}
+          {/* Sidebar footer — always adds a root-level parent folder */}
           <div className={css.sidebarFooter}>
-            <button className={css.sidebarAddBtn} onClick={() => {
-              const rootNodes = nodes.filter(n => n.type === 'FOLDER');
-              if (rootNodes.length === 0) {
-                openModal('FOLDER', 'SELECTION', null);
-              } else {
-                const parentId = selectedId && findNode(nodes, selectedId)?.type === 'FOLDER' ? selectedId : rootNodes[0].id;
-                openModal('FOLDER', 'SELECTION', parentId);
-              }
-            }}>
-              <Plus size={13} /> Add New
+            <button
+              className={css.sidebarAddBtn}
+              onClick={() => openModal('FOLDER', 'SELECTION', null)}
+            >
+              <Plus size={13} strokeWidth={2} /> New Folder
             </button>
           </div>
         </nav>
@@ -764,37 +791,33 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
           </div>
 
           {/* Scrollable content */}
-          <div className={css.scrollArea} style={{ paddingBottom: 20 }}>
+          <div className={css.scrollArea} style={{ padding: 20 }}>
 
-            {/* Root level — show folder cards only */}
-            {selectedId === null && (
-              nodes.filter(n => n.type === 'FOLDER').length === 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 280, gap: 14 }}>
-                  <FolderOpen size={44} color="#D1D5DB" />
-                  <p style={{ color: '#9CA3AF', fontSize: 14, margin: 0, textAlign: 'center' }}>
-                    No folders yet.<br />Click <strong>+</strong> in the sidebar to add one.
+            {/* Root level — prompt user to pick a folder from the sidebar */}
+            {selectedId === null && (() => {
+              const folderCount = nodes.filter(n => n.type === 'FOLDER').length;
+              return (
+                <div className={css.workspacePrompt}>
+                  <div className={css.workspacePromptIcon}>
+                    <FolderOpen size={32} strokeWidth={1.5} />
+                  </div>
+                  <p className={css.workspacePromptTitle}>
+                    {folderCount === 0 ? 'No folders yet' : `${folderCount} folder${folderCount !== 1 ? 's' : ''}`}
                   </p>
+                  <p className={css.workspacePromptSub}>
+                    {folderCount === 0
+                      ? 'Create your first root folder to start building the template.'
+                      : 'Select a folder from the sidebar to manage its panels'}
+                  </p>
+                  {/* <button
+                    className={css.workspacePromptBtn}
+                    onClick={() => openModal('FOLDER', 'SELECTION', null)}
+                  >
+                    <Plus size={14} strokeWidth={2} /> New Folder
+                  </button> */}
                 </div>
-              ) : (
-                <div className={css.fadeUp}>
-                  <div className={css.cgHeader}>
-                    <div>
-                      <h2 className={css.cgTitle}>Template Menu</h2>
-                      <p className={css.cgSub}>{nodes.filter(n => n.type === 'FOLDER').length} folder{nodes.filter(n => n.type === 'FOLDER').length !== 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
-                  <div className={css.cgGrid}>
-                    {nodes.filter(n => n.type === 'FOLDER').map(node => (
-                      <button key={node.id} className={css.cgCard} onClick={() => setSelectedId(node.id)}>
-                        <div className={css.cgCardIcon}><FolderOpen size={22} color="#1a7bbd" /></div>
-                        <div className={css.cgCardName}>{node.name}</div>
-                        <div className={css.cgCardMeta}>{countItems(node.children ?? [])} item{countItems(node.children ?? []) !== 1 ? 's' : ''}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            )}
+              );
+            })()}
 
             {/* Folder selected — Level 1 (panel cards) or Level 2 (items) */}
             {selectedNode?.type === 'FOLDER' && (
@@ -907,9 +930,9 @@ function FolderChecklistView({
     const leaf = leaves.find(l => l.id === selectedLeafId);
     if (!leaf) return null;
     const isSel = leaf.panelType === 'SELECTION';
-    const accent = isSel ? '#29A356' : '#EF4444';
-    const accentLight = isSel ? 'rgba(41,163,86,0.07)' : 'rgba(239,68,68,0.05)';
-    const accentBorder = isSel ? 'rgba(41,163,86,0.18)' : 'rgba(239,68,68,0.18)';
+    const accent = isSel ? '#1a7bbd' : '#DF453A';
+    const accentLight = isSel ? 'rgba(26,123,189,0.07)' : 'rgba(223,69,58,0.05)';
+    const accentBorder = isSel ? 'rgba(26,123,189,0.18)' : 'rgba(223,69,58,0.18)';
     const items = leaf.items ?? [];
 
     return (
@@ -935,32 +958,34 @@ function FolderChecklistView({
         </div>
 
 
-        {/* Items list */}
+        {/* Items list — scrollable, header strip stays pinned */}
         <div className={`${css.panelCard} ${isSel ? css.panelCardHeadSel : css.panelCardHeadDmg}`}>
-          {items.length === 0 && (
-            <p className={css.panelEmpty}>No items yet. Click "Add Item" below.</p>
-          )}
-          {items.map((item, idx) => {
-            const state = itemStates[item.id] ?? 'none';
-            return isSel
-              ? <SelectionRow key={item.id} item={item} state={state}
-                onToggle={() => setItemStates(p => ({ ...p, [item.id]: state === 'selected' ? 'none' : 'selected' }))}
-                onDelete={() => onDeleteItem(leaf.id, item.id)}
-                onRename={l => onRenameItem(leaf.id, item.id, l)}
-                onMoveUp={idx > 0 ? () => onMoveItemUp(leaf.id, item.id) : undefined}
-                onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(leaf.id, item.id) : undefined}
-                onMoveToFolder={() => onMoveItem(leaf.id, item.id)}
-                onCopyToFolder={() => onCopyItem(leaf.id, item.id)} />
-              : <DamageRow key={item.id} item={item} state={state}
-                onCorrect={() => setItemStates(p => ({ ...p, [item.id]: state === 'correct' ? 'none' : 'correct' }))}
-                onDamage={() => setItemStates(p => ({ ...p, [item.id]: state === 'damaged' ? 'none' : 'damaged' }))}
-                onDelete={() => onDeleteItem(leaf.id, item.id)}
-                onRename={l => onRenameItem(leaf.id, item.id, l)}
-                onMoveUp={idx > 0 ? () => onMoveItemUp(leaf.id, item.id) : undefined}
-                onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(leaf.id, item.id) : undefined}
-                onMoveToFolder={() => onMoveItem(leaf.id, item.id)}
-                onCopyToFolder={() => onCopyItem(leaf.id, item.id)} />;
-          })}
+          <div className={css.panelItemsList}>
+            {items.length === 0 && (
+              <p className={css.panelEmpty}>No items yet. Click "Add Item" below.</p>
+            )}
+            {items.map((item, idx) => {
+              const state = itemStates[item.id] ?? 'none';
+              return isSel
+                ? <SelectionRow key={item.id} item={item} state={state}
+                  onToggle={() => setItemStates(p => ({ ...p, [item.id]: state === 'selected' ? 'none' : 'selected' }))}
+                  onDelete={() => onDeleteItem(leaf.id, item.id)}
+                  onRename={l => onRenameItem(leaf.id, item.id, l)}
+                  onMoveUp={idx > 0 ? () => onMoveItemUp(leaf.id, item.id) : undefined}
+                  onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(leaf.id, item.id) : undefined}
+                  onMoveToFolder={() => onMoveItem(leaf.id, item.id)}
+                  onCopyToFolder={() => onCopyItem(leaf.id, item.id)} />
+                : <DamageRow key={item.id} item={item} state={state}
+                  onCorrect={() => setItemStates(p => ({ ...p, [item.id]: state === 'correct' ? 'none' : 'correct' }))}
+                  onDamage={() => setItemStates(p => ({ ...p, [item.id]: state === 'damaged' ? 'none' : 'damaged' }))}
+                  onDelete={() => onDeleteItem(leaf.id, item.id)}
+                  onRename={l => onRenameItem(leaf.id, item.id, l)}
+                  onMoveUp={idx > 0 ? () => onMoveItemUp(leaf.id, item.id) : undefined}
+                  onMoveDown={idx < items.length - 1 ? () => onMoveItemDown(leaf.id, item.id) : undefined}
+                  onMoveToFolder={() => onMoveItem(leaf.id, item.id)}
+                  onCopyToFolder={() => onCopyItem(leaf.id, item.id)} />;
+            })}
+          </div>
           <button onClick={() => onAddItem(leaf.id)}
             className={`${css.panelFooterBtn} ${isSel ? css.panelFooterBtnSel : css.panelFooterBtnDmg}`}>
             <Plus size={12} /> Add Item
@@ -970,32 +995,26 @@ function FolderChecklistView({
     );
   }
 
-  /* ── Level 1: Panel rows list ── */
+  /* ── Level 1: Sub-folders + Panel rows ── */
   return (
     <div className={css.fadeUp} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {/* Folder header */}
-      <div className={css.cgHeader} style={{ marginBottom: 12 }}>
-        <div>
-          <h2 className={css.cgTitle}>{folder.name}</h2>
-          <p className={css.cgSub}>
-            {leaves.length} panel{leaves.length !== 1 ? 's' : ''} · {totalItems} item{totalItems !== 1 ? 's' : ''}
-          </p>
-        </div>
-      </div>
 
+      {/* ── Sub-folder cards (if any) ── */}
+
+      {/* ── Empty state (no panels) ── */}
       {leaves.length === 0 && (
         <div className={css.panelCardsEmpty}>
-          <LayoutTemplate size={40} color="#D1D5DB" />
+          <LayoutTemplate size={38} strokeWidth={1.5} color="#CBD5E1" />
           <p>No panels yet.<br />Use the toolbar below to add a panel.</p>
         </div>
       )}
 
-      {/* Panel rows */}
+      {/* ── Panel rows ── */}
       <div className={css.panelRowList}>
         {leaves.map((leaf) => {
           const isSel = leaf.panelType === 'SELECTION';
-          const accent = isSel ? '#29A356' : '#EF4444';
-          const accentLight = isSel ? 'rgba(41,163,86,0.07)' : 'rgba(239,68,68,0.05)';
+          const accent = isSel ? '#1a7bbd' : '#DF453A';
+          const accentLight = isSel ? 'rgba(26,123,189,0.07)' : 'rgba(223,69,58,0.05)';
           const isFocused = focusedLeafId === leaf.id;
           const items = leaf.items ?? [];
 
@@ -1003,19 +1022,19 @@ function FolderChecklistView({
             <div
               key={leaf.id}
               className={`${css.panelRowItem} ${isFocused ? css.panelRowItemFocused : ''}`}
-              onClick={() => onFocusLeaf(isFocused ? null : leaf.id)}
+              onClick={() => { onFocusLeaf(leaf.id); onSelectLeaf(leaf.id); }}
             >
               {/* Colored top border */}
               <div className={css.panelRowAccent} style={{ background: accent }} />
 
               <div className={css.panelRowContent} style={{ background: isFocused ? accentLight : undefined }}>
                 {/* Left: chevron + icon + name */}
-                <span style={{ color: accent, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                {/* <span style={{ color: accent, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                   <ChevronRight size={14} />
-                </span>
-                {isSel
+                </span> */}
+                {/* {isSel
                   ? <CheckCircle2 size={15} style={{ color: accent, flexShrink: 0 }} />
-                  : <AlertTriangle size={15} style={{ color: accent, flexShrink: 0 }} />}
+                  : <AlertTriangle size={15} style={{ color: accent, flexShrink: 0 }} />} */}
                 <div className={css.panelRowLabel}>
                   <span className={css.panelHeadName}>{leaf.name}</span>
                   <span className={css.panelAccordionSub}>{items.length} item{items.length !== 1 ? 's' : ''}</span>
@@ -1031,12 +1050,9 @@ function FolderChecklistView({
                   onClick={e => { e.stopPropagation(); onDeleteLeaf(leaf.id); }}>
                   <Trash2 size={13} />
                 </button>
-                <button
-                  className={css.panelRowOpenBtn}
-                  title="Open items"
-                  onClick={e => { e.stopPropagation(); onSelectLeaf(leaf.id); }}>
+                <span className={css.panelRowOpenBtn} style={{ pointerEvents: 'none' }}>
                   <ChevronRight size={15} />
-                </button>
+                </span>
               </div>
             </div>
           );
@@ -1081,25 +1097,28 @@ function RecursiveTreeNode({
     <div>
       <div
         className={`${css.nodeRow} ${isSelected ? css.nodeRowActive : ''}`}
-        onClick={() => onSelect(node.id)}>
-        {/* Chevron — folders only */}
+        onClick={() => { onSelect(node.id); if (isFolder) onToggle(node.id); }}>
+        {/* Chevron — folders only, purely visual (row click handles toggle) */}
         {isFolder ? (
-          <button
-            onClick={e => { e.stopPropagation(); onToggle(node.id); }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: `7px 4px 7px ${basePad}px`, color: '#9CA3AF', display: 'flex', flexShrink: 0 }}>
-            {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          </button>
+          <span
+            style={{ background: 'none', border: 'none', padding: `6px 3px 6px ${basePad}px`, color: '#94A3B8', display: 'flex', flexShrink: 0 }}>
+            {isExpanded
+              ? <ChevronDown size={13} strokeWidth={1.5} />
+              : <ChevronRight size={13} strokeWidth={1.5} />}
+          </span>
         ) : (
-          <span style={{ paddingLeft: basePad + 16, paddingRight: 4, display: 'flex', alignItems: 'center', flexShrink: 0 }} />
+          <span style={{ paddingLeft: basePad + 16, paddingRight: 3, display: 'flex', alignItems: 'center', flexShrink: 0 }} />
         )}
 
-        {/* Icon */}
-        <span style={{ flexShrink: 0, marginRight: 7, display: 'flex', alignItems: 'center' }}>
+        {/* Icon — 14px, strokeWidth 1.5, soft slate when inactive */}
+        <span style={{ flexShrink: 0, marginRight: 6, display: 'flex', alignItems: 'center' }}>
           {isFolder
-            ? (isExpanded ? <FolderOpen size={14} color={isSelected ? '#1a7bbd' : '#6B7280'} /> : <Folder size={14} color={isSelected ? '#1a7bbd' : '#6B7280'} />)
+            ? (isExpanded
+              ? <FolderOpen size={14} strokeWidth={1.5} color={isSelected ? 'var(--ip-brand)' : '#94A3B8'} />
+              : <Folder size={14} strokeWidth={1.5} color={isSelected ? 'var(--ip-brand)' : '#94A3B8'} />)
             : isSel
-              ? <CheckCircle2 size={12} color={isSelected ? '#16A34A' : '#9CA3AF'} />
-              : <AlertTriangle size={12} color={isSelected ? '#DC2626' : '#9CA3AF'} />}
+              ? <CheckCircle2 size={13} strokeWidth={1.5} color={isSelected ? '#16A34A' : '#94A3B8'} />
+              : <AlertTriangle size={13} strokeWidth={1.5} color={isSelected ? '#DC2626' : '#94A3B8'} />}
         </span>
 
         {/* Label */}
@@ -1110,16 +1129,16 @@ function RecursiveTreeNode({
           onRename={name => onRename(node.id, name)}
         />
 
-        {/* Actions */}
+        {/* Actions — pushed to far right, appear as ghost circles on hover */}
         <div className={css.nodeActions}>
           {isFolder && (
-            <NodeActionBtn icon={<Plus size={10} />} title="Add Child" onClick={e => { e.stopPropagation(); onAddFolder(node.id); }} />
+            <NodeActionBtn icon={<Plus size={11} strokeWidth={1.5} />} title="Add Child" onClick={e => { e.stopPropagation(); onAddFolder(node.id); }} />
           )}
           {isFolder && depth > 0 && (
-            <NodeActionBtn icon={<Copy size={10} />} title="Copy Folder" onClick={e => { e.stopPropagation(); onCopy(node.id); }} />
+            <NodeActionBtn icon={<Copy size={11} strokeWidth={1.5} />} title="Copy Folder" onClick={e => { e.stopPropagation(); onCopy(node.id); }} />
           )}
-          <NodeActionBtn icon={<Edit2 size={10} />} title="Rename" onClick={e => { e.stopPropagation(); setEditingNodeId(node.id); }} />
-          <NodeActionBtn icon={<Trash2 size={10} />} title="Delete" danger onClick={e => { e.stopPropagation(); onDelete(node.id); }} />
+          <NodeActionBtn edit icon={<Edit2 size={11} strokeWidth={1.5} />} title="Rename" onClick={e => { e.stopPropagation(); setEditingNodeId(node.id); }} />
+          <NodeActionBtn danger icon={<Trash2 size={11} strokeWidth={1.5} />} title="Delete" onClick={e => { e.stopPropagation(); onDelete(node.id); }} />
         </div>
       </div>
 
@@ -1354,9 +1373,9 @@ function SidebarNodeLabel({ nodeId, name, isActive, bold, small, editingNodeId, 
   }
   return (
     <span className={css.nodeLabel} style={{
-      fontSize: small ? 13 : 14,
+      fontSize: small ? 15 : 15,
       fontWeight: bold ? 600 : isActive ? 500 : 400,
-      color: isActive ? '#298E7A' : '#263B4F',
+      color: isActive ? '#263B4F' : '#263B4F',
       paddingBlock: small ? 7 : 8,
       flex: 1,
     }}>
@@ -1365,12 +1384,16 @@ function SidebarNodeLabel({ nodeId, name, isActive, bold, small, editingNodeId, 
   );
 }
 
-function NodeActionBtn({ icon, title, onClick, danger }: {
-  icon: React.ReactNode; title?: string; onClick: (e: React.MouseEvent) => void; danger?: boolean;
+function NodeActionBtn({ icon, title, onClick, danger, edit }: {
+  icon: React.ReactNode; title?: string; onClick: (e: React.MouseEvent) => void; danger?: boolean; edit?: boolean;
 }) {
+  const cls = [
+    css.nodeActionBtn,
+    danger ? css.nodeActionBtnDanger : '',
+    edit ? css.nodeActionBtnEdit : '',
+  ].filter(Boolean).join(' ');
   return (
-    <button onClick={onClick} title={title}
-      className={`${css.nodeActionBtn} ${danger ? css.nodeActionBtnDanger : ''}`}>
+    <button onClick={onClick} title={title} className={cls}>
       {icon}
     </button>
   );
@@ -1397,7 +1420,7 @@ function SelectionRow({ item, state: _state, onToggle: _onToggle, onDelete, onRe
           onKeyDown={e => { if (e.key === 'Enter') { onRename(val || item.label); setEditLabel(false); } e.stopPropagation(); }}
           onClick={e => e.stopPropagation()}
           className={css.itemLabelInput}
-          style={{ borderBottom: '1px solid #29A356' }} />
+          style={{ borderBottom: '1px solid #1a7bbd' }} />
         : <span onDoubleClick={e => { e.stopPropagation(); setEditLabel(true); setVal(item.label); }}
           className={css.itemLabel}
           style={{ color: '#263B4F', fontWeight: 400 }}>

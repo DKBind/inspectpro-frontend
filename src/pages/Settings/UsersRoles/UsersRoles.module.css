@@ -43,8 +43,15 @@
   border-radius: 14px;
   background: var(--ip-surface);
   border: 1px solid var(--ip-border);
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--ip-shadow-sm);
+}
+
+/* Wraps the table so it clips to panel corners without clipping floating panels */
+.tableScroll {
+  overflow-x: auto;
+  border-radius: 0 0 14px 14px;
+  overflow-y: hidden;
 }
 
 .panelHeader {
@@ -898,6 +905,8 @@
     transform: translateY(0) scale(1);
   }
 }
+
+
 
 /* Each labelled section inside the panel */
 .roleFilterSection {

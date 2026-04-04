@@ -22,10 +22,10 @@ const AdminLayout = () => {
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
     if (accessModules.length === 0) {
-      moduleService.getMyAccess(user.id).then(setAccessModules).catch(() => {});
+      moduleService.getMyAccess(user.id).then(setAccessModules).catch(() => { });
     }
     if (modules.length === 0 && user.orgId) {
-      moduleService.getMyModules(user.orgId).then(setModules).catch(() => {});
+      moduleService.getMyModules(user.orgId).then(setModules).catch(() => { });
     }
   }, [isAuthenticated, user?.id]);
 

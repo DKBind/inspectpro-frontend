@@ -824,6 +824,7 @@ const UsersRoles = () => {
             </div>
           ) : (
             <>
+              <div className={styles.tableScroll}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -894,6 +895,7 @@ const UsersRoles = () => {
                   })}
                 </tbody>
               </table>
+              </div>
               <div className={styles.paginationArea}>
                 <Pagination
                   currentPage={currentPage}
@@ -1061,6 +1063,7 @@ const UsersRoles = () => {
               <span style={{ fontSize: 13.5, color: '#6B7280' }}>No roles yet. Click "Create Role" to add one.</span>
             </div>
           ) : (
+            <div className={styles.tableScroll}>
             <table className={styles.table}>
               <thead>
                 <tr>
@@ -1166,6 +1169,7 @@ const UsersRoles = () => {
                 })}
               </tbody>
             </table>
+            </div>
           )}
           <div className={styles.paginationArea}>
             <Pagination

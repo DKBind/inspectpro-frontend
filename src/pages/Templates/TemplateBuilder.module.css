@@ -1,57 +1,71 @@
 /* ── Page Shell ─────────────────────────────────────────────────────────── */
 .page {
-  height: 100vh;
+  /* Fill the parent <main> exactly — not the raw viewport.
+     The parent's overflow + padding are cleared by the component's
+     useEffect so this becomes: viewport-height minus header-height. */
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   font-family: 'Inter', system-ui, sans-serif;
-  background: #F8FAFC;
-  color: #263B4F;
+  background: var(--ip-page-bg);
+  color: var(--ip-text-primary);
   overflow: hidden;
 }
 
 /* ── Top Nav Bar ─────────────────────────────────────────────────────────── */
 .header {
-  height: 54px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #E5E7EB;
+  height: 56px;
+  background: var(--ip-surface);
+  border-bottom: 1px solid var(--ip-border);
   display: flex;
   align-items: center;
   padding: 0 20px;
   gap: 10px;
   flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(38, 59, 79, 0.06);
+  box-shadow: var(--ip-shadow-sm);
+  z-index: 10;
 }
 
 .backBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid #E5E7EB;
-  background: white;
-  color: #263B4F;
+  padding: 0 14px;
+  height: 34px;
+  border-radius: var(--ip-radius-md);
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-primary);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
   flex-shrink: 0;
 }
 
 .backBtn:hover {
-  background: #F3F4F6;
-  border-color: #D1D5DB;
+  background: var(--ip-surface-hover);
+  border-color: var(--ip-border-strong);
+  color: var(--ip-brand);
+}
+
+.backBtn:focus-visible {
+  outline: 2px solid var(--ip-border-focus);
+  outline-offset: 2px;
 }
 
 .headerSep {
-  color: #D1D5DB;
-  font-size: 17px;
+  color: var(--ip-border-strong);
+  font-size: 18px;
   flex-shrink: 0;
+  font-weight: 300;
+  line-height: 1;
 }
 
 .headerTitle {
   font-size: 14px;
-  color: #4B5563;
+  color: var(--ip-text-muted);
   font-weight: 500;
   flex: 1;
   overflow: hidden;
@@ -62,19 +76,24 @@
 .changesChip {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  padding: 4px 10px;
   font-size: 12px;
-  color: #D97706;
-  font-weight: 500;
+  color: var(--ip-orange);
+  font-weight: 600;
   flex-shrink: 0;
+  background: var(--ip-orange-light);
+  border-radius: var(--ip-radius-pill);
+  border: 1px solid rgba(231, 151, 14, 0.25);
 }
 
 .changesDot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #D97706;
+  background: var(--ip-orange);
   flex-shrink: 0;
+  animation: pulse 1.8s ease-in-out infinite;
 }
 
 .saveBtn {
@@ -82,55 +101,68 @@
   align-items: center;
   gap: 7px;
   padding: 0 20px;
-  height: 34px;
-  border-radius: 8px;
+  height: 36px;
+  border-radius: var(--ip-radius-md);
   border: none;
-  background: linear-gradient(135deg, #1a7bbd, #298E7A);
-  color: white;
+  background: var(--ip-gradient-brand);
+  color: var(--ip-text-inverse);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(51, 174, 149, 0.30);
-  transition: all 0.15s;
+  box-shadow: 0 2px 8px var(--ip-brand-hover-shadow);
+  transition: all 0.18s;
   flex-shrink: 0;
+  letter-spacing: 0.01em;
 }
 
 .saveBtn:hover:not(:disabled) {
-  box-shadow: 0 4px 14px rgba(51, 174, 149, 0.40);
+  box-shadow: 0 4px 16px var(--ip-brand-hover-shadow);
   transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+.saveBtn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .saveBtn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
   transform: none;
 }
 
-/* ── Template Title Card (pageHeader style) ──────────────────────────────── */
+/* ── Template Title Card ──────────────────────────────────────────────────── */
 .titleCard {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 16px 20px;
-  margin: 14px 20px 0;
-  border-radius: 14px;
-  background: white;
-  border: 1px solid #E2E8F0;
-  border-top: 4px solid #1a7bbd;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  margin: 8px 16px 0;
+  border-radius: var(--ip-radius-card);
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  border-top: 3px solid var(--ip-brand);
+  box-shadow: var(--ip-shadow-sm);
   flex-shrink: 0;
+  transition: box-shadow 0.2s;
+}
+
+.titleCard:focus-within {
+  box-shadow: var(--ip-shadow-md);
+  border-color: var(--ip-brand);
 }
 
 .titleCardIcon {
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
-  background: rgba(51, 174, 149, 0.10);
-  border: 1px solid rgba(51, 174, 149, 0.18);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ip-radius-md);
+  background: var(--ip-brand-light);
+  border: 1px solid var(--ip-brand-border);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: var(--ip-brand);
 }
 
 .titleCardBody {
@@ -142,7 +174,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 3px;
 }
 
 .titleCardBadge {
@@ -150,22 +182,23 @@
   align-items: center;
   gap: 5px;
   padding: 3px 10px;
-  border-radius: 20px;
+  border-radius: var(--ip-radius-pill);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  background: rgba(51, 174, 149, 0.08);
-  color: #298E7A;
-  border: 1.5px solid rgba(51, 174, 149, 0.22);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--ip-brand-light);
+  color: var(--ip-sidebar-text-active);
+  border: 1.5px solid var(--ip-brand-border);
   flex-shrink: 0;
 }
 
 .titleCardBadge::before {
   content: '';
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: #1a7bbd;
+  background: var(--ip-brand);
 }
 
 .titleInput {
@@ -176,31 +209,33 @@
   border: none;
   border-bottom: 2px solid transparent;
   outline: none;
-  color: #1E293B;
-  font-size: 18px;
+  color: var(--ip-text-primary);
+  font-size: 16px;
   font-weight: 700;
-  padding-bottom: 3px;
+  padding-bottom: 1px;
   transition: border-color 0.2s;
   font-family: inherit;
+  line-height: 1.3;
 }
 
 .titleInput:focus {
-  border-bottom-color: #1a7bbd;
+  border-bottom-color: var(--ip-border-focus);
 }
 
 .titleInput::placeholder {
-  color: #94A3B8;
+  color: var(--ip-text-disabled);
   font-weight: 500;
 }
 
 .titleInputError {
-  border-bottom-color: #EF4444 !important;
+  border-bottom-color: var(--ip-red) !important;
 }
 
 .titleErrorMsg {
   margin: 3px 0 0;
   font-size: 11px;
-  color: #EF4444;
+  color: var(--ip-red);
+  font-weight: 500;
 }
 
 .descInput {
@@ -209,36 +244,46 @@
   background: transparent;
   border: none;
   outline: none;
-  color: #64748B;
+  color: var(--ip-text-muted);
   font-size: 13px;
-  margin-top: 3px;
+  margin-top: 4px;
   font-family: inherit;
+  line-height: 1.5;
 }
 
 .descInput::placeholder {
-  color: #94A3B8;
+  color: var(--ip-text-disabled);
 }
 
-/* ── Body ────────────────────────────────────────────────────────────────── */
+/* ── Body Layout ─────────────────────────────────────────────────────────── */
 .body {
   flex: 1;
   display: flex;
   overflow: hidden;
-  padding: 14px 20px 14px;
-  gap: 16px;
+  min-height: 0;
+  background: var(--ip-surface);
+  /* background: white; */
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ip-radius-card);
+  box-shadow: var(--ip-shadow-sm);
+  margin: 8px 16px 12px;
+  gap: 0;
 }
 
 /* ── Left Sidebar ────────────────────────────────────────────────────────── */
 .sidebar {
-  width: 268px;
+  width: 300px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: white;
-  border: 1px solid #E5E7EB;
-  border-radius: 14px;
-  flex-shrink: 0;
+  background: var(--ip-sidebar-bg);
+  border-right: 1px solid var(--ip-border);
+  border-top: none;
+  border-bottom: none;
+  border-left: none;
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(38, 59, 79, 0.06);
 }
 
 .sidebarHead {
@@ -246,53 +291,83 @@
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  border-bottom: 1px solid #F3F4F6;
-  background: #FAFAFA;
+  border-bottom: 1px solid var(--ip-border);
+  background: var(--ip-surface-raised);
   flex-shrink: 0;
 }
 
 .sidebarHeadIcon {
   width: 28px;
   height: 28px;
-  border-radius: 7px;
-  background: white;
-  border: 1px solid #E5E7EB;
+  border-radius: var(--ip-radius-sm);
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  color: var(--ip-brand);
 }
 
 .sidebarHeadTitle {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: #263B4F;
+  letter-spacing: 0.06em;
+  color: var(--ip-text-muted);
   flex: 1;
+}
+
+.sidebarHeadAddBtn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ip-brand-light);
+  border: 1px solid var(--ip-brand-border);
+  border-radius: var(--ip-radius-sm);
+  color: var(--ip-brand);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.sidebarHeadAddBtn:hover {
+  background: rgba(26, 123, 189, 0.18);
+  border-color: var(--ip-brand);
+  box-shadow: 0 2px 6px rgba(26, 123, 189, 0.18);
 }
 
 .searchWrap {
   padding: 10px 12px;
-  border-bottom: 1px solid #F3F4F6;
+  border-bottom: 1px solid var(--ip-border);
   flex-shrink: 0;
 }
 
 .searchBox {
   display: flex;
   align-items: center;
-  gap: 7px;
-  background: #F9FAFB;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  padding: 6px 10px;
+  gap: 8px;
+  background: var(--ip-page-bg);
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ip-radius-md);
+  padding: 7px 10px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.searchBox:focus-within {
+  border-color: var(--ip-border-focus);
+  box-shadow: 0 0 0 3px var(--ip-brand-light);
+  background: var(--ip-surface);
 }
 
 .searchInput {
   background: none;
   border: none;
   outline: none;
-  color: #263B4F;
+  color: var(--ip-text-primary);
   font-size: 13px;
   flex: 1;
   min-width: 0;
@@ -300,22 +375,35 @@
 }
 
 .searchInput::placeholder {
-  color: #9CA3AF;
+  color: var(--ip-text-disabled);
 }
 
 .treeArea {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 0;
+  padding: 6px 0;
+}
+
+.treeArea::-webkit-scrollbar {
+  width: 4px;
+}
+
+.treeArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.treeArea::-webkit-scrollbar-thumb {
+  background: var(--ip-border-strong);
+  border-radius: 2px;
 }
 
 .sidebarFooter {
-  border-top: 1px solid #E5E7EB;
+  border-top: 1px solid var(--ip-border);
   padding: 10px 12px;
   display: flex;
   gap: 8px;
   flex-shrink: 0;
-  background: #FAFAFA;
+  background: var(--ip-surface-raised);
 }
 
 .sidebarAddBtn {
@@ -326,20 +414,25 @@
   gap: 6px;
   height: 34px;
   border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #1a7bbd, #298E7A);
-  color: #fff;
+  border-radius: var(--ip-radius-md);
+  background: var(--ip-gradient-brand);
+  color: var(--ip-text-inverse);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(51, 174, 149, 0.25);
+  box-shadow: 0 2px 6px var(--ip-brand-hover-shadow);
   transition: all 0.15s;
   font-family: inherit;
 }
 
 .sidebarAddBtn:hover {
-  box-shadow: 0 4px 10px rgba(51, 174, 149, 0.35);
+  box-shadow: 0 4px 12px var(--ip-brand-hover-shadow);
   transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.sidebarAddBtn:active {
+  transform: translateY(0);
 }
 
 .sidebarDelBtn {
@@ -349,10 +442,10 @@
   gap: 5px;
   height: 34px;
   padding: 0 12px;
-  border: 1px solid #FECACA;
-  border-radius: 8px;
+  border: 1px solid var(--ip-red-border);
+  border-radius: var(--ip-radius-md);
   background: transparent;
-  color: #EF4444;
+  color: var(--ip-red);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -361,37 +454,41 @@
 }
 
 .sidebarDelBtn:disabled {
-  border-color: #E5E7EB;
-  color: #9CA3AF;
+  border-color: var(--ip-border);
+  color: var(--ip-text-disabled);
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .sidebarDelBtn:not(:disabled):hover {
-  background: #FEF2F2;
+  background: var(--ip-red-light);
+  border-color: var(--ip-red);
 }
 
 /* ── Main Workspace ──────────────────────────────────────────────────────── */
 .workspace {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: white;
-  border: 1px solid #E5E7EB;
-  border-radius: 14px;
-  box-shadow: 0 1px 3px rgba(38, 59, 79, 0.06);
+  background: var(--ip-surface);
+  border: none;
+  border-radius: 0;
   position: relative;
 }
 
+/* ── Breadcrumb Bar ──────────────────────────────────────────────────────── */
 .breadcrumbBar {
-  padding: 10px 20px;
-  background: #FAFAFA;
-  border-bottom: 1px solid #F3F4F6;
+  padding: 12px 20px;
+  background: var(--ip-surface-raised);
+  border-bottom: 1px solid var(--ip-border);
   display: flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  min-height: 40px;
+  min-height: 42px;
 }
 
 .bcBtn {
@@ -403,29 +500,55 @@
   cursor: pointer;
   font-size: 13px;
   font-family: inherit;
-  padding: 0;
-  transition: color 0.12s;
-  border-radius: 4px;
+  padding: 3px 6px;
+  transition: color 0.12s, background 0.12s;
+  border-radius: var(--ip-radius-sm);
 }
 
 .bcActive {
   font-weight: 600;
-  color: #1E293B;
+  color: var(--ip-text-primary);
 }
 
 .bcLink {
-  font-weight: 400;
-  color: #1a7bbd;
+  font-weight: 500;
+  color: var(--ip-brand);
 }
 
 .bcLink:hover {
-  color: #298E7A;
+  color: var(--ip-sidebar-text-active);
+  background: var(--ip-brand-light);
 }
 
+/* ── Scroll Area ─────────────────────────────────────────────────────────── */
 .scrollArea {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 20px;
+  padding: 16px;
+}
+
+/* Items list inside a leaf panel — gets its own scroll so the panel
+   header strip stays pinned and the "Add Item" button stays at the bottom */
+.panelItemsList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.scrollArea::-webkit-scrollbar {
+  width: 5px;
+}
+
+.scrollArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollArea::-webkit-scrollbar-thumb {
+  background: var(--ip-border-strong);
+  border-radius: 3px;
 }
 
 /* ── Workspace Footer ────────────────────────────────────────────────────── */
@@ -434,10 +557,10 @@
   bottom: 0;
   left: 0;
   right: 0;
-  border-top: 1px solid #E5E7EB;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--ip-border);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 10px 20px;
   display: flex;
   align-items: center;
@@ -449,7 +572,7 @@
 .wFooterDivider {
   width: 1px;
   height: 20px;
-  background: #E5E7EB;
+  background: var(--ip-border);
   flex-shrink: 0;
 }
 
@@ -459,31 +582,31 @@
 
 .wFooterMeta {
   font-size: 12px;
-  color: #9CA3AF;
+  color: var(--ip-text-disabled);
 }
 
-/* Footer buttons */
+/* ── Footer Buttons ──────────────────────────────────────────────────────── */
 .fBtn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   padding: 0 14px;
   height: 34px;
-  border-radius: 8px;
+  border-radius: var(--ip-radius-md);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
   flex-shrink: 0;
   font-family: inherit;
-  border: 1px solid #E5E7EB;
-  background: transparent;
-  color: #263B4F;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-primary);
 }
 
 .fBtn:hover:not(:disabled) {
-  background: #F9FAFB;
-  border-color: #D1D5DB;
+  background: var(--ip-surface-hover);
+  border-color: var(--ip-border-strong);
 }
 
 .fBtn:disabled {
@@ -492,46 +615,47 @@
 }
 
 .fBtnPrimary {
-  background: linear-gradient(135deg, #1a7bbd, #298E7A);
-  color: white;
+  background: var(--ip-gradient-brand);
+  color: var(--ip-text-inverse);
   border: none;
-  box-shadow: 0 2px 6px rgba(51, 174, 149, 0.25);
+  box-shadow: 0 2px 6px var(--ip-brand-hover-shadow);
 }
 
 .fBtnPrimary:hover:not(:disabled) {
-  box-shadow: 0 4px 10px rgba(51, 174, 149, 0.35);
+  box-shadow: 0 4px 12px var(--ip-brand-hover-shadow);
   transform: translateY(-1px);
+  filter: brightness(1.05);
 }
 
 .fBtnDanger {
-  color: #EF4444;
-  border-color: #FECACA;
+  color: var(--ip-red);
+  border-color: var(--ip-red-border);
 }
 
 .fBtnDanger:hover:not(:disabled) {
-  background: #FEF2F2;
-  border-color: #FCA5A5;
+  background: var(--ip-red-light);
+  border-color: var(--ip-red);
 }
 
-/* ── CardGrid ────────────────────────────────────────────────────────────── */
+/* ── Card Grid (root folder view) ───────────────────────────────────────── */
 .cgHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
   gap: 12px;
 }
 
 .cgTitle {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
-  color: #1E293B;
+  color: var(--ip-text-primary);
   margin: 0 0 3px;
 }
 
 .cgSub {
   font-size: 13px;
-  color: #64748B;
+  color: var(--ip-text-muted);
   margin: 0;
 }
 
@@ -542,64 +666,104 @@
   padding: 0 16px;
   height: 36px;
   border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #1a7bbd, #298E7A);
-  color: white;
+  border-radius: var(--ip-radius-md);
+  background: var(--ip-gradient-brand);
+  color: var(--ip-text-inverse);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(51, 174, 149, 0.25);
+  box-shadow: 0 2px 6px var(--ip-brand-hover-shadow);
   transition: all 0.15s;
   font-family: inherit;
 }
 
 .cgAddBtn:hover {
-  box-shadow: 0 4px 10px rgba(51, 174, 149, 0.35);
+  box-shadow: 0 4px 12px var(--ip-brand-hover-shadow);
   transform: translateY(-1px);
+  filter: brightness(1.05);
 }
 
 .cgEmpty {
-  color: #94A3B8;
-  font-size: 13px;
-  line-height: 1.7;
-  padding: 32px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 260px;
+  gap: 10px;
+  color: var(--ip-text-disabled);
+  font-size: 14px;
   text-align: center;
+  border-radius: var(--ip-radius-xl);
+  padding: 40px;
+  background: linear-gradient(145deg, var(--ip-surface) 0%, var(--ip-surface-raised) 100%);
+  border: 1px solid var(--ip-border);
+  box-shadow: var(--ip-shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.cgEmpty p {
+  margin: 0;
+  line-height: 1.6;
 }
 
 .cgGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 14px;
 }
 
 .cgCard {
   text-align: left;
-  background: white;
-  border: 1px solid #E5E7EB;
-  border-radius: 12px;
-  padding: 18px 18px 16px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ip-radius-lg);
+  padding: 16px;
   cursor: pointer;
-  transition: all 0.15s;
-  box-shadow: 0 1px 3px rgba(38, 59, 79, 0.06);
+  transition: all 0.18s;
+  box-shadow: var(--ip-shadow-xs);
   display: block;
   font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.cgCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--ip-gradient-brand);
+  opacity: 0;
+  transition: opacity 0.18s;
 }
 
 .cgCard:hover {
-  box-shadow: 0 4px 12px rgba(38, 59, 79, 0.10);
-  border-color: #93C5FD;
-  transform: translateY(-2px);
+  box-shadow: var(--ip-shadow-md);
+  border-color: var(--ip-brand-hover);
+  transform: translateY(-3px);
+}
+
+.cgCard:hover::before {
+  opacity: 1;
+}
+
+.cgCard:focus-visible {
+  outline: 2px solid var(--ip-brand);
+  outline-offset: 2px;
 }
 
 .cgCardIcon {
   margin-bottom: 10px;
+  color: var(--ip-brand);
 }
 
 .cgCardName {
   font-size: 14px;
   font-weight: 600;
-  color: #1E293B;
+  color: var(--ip-text-primary);
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -608,10 +772,10 @@
 
 .cgCardMeta {
   font-size: 12px;
-  color: #94A3B8;
+  color: var(--ip-text-disabled);
 }
 
-/* ── Panel Row List (drill-down Level 1) ─────────────────────────────────── */
+/* ── Panel Row List (folder drill-down) ─────────────────────────────────── */
 .panelRowList {
   display: flex;
   flex-direction: column;
@@ -620,30 +784,24 @@
 }
 
 .panelRowItem {
-  border-radius: 10px;
-  border: 1px solid #E5E7EB;
-  background: white;
+  border-radius: var(--ip-radius-lg);
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
   overflow: hidden;
   cursor: pointer;
-  transition: border-color 0.12s, box-shadow 0.12s;
-  box-shadow: 0 1px 3px rgba(38, 59, 79, 0.05);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  box-shadow: var(--ip-shadow-xs);
 }
-
 
 .panelRowItem:hover {
-  border-color: #CBD5E1;
-  box-shadow: 0 2px 8px rgba(38, 59, 79, 0.09);
+  border-color: var(--ip-border-focus);
+  box-shadow: var(--ip-shadow-sm);
+  transform: translateY(-1px);
 }
 
-/* .panelRowItem:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 12px rgba(38, 59, 79, 0.08);
-  transform: translateX(4px);
-} */
-
 .panelRowItemFocused {
-  border-color: #93C5FD;
-  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.35);
+  border-color: var(--ip-brand);
+  box-shadow: 0 0 0 3px var(--ip-brand-light);
 }
 
 .panelRowAccent {
@@ -654,9 +812,13 @@
 .panelRowContent {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 10px 10px 12px;
+  gap: 10px;
+  padding: 14px 16px 14px 20px;
   transition: background 0.12s;
+}
+
+.panelRowContent:hover {
+  background: var(--ip-surface-hover);
 }
 
 .panelRowLabel {
@@ -670,18 +832,18 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #9CA3AF;
-  padding: 4px 6px;
+  color: var(--ip-text-disabled);
+  padding: 5px 7px;
   display: flex;
   align-items: center;
-  border-radius: 6px;
+  border-radius: var(--ip-radius-sm);
   transition: color 0.12s, background 0.12s;
   flex-shrink: 0;
 }
 
 .panelRowOpenBtn:hover {
-  color: #3B82F6;
-  background: #EFF6FF;
+  color: var(--ip-brand);
+  background: var(--ip-brand-light);
 }
 
 /* ── Bottom Toolbar ──────────────────────────────────────────────────────── */
@@ -689,146 +851,185 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 12px 20px;
-  border-top: 1px solid #E5E7EB;
-  background: #FAFAFA;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--ip-border);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   flex-shrink: 0;
   flex-wrap: wrap;
+  box-shadow: 0 -4px 16px rgba(38, 59, 79, 0.06);
 }
 
 .panelToolbarGroup {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
+/* Left-side: ghost buttons (Up / Down / Copy / Delete) */
 .panelToolbarBtn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
-  border-radius: 7px;
-  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--ip-radius-md);
+  padding: 0 12px;
   font-size: 12px;
   font-weight: 500;
-  color: #475569;
+  color: var(--ip-text-muted);
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s;
+  transition: all 0.15s;
+  height: 32px;
+  white-space: nowrap;
 }
 
 .panelToolbarBtn:hover:not(:disabled) {
-  background: #F1F5F9;
-  border-color: #CBD5E1;
-  color: #1E293B;
+  background: var(--ip-surface-hover);
+  border-color: var(--ip-border);
+  color: var(--ip-text-primary);
+}
+
+.panelToolbarBtn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .panelToolbarBtn:disabled {
-  opacity: 0.38;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
 .panelToolbarBtnDanger:hover:not(:disabled) {
-  background: #FEF2F2;
-  border-color: #FECACA;
-  color: #DC2626;
+  background: var(--ip-red-light);
+  border-color: var(--ip-red-border);
+  color: var(--ip-red);
 }
 
+/* Right-side: floating solid "Add" buttons */
 .panelToolbarBtnSel {
-  color: #16653a;
-  border-color: rgba(41, 163, 86, 0.35);
-  background: rgba(41, 163, 86, 0.06);
+  background: var(--ip-gradient-brand);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(26, 123, 189, 0.30);
 }
 
 .panelToolbarBtnSel:hover:not(:disabled) {
-  background: rgba(41, 163, 86, 0.12);
-  border-color: rgba(41, 163, 86, 0.5);
+  box-shadow: 0 4px 14px rgba(26, 123, 189, 0.42);
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  border-color: transparent;
+  background: var(--ip-gradient-brand);
+  color: #fff;
 }
 
 .panelToolbarBtnDmg {
-  color: #b91c1c;
-  border-color: rgba(239, 68, 68, 0.35);
-  background: rgba(239, 68, 68, 0.06);
+  background: linear-gradient(135deg, #DF453A, #c0392b);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(223, 69, 58, 0.28);
 }
 
 .panelToolbarBtnDmg:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 4px 14px rgba(223, 69, 58, 0.40);
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  border-color: transparent;
+  background: linear-gradient(135deg, #DF453A, #c0392b);
+  color: #fff;
 }
 
+/* ── Empty State — Soft Card ─────────────────────────────────────────────── */
 .panelCardsEmpty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 180px;
+  flex: 1;
+  width: 100%;
+  min-height: 260px;
   gap: 12px;
-  color: #9CA3AF;
+  color: var(--ip-text-disabled);
   font-size: 14px;
   text-align: center;
+  border-radius: var(--ip-radius-xl);
+  background: linear-gradient(145deg, var(--ip-surface) 0%, var(--ip-surface-raised) 100%);
+  border: 1px solid var(--ip-border);
+  box-shadow: var(--ip-shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  margin: 2px 0;
+  padding: 40px;
 }
 
 .panelCardsEmpty p {
   margin: 0;
-  line-height: 1.6;
+  line-height: 1.7;
+  max-width: 260px;
 }
 
 /* ── Panel Card ──────────────────────────────────────────────────────────── */
 .panelCard {
-  background: white;
-  border: 1px solid #E5E7EB;
-  border-radius: 12px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border-panel);
+  border-radius: var(--ip-radius-lg);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(38, 59, 79, 0.06);
+  box-shadow: var(--ip-shadow-xs);
+  transition: box-shadow 0.15s;
+}
+
+.panelCard:hover {
+  box-shadow: var(--ip-shadow-sm);
 }
 
 .panelCardHeadSel {
-  border-top: 3px solid #29A356;
+  border-top: 3px solid var(--ip-brand);
 }
 
 .panelCardHeadDmg {
-  border-top: 3px solid #EF4444;
+  border-top: 3px solid var(--ip-red);
 }
 
 .panelHead {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 11px 16px;
-  border-bottom: 1px solid #F3F4F6;
-  background: #FAFAFA;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ip-border);
+  background: var(--ip-surface-raised);
 }
 
 .panelHeadName {
   flex: 1;
   font-size: 14px;
   font-weight: 600;
-  color: #1E293B;
+  color: var(--ip-text-primary);
 }
 
-/* ── Accordion header (replaces static panelHead) ── */
+/* ── Accordion Header ────────────────────────────────────────────────────── */
 .panelAccordionHead {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 12px 9px 10px;
+  padding: 10px 14px;
   cursor: pointer;
   user-select: none;
   transition: background 0.12s;
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--ip-radius-md) var(--ip-radius-md) 0 0;
 }
 
 .panelAccordionHead:hover {
-  filter: brightness(0.97);
+  background: var(--ip-surface-hover);
 }
 
 .panelChevron {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  transition: transform 0.15s;
+  transition: transform 0.18s;
+  color: var(--ip-text-disabled);
 }
 
 .panelAccordionLabel {
@@ -840,7 +1041,7 @@
 
 .panelAccordionSub {
   font-size: 11px;
-  color: #6B7280;
+  color: var(--ip-text-muted);
   font-weight: 400;
   margin-top: 1px;
 }
@@ -849,9 +1050,9 @@
   flex: 1;
   background: transparent;
   border: none;
-  border-bottom: 1.5px solid #1a7bbd;
+  border-bottom: 1.5px solid var(--ip-border-focus);
   outline: none;
-  color: #1E293B;
+  color: var(--ip-text-primary);
   font-size: 14px;
   font-weight: 600;
   padding: 1px 0;
@@ -861,23 +1062,25 @@
 .panelBadgeSel {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   padding: 2px 8px;
-  border-radius: 9999px;
-  background: rgba(41, 163, 86, 0.12);
-  color: #16A34A;
+  border-radius: var(--ip-radius-pill);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand);
   flex-shrink: 0;
+  text-transform: uppercase;
 }
 
 .panelBadgeDmg {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   padding: 2px 8px;
-  border-radius: 9999px;
-  background: rgba(239, 68, 68, 0.10);
-  color: #DC2626;
+  border-radius: var(--ip-radius-pill);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
   flex-shrink: 0;
+  text-transform: uppercase;
 }
 
 .panelCameraBtn {
@@ -885,22 +1088,22 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(239, 68, 68, 0.30);
-  background: rgba(239, 68, 68, 0.06);
-  color: #EF4444;
+  border-radius: var(--ip-radius-sm);
+  border: 1px solid var(--ip-red-border);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
-  transition: background 0.12s, border-color 0.12s;
+  transition: all 0.12s;
   flex-shrink: 0;
   position: relative;
   font-family: inherit;
 }
 
 .panelCameraBtn:hover {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(223, 69, 58, 0.15);
+  border-color: var(--ip-red);
 }
 
 .panelCameraCount {
@@ -909,9 +1112,9 @@
   right: -5px;
   min-width: 16px;
   height: 16px;
-  border-radius: 9999px;
-  background: #EF4444;
-  color: white;
+  border-radius: var(--ip-radius-pill);
+  background: var(--ip-red);
+  color: var(--ip-text-inverse);
   font-size: 10px;
   font-weight: 700;
   display: flex;
@@ -920,30 +1123,30 @@
   padding: 0 3px;
 }
 
-/* ── Panel photo strip ───────────────────────────────────────────── */
+/* ── Panel Photo Strip ───────────────────────────────────────────────────── */
 .panelPhotoStrip {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 10px 16px;
-  background: rgba(239, 68, 68, 0.03);
-  border-bottom: 1px solid rgba(239, 68, 68, 0.12);
+  padding: 10px 14px;
+  background: rgba(223, 69, 58, 0.02);
+  border-bottom: 1px solid var(--ip-red-border);
 }
 
 .panelPhotoThumb {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
 }
 
 .panelPhotoImg {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--ip-radius-md);
   object-fit: cover;
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  border: 1px solid var(--ip-red-border);
   display: block;
 }
 
@@ -954,10 +1157,10 @@
   width: 17px;
   height: 17px;
   border-radius: 50%;
-  background: #EF4444;
+  background: var(--ip-red);
   border: none;
   cursor: pointer;
-  color: white;
+  color: var(--ip-text-inverse);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -965,10 +1168,10 @@
 }
 
 .panelPhotoAdd {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  border: 1.5px dashed rgba(239, 68, 68, 0.35);
+  width: 52px;
+  height: 52px;
+  border-radius: var(--ip-radius-md);
+  border: 1.5px dashed var(--ip-red-border);
   background: transparent;
   cursor: pointer;
   display: flex;
@@ -976,7 +1179,7 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  color: #EF4444;
+  color: var(--ip-red);
   font-size: 10px;
   font-weight: 600;
   transition: background 0.12s;
@@ -985,39 +1188,39 @@
 }
 
 .panelPhotoAdd:hover {
-  background: rgba(239, 68, 68, 0.07);
+  background: var(--ip-red-light);
 }
 
 .panelDelBtn {
   background: none;
   border: none;
   cursor: pointer;
-  color: #9CA3AF;
+  color: var(--ip-text-disabled);
   padding: 4px;
   display: flex;
-  border-radius: 6px;
+  border-radius: var(--ip-radius-sm);
   transition: color 0.12s, background 0.12s;
 }
 
 .panelDelBtn:hover {
-  color: #EF4444;
-  background: #FEF2F2;
+  color: var(--ip-red);
+  background: var(--ip-red-light);
 }
 
 .panelEmpty {
   padding: 14px 16px;
   margin: 0;
   font-size: 13px;
-  color: #9CA3AF;
+  color: var(--ip-text-disabled);
 }
 
 .panelFooterBtn {
   width: 100%;
   background: none;
   border: none;
-  border-top: 1px solid #F3F4F6;
+  border-top: 1px solid var(--ip-border);
   cursor: pointer;
-  color: #9CA3AF;
+  color: var(--ip-text-disabled);
   font-size: 13px;
   padding: 9px 16px;
   text-align: left;
@@ -1029,16 +1232,16 @@
 }
 
 .panelFooterBtnSel:hover {
-  color: #16A34A;
-  background: rgba(41, 163, 86, 0.05);
+  color: var(--ip-brand);
+  background: var(--ip-brand-light);
 }
 
 .panelFooterBtnDmg:hover {
-  color: #DC2626;
-  background: rgba(239, 68, 68, 0.05);
+  color: var(--ip-red);
+  background: var(--ip-red-light);
 }
 
-/* ── Inspection Editor header ───────────────────────────────────────────── */
+/* ── Inspection Editor Header ────────────────────────────────────────────── */
 .ieHeader {
   display: flex;
   align-items: center;
@@ -1049,90 +1252,97 @@
 }
 
 .ieTitle {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
-  color: #1E293B;
+  color: var(--ip-text-primary);
   margin: 0 0 3px;
 }
 
 .ieSub {
   font-size: 13px;
-  color: #64748B;
+  color: var(--ip-text-muted);
   margin: 0;
 }
 
 .ieEmpty {
-  border: 1.5px dashed #E5E7EB;
-  border-radius: 12px;
-  padding: 36px 24px;
+  border: 1.5px dashed var(--ip-border-strong);
+  border-radius: var(--ip-radius-lg);
+  padding: 40px 24px;
   text-align: center;
-  color: #94A3B8;
+  color: var(--ip-text-disabled);
   font-size: 13px;
   line-height: 1.8;
+  background: var(--ip-surface-raised);
 }
 
-/* Add Panel buttons */
+/* ── Add Panel Buttons ───────────────────────────────────────────────────── */
 .addPanelBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 0 14px;
   height: 34px;
-  border-radius: 8px;
+  border-radius: var(--ip-radius-md);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: all 0.12s;
   font-family: inherit;
 }
 
 .addPanelBtnSel {
-  border: 1px solid rgba(41, 163, 86, 0.35);
-  color: #16A34A;
-  background: transparent;
+  border: 1px solid var(--ip-green-border);
+  color: var(--ip-green);
+  background: var(--ip-green-light);
 }
 
 .addPanelBtnSel:hover {
-  background: rgba(41, 163, 86, 0.07);
+  background: rgba(41, 163, 86, 0.15);
+  border-color: var(--ip-green);
 }
 
 .addPanelBtnDmg {
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  color: #DC2626;
-  background: transparent;
+  border: 1px solid var(--ip-red-border);
+  color: var(--ip-red);
+  background: var(--ip-red-light);
 }
 
 .addPanelBtnDmg:hover {
-  background: rgba(239, 68, 68, 0.07);
+  background: rgba(223, 69, 58, 0.15);
+  border-color: var(--ip-red);
 }
 
-/* ── Item rows ───────────────────────────────────────────────────────────── */
+/* ── Item Rows ───────────────────────────────────────────────────────────── */
 .itemRow {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 16px;
+  padding: 9px 14px;
   cursor: pointer;
   transition: background 0.12s;
-  border-bottom: 1px solid #F9FAFB;
+  border-bottom: 1px solid var(--ip-border);
+}
+
+.itemRow:last-child {
+  border-bottom: none;
 }
 
 .itemRow:hover {
-  background: #F9FAFB;
+  background: var(--ip-surface-hover);
 }
 
 .itemRowSelected {
-  background: rgba(41, 163, 86, 0.07);
-  border-left: 3px solid #29A356;
-  padding-left: 13px;
+  background: var(--ip-brand-light);
+  border-left: 3px solid var(--ip-brand);
+  padding-left: 11px;
 }
 
 .itemRowDamaged {
-  background: rgba(239, 68, 68, 0.06);
+  background: var(--ip-red-light);
 }
 
 .itemRowCorrect {
-  background: rgba(41, 163, 86, 0.06);
+  background: var(--ip-green-light);
 }
 
 .itemDot {
@@ -1145,8 +1355,9 @@
 
 .itemLabel {
   flex: 1;
-  font-size: 14px;
+  font-size: 13.5px;
   transition: color 0.12s;
+  color: var(--ip-text-primary);
 }
 
 .itemLabelInput {
@@ -1154,19 +1365,23 @@
   background: transparent;
   border: none;
   outline: none;
-  font-size: 14px;
+  font-size: 13.5px;
   font-family: inherit;
   padding: 1px 0;
+  color: var(--ip-text-primary);
+  border-bottom: 1.5px solid var(--ip-border-focus);
 }
 
 .itemSelBadge {
   font-size: 10px;
   font-weight: 700;
-  color: #16A34A;
-  background: rgba(41, 163, 86, 0.10);
+  color: var(--ip-brand);
+  background: var(--ip-brand-light);
   padding: 2px 7px;
-  border-radius: 9999px;
+  border-radius: var(--ip-radius-pill);
   flex-shrink: 0;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--ip-brand-border);
 }
 
 .itemDeleteBtn {
@@ -1178,10 +1393,10 @@
   border: 1px solid var(--ip-border);
   background: var(--ip-surface);
   color: var(--ip-text-disabled);
-  border-radius: 8px;
+  border-radius: var(--ip-radius-md);
   cursor: pointer;
   flex-shrink: 0;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.18s;
   box-shadow: var(--ip-shadow-xs);
   padding: 0;
 }
@@ -1190,20 +1405,20 @@
   background: var(--ip-red-light);
   border-color: var(--ip-red-border);
   color: var(--ip-red);
-  box-shadow: 0 4px 6px -1px rgba(223, 69, 58, 0.1), 0 2px 4px -1px rgba(223, 69, 58, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(223, 69, 58, 0.1);
   transform: translateY(-1px);
 }
 
-/* Item-level camera button */
+/* ── Item Camera Button ──────────────────────────────────────────────────── */
 .itemCameraBtn {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   padding: 3px 7px;
-  border-radius: 6px;
-  border: 1px solid #E5E7EB;
+  border-radius: var(--ip-radius-sm);
+  border: 1px solid var(--ip-border);
   background: transparent;
-  color: #9CA3AF;
+  color: var(--ip-text-disabled);
   cursor: pointer;
   flex-shrink: 0;
   position: relative;
@@ -1212,15 +1427,15 @@
 }
 
 .itemCameraBtn:hover {
-  border-color: rgba(223, 69, 58, 0.40);
-  background: rgba(223, 69, 58, 0.06);
-  color: #DF453A;
+  border-color: var(--ip-red-border);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
 }
 
 .itemCameraBtnActive {
-  border-color: rgba(223, 69, 58, 0.40);
-  background: rgba(223, 69, 58, 0.07);
-  color: #DF453A;
+  border-color: var(--ip-red-border);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
 }
 
 .itemCameraCount {
@@ -1229,9 +1444,9 @@
   right: -5px;
   min-width: 14px;
   height: 14px;
-  border-radius: 9999px;
-  background: #DF453A;
-  color: white;
+  border-radius: var(--ip-radius-pill);
+  background: var(--ip-red);
+  color: var(--ip-text-inverse);
   font-size: 9px;
   font-weight: 700;
   display: flex;
@@ -1240,13 +1455,14 @@
   padding: 0 2px;
 }
 
-/* Damage toggle buttons */
+/* ── Damage Toggle Buttons ───────────────────────────────────────────────── */
 .dmgToggleBtn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  border-radius: 8px;
+  height: 30px;
+  border-radius: var(--ip-radius-md);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -1256,9 +1472,15 @@
 }
 
 .dmgToggleBtnCorrect {
-  border: 1px solid #E5E7EB;
+  border: 1px solid var(--ip-border);
   background: transparent;
-  color: #64748B;
+  color: var(--ip-text-muted);
+}
+
+.dmgToggleBtnCorrect:hover {
+  border-color: var(--ip-green-border);
+  background: var(--ip-green-light);
+  color: var(--ip-green);
 }
 
 .dmgToggleBtnCorrectOn {
@@ -1268,9 +1490,15 @@
 }
 
 .dmgToggleBtnDamage {
-  border: 1px solid #E5E7EB;
+  border: 1px solid var(--ip-border);
   background: transparent;
-  color: #64748B;
+  color: var(--ip-text-muted);
+}
+
+.dmgToggleBtnDamage:hover {
+  border-color: var(--ip-red-border);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
 }
 
 .dmgToggleBtnDamageOn {
@@ -1279,11 +1507,11 @@
   color: var(--ip-red);
 }
 
-/* Damage expanded fields */
+/* ── Damage Expanded Fields ──────────────────────────────────────────────── */
 .dmgFields {
-  padding: 12px 16px 14px 40px;
-  background: rgba(239, 68, 68, 0.02);
-  border-top: 1px solid rgba(239, 68, 68, 0.12);
+  padding: 12px 14px 14px 38px;
+  background: rgba(223, 69, 58, 0.02);
+  border-top: 1px solid var(--ip-red-border);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1299,7 +1527,7 @@
   display: block;
   font-size: 11px;
   font-weight: 700;
-  color: #9CA3AF;
+  color: var(--ip-text-disabled);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 5px;
@@ -1307,86 +1535,105 @@
 
 .dmgSelect {
   width: 100%;
-  height: 38px;
-  background: white;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
+  height: 36px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ip-radius-md);
   font-size: 13px;
   padding: 0 10px;
   outline: none;
   cursor: pointer;
-  color: #263B4F;
+  color: var(--ip-text-primary);
   font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.dmgSelect:focus {
+  border-color: var(--ip-border-focus);
 }
 
 .dmgInput {
   width: 100%;
   box-sizing: border-box;
-  height: 38px;
-  background: white;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
+  height: 36px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ip-radius-md);
   font-size: 13px;
   padding: 0 10px;
   outline: none;
-  color: #263B4F;
+  color: var(--ip-text-primary);
   font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.dmgInput:focus {
+  border-color: var(--ip-border-focus);
 }
 
 .dmgAddLabel {
   font-size: 10px;
   font-weight: 600;
+  color: var(--ip-text-muted);
 }
 
 /* ── Copy/Move Modal ─────────────────────────────────────────────────────── */
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.40);
+  background: rgba(38, 59, 79, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 300;
+  animation: fadeIn 0.15s ease;
+  backdrop-filter: blur(2px);
 }
 
 .modalBox {
-  background: white;
-  border-radius: 16px;
-  padding: 28px;
+  background: var(--ip-surface);
+  border-radius: var(--ip-radius-modal);
+  padding: 26px;
   min-width: 340px;
   max-width: 460px;
-  box-shadow: 0 20px 60px rgba(38, 59, 79, 0.18);
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--ip-shadow-xl);
+  animation: slideUp 0.2s ease;
+  border: 1px solid var(--ip-border);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .modalTitle {
-  margin: 0 0 6px;
-  font-size: 17px;
+  margin: 0;
+  font-size: 16px;
   font-weight: 700;
-  color: #1E293B;
+  color: var(--ip-text-primary);
 }
 
 .modalSub {
-  margin: 0 0 18px;
+  margin: -8px 0 0;
   font-size: 13px;
-  color: #64748B;
+  color: var(--ip-text-muted);
 }
 
 .modalEmpty {
   font-size: 13px;
-  color: #64748B;
+  color: var(--ip-text-muted);
 }
 
 .modalItemBtn {
   width: 100%;
   text-align: left;
-  padding: 11px 14px;
-  margin-bottom: 8px;
-  border: 1px solid #E5E7EB;
-  border-radius: 10px;
-  background: #F9FAFB;
+  padding: 10px 14px;
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ip-radius-md);
+  background: var(--ip-surface-raised);
   cursor: pointer;
   font-size: 13px;
-  color: #263B4F;
+  color: var(--ip-text-primary);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1395,29 +1642,31 @@
 }
 
 .modalItemBtn:hover {
-  border-color: #1a7bbd;
-  background: rgba(51, 174, 149, 0.04);
+  border-color: var(--ip-brand);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand);
 }
 
 .modalCancelBtn {
   width: 100%;
-  margin-top: 4px;
   padding: 9px;
-  border: 1px solid #E5E7EB;
-  border-radius: 10px;
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ip-radius-md);
   background: transparent;
-  color: #4B5563;
+  color: var(--ip-text-muted);
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: all 0.12s;
   font-family: inherit;
+  height: 36px;
 }
 
 .modalCancelBtn:hover {
-  background: #F9FAFB;
+  background: var(--ip-surface-hover);
+  color: var(--ip-text-primary);
 }
 
-/* ── Loading screen ─────────────────────────────────────────────────────── */
+/* ── Loading Screen ──────────────────────────────────────────────────────── */
 .loadingScreen {
   height: 100vh;
   display: flex;
@@ -1425,87 +1674,109 @@
   justify-content: center;
   flex-direction: column;
   gap: 16px;
-  background: #F8FAFC;
+  background: var(--ip-page-bg);
   font-family: 'Inter', system-ui, sans-serif;
 }
 
 .loadingSpinner {
   width: 36px;
   height: 36px;
-  border: 3px solid #E5E7EB;
-  border-top-color: #1a7bbd;
+  border: 3px solid var(--ip-border);
+  border-top-color: var(--ip-brand);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
 
 .loadingText {
-  color: #9CA3AF;
+  color: var(--ip-text-disabled);
   font-size: 14px;
 }
 
-/* ── Sidebar tree nodes ─────────────────────────────────────────────────── */
+/* ── Sidebar Tree Nodes — Notion/Linear pill style ───────────────────────── */
 .nodeRow {
   display: flex;
   align-items: center;
   gap: 0;
-  padding-right: 8px;
+  padding-right: 4px;
   cursor: pointer;
-  transition: background 0.1s;
-  border-left: 2px solid transparent;
+  transition: background 0.12s;
+  border-radius: var(--ip-radius-md);
+  margin: 1px 6px;
+  border-left: none;
   position: relative;
 }
 
 .nodeRow:hover {
-  background: #F3F4F6;
+  background: var(--ip-sidebar-hover-bg);
+  box-shadow: inset 3px 0 0 var(--ip-brand);
 }
 
 .nodeRowActive {
-  background: rgba(51, 174, 149, 0.09) !important;
-  border-left-color: #1a7bbd !important;
+  background: rgba(26, 123, 189, 0.10) !important;
+  box-shadow: inset 3px 0 0 var(--ip-brand) !important;
 }
 
 .nodeActions {
   display: flex;
-  gap: 1px;
+  gap: 2px;
   flex-shrink: 0;
-  margin-left: 2px;
-  opacity: 1;
+  margin-left: auto;
   padding-right: 2px;
   transition: opacity 0.12s;
+  opacity: 0;
 }
 
+.nodeRow:hover .nodeActions {
+  opacity: 1;
+}
+
+/* Ghost-circle buttons — appear on hover only */
 .nodeActionBtn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
-  color: #9CA3AF;
-  padding: 4px 3px;
-  border-radius: 4px;
-  display: flex;
+  border-radius: 50%;
+  color: var(--ip-text-disabled);
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
   line-height: 0;
-  transition: color 0.12s, background 0.12s;
 }
 
+/* Default hover — add/copy/toggle */
 .nodeActionBtn:hover {
-  color: #1a7bbd;
-  background: rgba(51, 174, 149, 0.08);
+  background: rgba(100, 116, 139, 0.10);
+  color: #64748B;
 }
 
+/* Rename (pencil) — soft slate */
+.nodeActionBtnEdit:hover {
+  background: rgba(100, 116, 139, 0.12);
+  color: #64748B;
+}
+
+/* Delete (trash) — muted rose */
 .nodeActionBtnDanger:hover {
-  color: #EF4444 !important;
-  background: #FEF2F2 !important;
+  background: rgba(251, 113, 133, 0.12) !important;
+  color: #FDA4AF !important;
 }
 
 .nodeLabelInput {
   flex: 1;
-  background: white;
-  border: 1px solid #1a7bbd;
-  border-radius: 5px;
-  color: #263B4F;
-  padding: 1px 5px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border-focus);
+  border-radius: var(--ip-radius-sm);
+  color: var(--ip-text-primary);
+  padding: 2px 6px;
   outline: none;
   min-width: 0;
   font-family: inherit;
+  font-size: 13px;
 }
 
 .nodeLabel {
@@ -1513,55 +1784,39 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 13px;
+  color: var(--ip-sidebar-text);
+  min-width: 0;
 }
 
-/* ── Animations ─────────────────────────────────────────────────────────── */
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.nodeRowActive .nodeLabel {
+  color: var(--ip-brand);
+  font-weight: 700;
 }
 
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fadeUp {
-  animation: fadeUp 0.18s ease both;
-}
-
-/* ── Breadcrumb back button ──────────────────────────────────────────────── */
-/* ── Leaf Editor back button ─────────────────────────────────────────────── */
+/* ── Breadcrumb Navigation Buttons ──────────────────────────────────────── */
 .leafBackBtn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  border-radius: 8px;
-  border: 1px solid #E5E7EB;
-  background: white;
-  color: #4B5563;
+  border-radius: var(--ip-radius-md);
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-muted);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   align-self: flex-start;
   transition: all 0.15s;
   font-family: inherit;
-  box-shadow: 0 1px 2px rgba(38, 59, 79, 0.06);
+  box-shadow: var(--ip-shadow-xs);
 }
 
 .leafBackBtn:hover {
-  background: #F3F4F6;
-  border-color: #D1D5DB;
-  color: #263B4F;
+  background: var(--ip-surface-hover);
+  border-color: var(--ip-border-strong);
+  color: var(--ip-text-primary);
 }
 
 .bcBackBtn {
@@ -1569,10 +1824,10 @@
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  border-radius: 7px;
-  border: 1px solid #E5E7EB;
-  background: white;
-  color: #4B5563;
+  border-radius: var(--ip-radius-sm);
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-muted);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -1582,20 +1837,20 @@
 }
 
 .bcBackBtn:hover {
-  background: #F3F4F6;
-  border-color: #D1D5DB;
-  color: #263B4F;
+  background: var(--ip-surface-hover);
+  border-color: var(--ip-border-strong);
+  color: var(--ip-text-primary);
 }
 
 .bcBarDivider {
   width: 1px;
   height: 16px;
-  background: #E5E7EB;
+  background: var(--ip-border);
   flex-shrink: 0;
   margin: 0 4px;
 }
 
-/* ── Custom checkbox (SelectionRow) ─────────────────────────────────────── */
+/* ── Custom Checkbox (SelectionRow) ─────────────────────────────────────── */
 .itemCheckLabel {
   display: inline-flex;
   align-items: center;
@@ -1615,8 +1870,8 @@
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  border: 2px solid #D1D5DB;
-  background: white;
+  border: 2px solid var(--ip-border-strong);
+  background: var(--ip-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1628,7 +1883,7 @@
   content: '';
   width: 5px;
   height: 9px;
-  border: 2px solid white;
+  border: 2px solid var(--ip-text-inverse);
   border-top: none;
   border-left: none;
   transform: rotate(45deg) translateY(-1px);
@@ -1637,15 +1892,15 @@
 }
 
 .itemCheckOn {
-  background: #29A356;
-  border-color: #29A356;
+  background: var(--ip-brand);
+  border-color: var(--ip-brand);
 }
 
 .itemCheckOn::after {
   opacity: 1;
 }
 
-/* ── Smart Add Panel (sidebar footer) ───────────────────────────────────── */
+/* ── Smart Add Panel (sidebar footer) ────────────────────────────────────── */
 .addPanel {
   display: flex;
   flex-direction: column;
@@ -1655,9 +1910,11 @@
 
 .addPanelLabel {
   font-size: 11px;
-  color: #6B7280;
+  color: var(--ip-text-muted);
   margin: 0;
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .addPanelRow {
@@ -1672,10 +1929,10 @@
   justify-content: center;
   gap: 5px;
   height: 30px;
-  border-radius: 7px;
-  border: 1px solid #E5E7EB;
-  background: #F9FAFB;
-  color: #4B5563;
+  border-radius: var(--ip-radius-sm);
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface-raised);
+  color: var(--ip-text-muted);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -1684,28 +1941,29 @@
 }
 
 .addTypeBtn:hover {
-  border-color: #D1D5DB;
-  background: #F3F4F6;
+  border-color: var(--ip-border-strong);
+  background: var(--ip-surface-hover);
+  color: var(--ip-text-primary);
 }
 
 .addTypeBtnActive {
-  background: rgba(51, 174, 149, 0.09);
-  border-color: rgba(51, 174, 149, 0.40);
-  color: #298E7A;
+  background: var(--ip-brand-light);
+  border-color: var(--ip-brand-border);
+  color: var(--ip-sidebar-text-active);
   font-weight: 600;
 }
 
 .addTypeBtnSel {
-  background: rgba(41, 163, 86, 0.09);
-  border-color: rgba(41, 163, 86, 0.40);
-  color: #16A34A;
+  background: var(--ip-brand-light);
+  border-color: var(--ip-brand-border);
+  color: var(--ip-brand);
   font-weight: 600;
 }
 
 .addTypeBtnDmg {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.35);
-  color: #DC2626;
+  background: var(--ip-red-light);
+  border-color: var(--ip-red-border);
+  color: var(--ip-red);
   font-weight: 600;
 }
 
@@ -1717,10 +1975,10 @@
 .addPanelCancelBtn {
   flex: 1;
   height: 30px;
-  border-radius: 7px;
-  border: 1px solid #E5E7EB;
+  border-radius: var(--ip-radius-sm);
+  border: 1px solid var(--ip-border);
   background: transparent;
-  color: #6B7280;
+  color: var(--ip-text-muted);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -1729,36 +1987,37 @@
 }
 
 .addPanelCancelBtn:hover {
-  background: #F3F4F6;
+  background: var(--ip-surface-hover);
 }
 
 .addPanelConfirmBtn {
   flex: 1;
   height: 30px;
-  border-radius: 7px;
+  border-radius: var(--ip-radius-sm);
   border: none;
-  background: linear-gradient(135deg, #1a7bbd, #298E7A);
-  color: white;
+  background: var(--ip-gradient-brand);
+  color: var(--ip-text-inverse);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.12s;
+  transition: all 0.12s;
   font-family: inherit;
 }
 
 .addPanelConfirmBtn:hover {
-  opacity: 0.88;
+  filter: brightness(1.06);
+  box-shadow: 0 2px 8px var(--ip-brand-hover-shadow);
 }
 
-/* ── DamageRow camera button & expand area ──────────────────────────────── */
+/* ── DamageRow Camera & Expand ───────────────────────────────────────────── */
 .dmgCameraBtn {
   display: inline-flex;
   align-items: center;
   padding: 4px;
-  border-radius: 6px;
-  border: 1px solid #E5E7EB;
+  border-radius: var(--ip-radius-sm);
+  border: 1px solid var(--ip-border);
   background: transparent;
-  color: #9CA3AF;
+  color: var(--ip-text-disabled);
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.12s;
@@ -1766,20 +2025,20 @@
 }
 
 .dmgCameraBtn:hover {
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #EF4444;
-  background: rgba(239, 68, 68, 0.06);
+  border-color: var(--ip-red-border);
+  color: var(--ip-red);
+  background: var(--ip-red-light);
 }
 
 .itemDamageExpand {
-  background: rgba(239, 68, 68, 0.02);
-  border-top: 1px solid rgba(239, 68, 68, 0.10);
+  background: rgba(223, 69, 58, 0.02);
+  border-top: 1px solid var(--ip-red-border);
 }
 
 .itemDamageFields {
   display: flex;
   gap: 8px;
-  padding: 10px 16px 12px;
+  padding: 10px 14px 12px;
   flex-wrap: wrap;
 }
 
@@ -1787,86 +2046,63 @@
   flex: 1;
   min-width: 120px;
   height: 34px;
-  background: white;
-  border: 1px solid #E5E7EB;
-  border-radius: 7px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ip-radius-md);
   font-size: 13px;
   padding: 0 10px;
   outline: none;
   cursor: pointer;
-  color: #263B4F;
+  color: var(--ip-text-primary);
   font-family: inherit;
+  transition: border-color 0.15s;
 }
 
 .itemDamageSel:focus {
-  border-color: #1a7bbd;
+  border-color: var(--ip-border-focus);
 }
 
 .itemDamageInput {
   flex: 2;
   min-width: 160px;
   height: 34px;
-  background: white;
-  border: 1px solid #E5E7EB;
-  border-radius: 7px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ip-radius-md);
   font-size: 13px;
   padding: 0 10px;
   outline: none;
-  color: #263B4F;
+  color: var(--ip-text-primary);
   font-family: inherit;
+  transition: border-color 0.15s;
 }
 
 .itemDamageInput:focus {
-  border-color: #1a7bbd;
+  border-color: var(--ip-border-focus);
 }
 
-/* ── Name Validation Modal ──────────────────────────────────────────────── */
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(38, 59, 79, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.15s ease;
-}
+/* ── Name Validation Modal (second definition, takes precedence) ──────────── */
+/* already covered by the unified .modalOverlay / .modalBox above */
 
-.modalBox {
-  background: #FFFFFF;
-  border-radius: 14px;
-  padding: 24px;
-  width: 360px;
-  max-width: calc(100vw - 32px);
-  box-shadow: 0 12px 40px rgba(38, 59, 79, 0.18);
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.modalTitle {
-  font-size: 15px;
-  font-weight: 700;
-  color: #263B4F;
-  margin: 0;
-}
-
+/* ── Modal Input Fields ──────────────────────────────────────────────────── */
 .modalInput {
   height: 40px;
-  border: 1.5px solid #E5E7EB;
-  border-radius: 8px;
+  border: 1.5px solid var(--ip-border);
+  border-radius: var(--ip-radius-md);
   padding: 0 12px;
   font-size: 14px;
-  color: #263B4F;
+  color: var(--ip-text-primary);
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
   width: 100%;
   box-sizing: border-box;
+  background: var(--ip-surface);
 }
 
 .modalInput:focus {
-  border-color: #1a7bbd;
+  border-color: var(--ip-border-focus);
+  box-shadow: 0 0 0 3px var(--ip-brand-light);
 }
 
 .modalActions {
@@ -1875,51 +2111,35 @@
   justify-content: flex-end;
 }
 
-.modalCancelBtn {
-  height: 36px;
-  padding: 0 16px;
-  border-radius: 8px;
-  border: 1px solid #E5E7EB;
-  background: #FFFFFF;
-  color: #6B7280;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-
-.modalCancelBtn:hover {
-  background: #F3F4F6;
-  color: #263B4F;
-}
-
 .modalConfirmBtn {
   height: 36px;
   padding: 0 18px;
-  border-radius: 8px;
+  border-radius: var(--ip-radius-md);
   border: none;
-  background: linear-gradient(135deg, #1a7bbd, #298E7A);
-  color: #FFFFFF;
+  background: var(--ip-gradient-brand);
+  color: var(--ip-text-inverse);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: opacity 0.15s;
+  transition: all 0.15s;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 6px var(--ip-brand-hover-shadow);
 }
 
 .modalConfirmBtn:hover {
-  opacity: 0.9;
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px var(--ip-brand-hover-shadow);
 }
 
 .modalConfirmBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  transform: none;
 }
 
 /* ── Item Sort Buttons ───────────────────────────────────────────────────── */
@@ -1936,7 +2156,7 @@
   padding: 2px;
   border: 1px solid var(--ip-border);
   background: var(--ip-surface);
-  border-radius: 8px;
+  border-radius: var(--ip-radius-md);
   flex-shrink: 0;
 }
 
@@ -1951,18 +2171,233 @@
   color: var(--ip-text-disabled);
   cursor: pointer;
   padding: 0;
-  border-radius: 4px;
-  transition: all 0.15s;
+  border-radius: 3px;
+  transition: all 0.12s;
 }
 
 .itemSortBtn:hover:not(:disabled) {
-  background: var(--ip-green-light);
-  color: var(--ip-green);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand);
 }
 
 .itemSortBtn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+/* ── Modal Field Labels & Validation ─────────────────────────────────────── */
+.modalFieldLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ip-text-muted);
+  margin: 8px 0 4px;
+}
+
+.modalInputError {
+  border-color: var(--ip-red) !important;
+  background: rgba(223, 69, 58, 0.03) !important;
+}
+
+.modalErrorMsg {
+  font-size: 12px;
+  color: var(--ip-red);
+  margin: 3px 0 0;
+  font-weight: 500;
+}
+
+.modalCheckboxRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ip-text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.modalCheckbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--ip-brand);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Move/Copy Panel List ────────────────────────────────────────────────── */
+.mvPanelList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--ip-border);
+  border-radius: var(--ip-radius-md);
+  padding: 4px;
+  background: var(--ip-surface-raised);
+}
+
+.mvPanelItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--ip-radius-sm);
+  border: 1px solid transparent;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: inherit;
+}
+
+.mvPanelItem:hover {
+  background: var(--ip-surface-hover);
+  border-color: var(--ip-border);
+}
+
+.mvPanelItemActive {
+  background: var(--ip-brand-light) !important;
+  border-color: var(--ip-brand) !important;
+}
+
+.mvBadgeSel {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--ip-radius-sm);
+  background: var(--ip-brand-light);
+  color: var(--ip-brand);
+  flex-shrink: 0;
+  border: 1px solid var(--ip-brand-border);
+}
+
+.mvBadgeDmg {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--ip-radius-sm);
+  background: var(--ip-red-light);
+  color: var(--ip-red);
+  flex-shrink: 0;
+  border: 1px solid var(--ip-red-border);
+}
+
+.mvPanelPath {
+  font-size: 13px;
+  color: var(--ip-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Item Action Buttons (move/copy to folder) ───────────────────────────── */
+.itemActionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+  color: var(--ip-text-disabled);
+  border-radius: var(--ip-radius-md);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.18s;
+  box-shadow: var(--ip-shadow-xs);
+  padding: 0;
+}
+
+.itemActionBtn:hover {
+  background: var(--ip-brand-light);
+  border-color: var(--ip-brand-border);
+  color: var(--ip-brand);
+  box-shadow: 0 4px 6px -1px rgba(26, 123, 189, 0.12);
+  transform: translateY(-1px);
+}
+
+/* ── Report Name Alias Badge ─────────────────────────────────────────────── */
+.itemReportAlias {
+  font-size: 11px;
+  color: var(--ip-text-disabled);
+  font-weight: 400;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: var(--ip-radius-sm);
+  background: var(--ip-surface-raised);
+  border: 1px solid var(--ip-border);
+}
+
+/* ── Workspace Prompt (no folder selected) ───────────────────────────────── */
+.workspacePrompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 12px;
+  text-align: center;
+  padding: 40px;
+}
+
+.workspacePromptIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--ip-radius-xl);
+  background: var(--ip-brand-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ip-brand);
+  flex-shrink: 0;
+}
+
+.workspacePromptTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ip-text-primary);
+  margin: 0;
+}
+
+.workspacePromptSub {
+  font-size: 13px;
+  color: var(--ip-text-muted);
+  margin: 0;
+  max-width: 280px;
+  line-height: 1.6;
+}
+
+.workspacePromptBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 20px;
+  height: 38px;
+  border-radius: var(--ip-radius-md);
+  border: none;
+  background: var(--ip-gradient-brand);
+  color: var(--ip-text-inverse);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--ip-brand-hover-shadow);
+  transition: all 0.15s;
+  font-family: inherit;
+  margin-top: 4px;
+}
+
+.workspacePromptBtn:hover {
+  box-shadow: 0 4px 14px var(--ip-brand-hover-shadow);
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
@@ -1975,144 +2410,42 @@
   }
 }
 
-/* ── Add Item / Move-Copy Modal extras ──────────────────────────────────── */
-.modalFieldLabel {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
-  margin: 12px 0 4px;
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.modalInputError {
-  border-color: #EF4444 !important;
-  background: #FFF5F5 !important;
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-.modalErrorMsg {
-  font-size: 12px;
-  color: #EF4444;
-  margin: 3px 0 0;
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
 }
 
-.modalCheckboxRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #374151;
-  margin-top: 14px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.modalCheckbox {
-  width: 15px;
-  height: 15px;
-  accent-color: #1a7bbd;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-/* ── Move/Copy panel list ────────────────────────────────────────────────── */
-.mvPanelList {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 240px;
-  overflow-y: auto;
-  margin-bottom: 4px;
-  border: 1px solid #E5E7EB;
-  border-radius: 8px;
-  padding: 4px;
-}
-
-.mvPanelItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
-  font-family: inherit;
-}
-
-.mvPanelItem:hover {
-  background: #F9FAFB;
-  border-color: #E5E7EB;
-}
-
-.mvPanelItemActive {
-  background: rgba(51, 174, 149, 0.08) !important;
-  border-color: #1a7bbd !important;
-}
-
-.mvBadgeSel {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: rgba(41, 163, 86, 0.12);
-  color: #16A34A;
-  flex-shrink: 0;
-}
-
-.mvBadgeDmg {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: rgba(239, 68, 68, 0.10);
-  color: #DC2626;
-  flex-shrink: 0;
-}
-
-.mvPanelPath {
-  font-size: 13px;
-  color: #374151;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ── Item action buttons (move-to-folder / copy-to-folder) ──────────────── */
-.itemActionBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--ip-border);
-  background: var(--ip-surface);
-  color: var(--ip-text-disabled);
-  border-radius: 8px;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--ip-shadow-xs);
-  padding: 0;
-}
-
-.itemActionBtn:hover {
-  background: var(--ip-green-light);
-  border-color: var(--ip-green);
-  color: var(--ip-green);
-  box-shadow: 0 4px 6px -1px rgba(41, 163, 86, 0.1), 0 2px 4px -1px rgba(41, 163, 86, 0.06);
-  transform: translateY(-1px);
-}
-
-/* ── Report name alias badge ─────────────────────────────────────────────── */
-.itemReportAlias {
-  font-size: 11px;
-  color: #9CA3AF;
-  font-weight: 400;
-  margin-left: 6px;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: #F3F4F6;
-  border: 1px solid #E5E7EB;
+.fadeUp {
+  animation: fadeUp 0.18s ease both;
 }
