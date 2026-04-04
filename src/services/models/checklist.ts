@@ -107,7 +107,6 @@ export interface TemplateResponse {
   parentOrgId?: string;
   /** New recursive tree — populated for templates saved in the new format */
   nodes?: TemplateNode[];
-  globalOveralls?: string[];
   sections: SectionInfo[];
   sectionCount: number;
   fields: FieldInfo[];             // legacy
@@ -125,7 +124,6 @@ export interface TemplateRequest {
   projectId?: string;
   /** New recursive node tree — takes precedence over sections when present */
   nodes?: TemplateNode[];
-  globalOveralls?: string[];
   sections?: any[];
   fields?: {
     fieldTitle: string;

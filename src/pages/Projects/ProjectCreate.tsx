@@ -1262,7 +1262,6 @@ const ProjectCreate = () => {
                               description: `Mapped template from ${selectedTpl.title}`,
                               scope: projectFor === 'franchise' ? 'FRANCHISE' : 'ORGANISATION',
                               nodes: selectedTpl.nodes || [],
-                              globalOveralls: selectedTpl.globalOveralls || [],
                               sections: [],
                             });
                             setFinalizedTemplateId(res.id!.toString());
