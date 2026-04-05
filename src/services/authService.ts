@@ -1,4 +1,7 @@
 import { api } from './api';
+import { useAuthStore } from '../store/useAuthStore';
+import { decodeEmailFromJwt } from '../lib/utils';
+
 
 interface ApiResponse<T> {
   status: boolean;
@@ -6,24 +9,7 @@ interface ApiResponse<T> {
   object: T | null;
 }
 
-export interface RoleItem {
-  roleId: number;
-  roleName: string;
-}
-
 export interface LoginResponse {
-  userId: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  orgId?: string;
-  orgName?: string;
-  roleId?: number;
-  roleName?: string;
-  roles: RoleItem[];
-  superAdmin: boolean;
-  firstLogin: boolean; // true when user still has the default password
-  accessToken: string;
   idToken: string;
   refreshToken: string;
   isFirstLogin?: boolean;
@@ -57,18 +43,16 @@ export const authService = {
     if (!res.status) throw new Error(res.message || 'Failed to change password');
   },
 
-  refreshTokens: async (refreshToken: string): Promise<{ accessToken: string; idToken: string }> => {
-    const res = await api.post<ApiResponse<{ accessToken: string; idToken: string }>>('/auth/refresh-token', { refreshToken });
+  refreshTokens: async (refreshToken: string): Promise<{ idToken: string }> => {
+    const idToken = useAuthStore.getState().idToken;
+    const email = idToken ? decodeEmailFromJwt(idToken) : null;
+    const res = await api.post<ApiResponse<{ idToken: string }>>('/auth/refresh-token', { refreshToken, email });
     if (!res.status) throw new Error(res.message || 'Token refresh failed');
     return res.object!;
   },
 
+  /** Calls Cognito global sign-out. Caller is responsible for clearing local state. */
   logout: async (): Promise<void> => {
-    try {
-      await api.post('/auth/logout');
-    } finally {
-      localStorage.removeItem('auth-storage');
-      window.location.href = '/login';
-    }
+    await api.post('/auth/logout');
   },
 };

@@ -53,7 +53,7 @@ const CATEGORY_ORDER: Record<string, number> = { main: 0 };
 
 const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
   const location = useLocation();
-  const { modules, accessModules } = useModuleStore();
+  const { accessModules } = useModuleStore();
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
@@ -62,17 +62,7 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
     const seenPaths = new Set<string>();
     const sectionMap = new Map<string, NavItem[]>();
 
-    // Accessible paths set for O(1) lookup (only modules that have a real route)
-    const accessiblePaths = new Set(
-      accessModules
-        .filter((m) => !!m.route?.trim())
-        .map((m) => '/' + m.route.split('/').filter(Boolean)[0])
-    );
-
-    // Use org modules (full list) when available; fall back to accessModules
-    const source = modules.length > 0 ? modules : accessModules;
-
-    source.forEach((m) => {
+    accessModules.forEach((m) => {
       const hasRoute = !!m.route?.trim();
       // Use route-based key for real routes; name-based key for empty-route modules
       const dedupeKey = hasRoute
@@ -83,7 +73,7 @@ const Sidebar = ({ collapsed, mobileOpen }: SidebarProps) => {
       seenPaths.add(dedupeKey);
 
       const topPath = hasRoute ? '/' + m.route.split('/').filter(Boolean)[0] : null;
-      const isLocked = !hasRoute || (topPath !== null && !accessiblePaths.has(topPath));
+      const isLocked = !hasRoute;
 
       const category = m.category || 'Other';
       if (!sectionMap.has(category)) sectionMap.set(category, []);

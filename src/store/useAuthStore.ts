@@ -1,9 +1,7 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type UserRole = string;
 
-/** One role entry with ID — needed to re-fetch modules when switching roles */
 export interface RoleInfo {
   roleId: number;
   roleName: string;
@@ -13,63 +11,74 @@ export interface User {
   id: string;
   email: string;
   name?: string;
-  role: UserRole;       // currently active role name
-  roleId?: number;      // currently active role ID
-  roles: RoleInfo[];    // all roles assigned to this user
+  role: UserRole;
+  roleId?: number;
+  roles: RoleInfo[];
   orgId?: string;
   orgName?: string;
   isSuperAdmin?: boolean;
+  imageUrl?: string | null;
 }
 
 interface AuthState {
-  user: User | null;
-  accessToken: string | null;
+  // ── Persisted as plain localStorage keys ─────────────────
   idToken: string | null;
   refreshToken: string | null;
-  isAuthenticated: boolean;
+
+  // ── In-memory only (never stored) ─────────────────────────
+  user: User | null;
   isFirstLogin: boolean;
-  setAuth: (user: User, accessToken: string, refreshToken: string, isFirstLogin?: boolean, idToken?: string | null) => void;
-  setAccessToken: (accessToken: string) => void;
-  /** Update both access and ID tokens after a silent refresh */
-  setTokens: (accessToken: string, idToken: string | null) => void;
+  isAppReady: boolean;
+
+  // ── Actions ───────────────────────────────────────────────
+  setTokens: (idToken: string, refreshToken: string) => void;
+  refreshIdToken: (idToken: string) => void;
+  setUser: (user: User, isFirstLogin?: boolean) => void;
+  updateUser: (patch: Partial<User>) => void;
+  setAppReady: (ready: boolean) => void;
   setFirstLoginDone: () => void;
-  /** Switch the active role in-memory without a page reload */
   switchRole: (roleName: string, roleId: number) => void;
   clearAuth: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      accessToken: null,
-      idToken: null,
-      refreshToken: null,
-      isAuthenticated: false,
-      isFirstLogin: false,
-      setAuth: (user, accessToken, refreshToken, isFirstLogin = false, idToken = null) =>
-        set({ user, accessToken, idToken, refreshToken, isAuthenticated: true, isFirstLogin }),
-      setAccessToken: (accessToken) => set({ accessToken }),
-      setTokens: (accessToken, idToken) => set({ accessToken, idToken }),
-      setFirstLoginDone: () => set({ isFirstLogin: false }),
-      switchRole: (roleName, roleId) =>
-        set((state) => ({
-          user: state.user ? { ...state.user, role: roleName, roleId } : null,
-        })),
-      clearAuth: () =>
-        set({ user: null, accessToken: null, idToken: null, refreshToken: null, isAuthenticated: false, isFirstLogin: false }),
-    }),
-    {
-      name: 'auth-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        accessToken: state.accessToken,
-        idToken: state.idToken,
-        refreshToken: state.refreshToken,
-        isAuthenticated: state.isAuthenticated,
-        isFirstLogin: state.isFirstLogin,
-        user: state.user,
-      }),
-    }
-  )
-);
+export const useAuthStore = create<AuthState>()((set) => ({
+  // Hydrate tokens directly from localStorage on store creation
+  idToken: localStorage.getItem('idToken'),
+  refreshToken: localStorage.getItem('refreshToken'),
+
+  user: null,
+  isFirstLogin: false,
+  isAppReady: false,
+
+  setTokens: (idToken, refreshToken) => {
+    localStorage.setItem('idToken', idToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    set({ idToken, refreshToken, isAppReady: false });
+  },
+
+  refreshIdToken: (idToken) => {
+    localStorage.setItem('idToken', idToken);
+    set({ idToken });
+  },
+
+  setUser: (user, isFirstLogin = false) =>
+    set({ user, isFirstLogin }),
+
+  updateUser: (patch) =>
+    set((s) => ({ user: s.user ? { ...s.user, ...patch } : null })),
+
+  setAppReady: (ready) => set({ isAppReady: ready }),
+
+  setFirstLoginDone: () => set({ isFirstLogin: false }),
+
+  switchRole: (roleName, roleId) =>
+    set((s) => ({
+      user: s.user ? { ...s.user, role: roleName, roleId } : null,
+      isAppReady: false,
+    })),
+
+  clearAuth: () => {
+    localStorage.clear();
+    set({ idToken: null, refreshToken: null, user: null, isFirstLogin: false, isAppReady: false });
+  },
+}));

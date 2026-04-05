@@ -3,14 +3,13 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { ROUTES } from '@/components/Constant/Route';
 
 export const ProtectedRoute = () => {
-  const { isAuthenticated, isFirstLogin } = useAuthStore();
+  const { idToken, isFirstLogin } = useAuthStore();
   const location = useLocation();
 
-  if (!isAuthenticated) {
+  if (!idToken) {
     return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
   }
 
-  // On first login, force password update — only allow /update-password
   if (isFirstLogin && location.pathname !== ROUTES.UPDATE_PASSWORD) {
     return <Navigate to={ROUTES.UPDATE_PASSWORD} replace />;
   }
@@ -19,10 +18,10 @@ export const ProtectedRoute = () => {
 };
 
 export const PublicRoute = () => {
-  const { isAuthenticated, isFirstLogin } = useAuthStore();
+  const { idToken, isFirstLogin } = useAuthStore();
   const location = useLocation();
 
-  if (isAuthenticated) {
+  if (idToken) {
     if (isFirstLogin) {
       return <Navigate to={ROUTES.UPDATE_PASSWORD} replace />;
     }

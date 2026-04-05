@@ -1,0 +1,79 @@
+.root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ip-bg, #f4f6f8);
+  z-index: 9999;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.logoWrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--ip-brand, #1a7bbd);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoIcon {
+  width: 28px;
+  height: 28px;
+  color: #fff;
+}
+
+.appName {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ip-text-primary, #263b4f);
+  margin: 0;
+}
+
+.spinnerWrap {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  margin-top: 8px;
+}
+
+.spinnerRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--ip-border-strong, #d0d7de);
+  border-top-color: var(--ip-brand, #1a7bbd);
+  animation: spin 0.8s linear infinite;
+}
+
+.spinnerGlow {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(26, 123, 189, 0.15), transparent 70%);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ip-text-secondary, #64748b);
+  margin: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
