@@ -7,6 +7,7 @@ import type { OrganisationResponse } from '@/services/models/organisation';
 import { OrganisationCreateModal } from './OrganisationCreateModal';
 import { OrganisationViewModal } from './OrganisationViewModal';
 import Pagination from '@/components/shared-ui/Pagination/Pagination';
+import Loader from '@/components/shared-ui/Loader/Loader';
 import {
   Dialog,
   DialogContent,
@@ -170,8 +171,7 @@ const Organisation = () => {
         <div className={styles.panelBody}>
           {loading ? (
             <div className={styles.emptyState}>
-              <div className={styles.spinner} />
-              <p style={{ marginTop: 12 }}>Loading...</p>
+              <Loader variant="inline" type="spinner" small text="Loading organisations…" />
             </div>
           ) : organisations.length === 0 ? (
             <div className={styles.emptyState}>

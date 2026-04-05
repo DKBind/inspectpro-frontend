@@ -9,6 +9,7 @@ import {
   Lock, Wand2, ChevronDown, GitBranch, SlidersHorizontal,
 } from 'lucide-react';
 import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
+import Loader from '@/components/shared-ui/Loader/Loader';
 
 import { customerService } from '@/services/customerService';
 import { organisationService } from '@/services/organisationService';
@@ -217,7 +218,7 @@ const Clients = () => {
   };
 
   const filteredClients = clients.filter(c => {
-    if (filterOrgId && c.orgId !== filterOrgId) return false;
+    if (filterOrgId && c.franchiseId !== filterOrgId) return false;
     if (filterStatus === 'active' && !c.isActive) return false;
     if (filterStatus === 'inactive' && c.isActive) return false;
     return true;
@@ -417,7 +418,7 @@ const Clients = () => {
             {isFilterActive && <span className={styles.filterActiveBadge}>Filtered</span>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div ref={filterRef} style={{ position: 'relative' }}>
+            {/* <div ref={filterRef} style={{ position: 'relative' }}>
               <button
                 className={`${styles.filterBtn} ${isFilterActive ? styles.filterBtnActive : ''}`}
                 onClick={openFilter}
@@ -466,7 +467,7 @@ const Clients = () => {
                   )}
                 </div>
               )}
-            </div>
+            </div> */}
             <button className={styles.createBtn} onClick={openCreate}>
               <Plus style={{ width: 15, height: 15 }} /> Add Client
             </button>
@@ -476,7 +477,7 @@ const Clients = () => {
         <div className={styles.panelBody}>
           {loading ? (
             <div className={styles.emptyState}>
-              <Loader2 className={styles.spinner} /><p>Loading clients...</p>
+              <Loader variant="inline" type="spinner" small text="Loading clients…" />
             </div>
           ) : clients.length === 0 ? (
             <div className={styles.emptyState}>

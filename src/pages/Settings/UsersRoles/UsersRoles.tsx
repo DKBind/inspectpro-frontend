@@ -26,7 +26,9 @@ import {
 } from '@/components/shared-ui/DropdownMenu/dropdown-menu';
 import { Button } from '@/components/shared-ui/Button/button';
 import { Input } from '@/components/shared-ui/Input/input';
+import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
 import Pagination from '@/components/shared-ui/Pagination/Pagination';
+import Loader from '@/components/shared-ui/Loader/Loader';
 import styles from './UsersRoles.module.css';
 import { Fld, IcoInput, inputCls } from '@/components/shared-ui/form-helpers';
 
@@ -141,6 +143,20 @@ const UsersRoles = () => {
   const [pendingFranchiseId, setPendingFranchiseId] = useState('');
   const [pendingFranchises, setPendingFranchises] = useState<OrganisationResponse[]>([]);
 
+  // User type filter (Users tab)
+  const [userTypeFilter, setUserTypeFilter] = useState<'own' | 'organisation' | 'franchise'>('own');
+  const [userFilterOrgId, setUserFilterOrgId] = useState('');
+  const [userFilterFranchiseId, setUserFilterFranchiseId] = useState('');
+  const [userFilterFranchises, setUserFilterFranchises] = useState<OrganisationResponse[]>([]);
+  const [userFilterPanelOpen, setUserFilterPanelOpen] = useState(false);
+  const userFilterRef = useRef<HTMLDivElement>(null);
+
+  // Pending user filter values
+  const [pendingUserTypeFilter, setPendingUserTypeFilter] = useState<'own' | 'organisation' | 'franchise'>('own');
+  const [pendingUserFilterOrgId, setPendingUserFilterOrgId] = useState('');
+  const [pendingUserFilterFranchiseId, setPendingUserFilterFranchiseId] = useState('');
+  const [pendingUserFilterFranchises, setPendingUserFilterFranchises] = useState<OrganisationResponse[]>([]);
+
   // Roles table pagination
   const [rolesPage, setRolesPage] = useState(1);
   const [usersPageSize, setUsersPageSize] = useState(PAGE_SIZE);
@@ -204,7 +220,6 @@ const UsersRoles = () => {
   const selectedOrgId = watch('orgId');
   const selectedRole = roles.find((r) => String(r.roleId) === selectedRoleId);
   const selectedUserOrg = allOrgs.find(o => o.uuid === selectedOrgId);
-  const totalPages = Math.ceil(total / usersPageSize);
 
   // Computed: is the logged-in user an Org Admin (top-level org)?
   const authOrgInList = allOrgs.find(o => o.uuid === authUser?.orgId);
@@ -230,11 +245,11 @@ const UsersRoles = () => {
   };
 
   // ── Fetch users ───────────────────────────────────────────────────────────
-  const fetchUsers = async (page = currentPage, size = usersPageSize) => {
+  const fetchUsers = async () => {
     setUsersLoading(true);
     try {
       const [userData, rolesData, orgsData] = await Promise.all([
-        userService.listUsers(page - 1, size),
+        userService.listUsers(0, 2000),
         userService.listRoles(),
         organisationService.getOrganisations(0, 1000),
       ]);
@@ -256,8 +271,8 @@ const UsersRoles = () => {
   };
 
   useEffect(() => {
-    if (subTab === 'users') fetchUsers(currentPage, usersPageSize);
-  }, [subTab, currentPage, usersPageSize]);
+    if (subTab === 'users') fetchUsers();
+  }, [subTab]);
 
   // Load franchises when a parent org is selected in role modal (Part D)
   useEffect(() => {
@@ -287,12 +302,29 @@ const UsersRoles = () => {
       .catch(() => setPendingFranchises([]));
   }, [pendingOrgId, pendingTypeFilter]);
 
+  // Load franchises for the pending org in the USER filter panel (super admin)
+  useEffect(() => {
+    if (!isSuperAdmin || pendingUserTypeFilter !== 'franchise' || !pendingUserFilterOrgId) {
+      setPendingUserFilterFranchises([]);
+      setPendingUserFilterFranchiseId('');
+      return;
+    }
+    organisationService.getFranchises(0, 500, pendingUserFilterOrgId)
+      .then(d => setPendingUserFilterFranchises(d.content ?? []))
+      .catch(() => setPendingUserFilterFranchises([]));
+  }, [pendingUserFilterOrgId, pendingUserTypeFilter]);
+
   // Reset roles pagination when filter changes
   useEffect(() => {
     setRolesPage(1);
   }, [roleTypeFilter, roleFilterOrgId, roleFilterFranchiseId]);
 
-  // Close filter panel on outside click (without applying)
+  // Reset users pagination when user filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [userTypeFilter, userFilterOrgId, userFilterFranchiseId]);
+
+  // Close roles filter panel on outside click (without applying)
   useEffect(() => {
     if (!filterPanelOpen) return;
     const handler = (e: MouseEvent) => {
@@ -304,7 +336,19 @@ const UsersRoles = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [filterPanelOpen]);
 
-  // ── Filter panel actions ──────────────────────────────────────────────────
+  // Close user filter panel on outside click (without applying)
+  useEffect(() => {
+    if (!userFilterPanelOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (userFilterRef.current && !userFilterRef.current.contains(e.target as Node)) {
+        setUserFilterPanelOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [userFilterPanelOpen]);
+
+  // ── Role filter panel actions ─────────────────────────────────────────────
   const openFilterPanel = () => {
     // Initialise pending state from currently applied state
     setPendingTypeFilter(roleTypeFilter);
@@ -335,6 +379,38 @@ const UsersRoles = () => {
     setPendingFranchises([]);
     setRolesPage(1);
     setFilterPanelOpen(false);
+  };
+
+  // ── User filter panel actions ─────────────────────────────────────────────
+  const openUserFilterPanel = () => {
+    setPendingUserTypeFilter(userTypeFilter);
+    setPendingUserFilterOrgId(userFilterOrgId);
+    setPendingUserFilterFranchiseId(userFilterFranchiseId);
+    setPendingUserFilterFranchises(userFilterFranchises);
+    setUserFilterPanelOpen(true);
+  };
+
+  const applyUserFilter = () => {
+    setUserTypeFilter(pendingUserTypeFilter);
+    setUserFilterOrgId(pendingUserFilterOrgId);
+    setUserFilterFranchiseId(pendingUserFilterFranchiseId);
+    setUserFilterFranchises(pendingUserFilterFranchises);
+    setCurrentPage(1);
+    setUserFilterPanelOpen(false);
+  };
+
+  const clearUserFilter = () => {
+    const own = 'own' as const;
+    setUserTypeFilter(own);
+    setUserFilterOrgId('');
+    setUserFilterFranchiseId('');
+    setUserFilterFranchises([]);
+    setPendingUserTypeFilter(own);
+    setPendingUserFilterOrgId('');
+    setPendingUserFilterFranchiseId('');
+    setPendingUserFilterFranchises([]);
+    setCurrentPage(1);
+    setUserFilterPanelOpen(false);
   };
 
   // ── Fetch roles ───────────────────────────────────────────────────────────
@@ -702,7 +778,7 @@ const UsersRoles = () => {
         toast.success('User updated successfully');
       }
       closeModal();
-      fetchUsers(currentPage, usersPageSize);
+      fetchUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Something went wrong');
     } finally { setSubmitting(false); }
@@ -715,7 +791,7 @@ const UsersRoles = () => {
       await userService.deleteUser(deleteTarget.id);
       toast.success('User deleted');
       setDeleteTarget(null);
-      fetchUsers(currentPage, usersPageSize);
+      fetchUsers();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete');
     } finally { setDeleting(false); }
@@ -743,6 +819,43 @@ const UsersRoles = () => {
       toast.error(e instanceof Error ? e.message : 'Failed to update status');
     } finally { setToggling(false); setToggleTarget(null); }
   };
+
+  // ── User type filter logic ────────────────────────────────────────────────
+  const userTypeOptions: Array<{ value: 'own' | 'organisation' | 'franchise'; label: string }> = isSuperAdmin
+    ? [{ value: 'own', label: 'Own' }, { value: 'organisation', label: 'Organisation' }, { value: 'franchise', label: 'Franchise' }]
+    : isOrgAdmin
+      ? [{ value: 'own', label: 'Own' }, { value: 'franchise', label: 'Franchise' }]
+      : [{ value: 'own', label: 'Own' }];
+
+  const isUserFilterActive = userTypeFilter !== 'own' || !!userFilterOrgId || !!userFilterFranchiseId;
+
+  // Filter the full users list based on selected type + org/franchise
+  const visibleUsers = users.filter(u => {
+    if (u.roleName?.toLowerCase() === 'client') return false;
+    const userOrg = allOrgs.find(o => o.uuid === u.orgId);
+    if (isSuperAdmin) {
+      if (userTypeFilter === 'own') return !u.orgId;
+      if (userTypeFilter === 'organisation') {
+        if (!u.orgId || userOrg?.parentOrgId) return false; // must be top-level org user
+        return userFilterOrgId ? u.orgId === userFilterOrgId : true;
+      }
+      // franchise
+      if (!u.orgId || !userOrg?.parentOrgId) return false; // must belong to a franchise
+      if (userFilterFranchiseId) return u.orgId === userFilterFranchiseId;
+      if (userFilterOrgId) return userOrg.parentOrgId === userFilterOrgId;
+      return true;
+    } else if (isOrgAdmin) {
+      if (userTypeFilter === 'own') return u.orgId === authUser?.orgId;
+      // franchise
+      if (!userOrg?.parentOrgId || userOrg.parentOrgId !== authUser?.orgId) return false;
+      return userFilterFranchiseId ? u.orgId === userFilterFranchiseId : true;
+    }
+    // Franchise user: only their own org
+    return u.orgId === authUser?.orgId;
+  });
+
+  const usersTotalPages = Math.ceil(visibleUsers.length / usersPageSize);
+  const paginatedUsers = visibleUsers.slice((currentPage - 1) * usersPageSize, currentPage * usersPageSize);
 
   // ── Role type filter logic ────────────────────────────────────────────────
   // Available Role Type options depend on auth level
@@ -808,19 +921,131 @@ const UsersRoles = () => {
       {subTab === 'users' && (
         <div className={styles.panel}>
           <div className={styles.panelHeader}>
-            <h3 className={styles.panelTitle}>Team Members</h3>
-            <button className={styles.addBtn} onClick={openCreate}>
-              <Plus size={14} style={{ marginRight: 5 }} /> Add User
-            </button>
+            <h3 className={styles.panelTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Users size={15} style={{ color: '#1a7bbd' }} />
+              Team Members
+              {isUserFilterActive && (
+                <span className={styles.roleFilterActiveBadge}>
+                  {userTypeFilter === 'own' ? 'Own' : userTypeFilter === 'organisation' ? 'Organisation' : 'Franchise'}
+                  {userFilterOrgId && ` · ${allOrgs.find(o => o.uuid === userFilterOrgId)?.name ?? ''}`}
+                  {userFilterFranchiseId && ` · ${[...userFilterFranchises, ...orgAdminFranchises].find(f => f.uuid === userFilterFranchiseId)?.name ?? ''}`}
+                </span>
+              )}
+            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* Filter button — only shown when more than one option exists */}
+              {userTypeOptions.length > 1 && (
+                <div ref={userFilterRef} style={{ position: 'relative' }}>
+                  <button
+                    className={`${styles.roleFilterBtn} ${isUserFilterActive ? styles.roleFilterBtnActive : ''}`}
+                    onClick={openUserFilterPanel}
+                    title="Filter users"
+                  >
+                    <SlidersHorizontal size={14} />
+                    Filter
+                    {isUserFilterActive && <span className={styles.roleFilterDot} />}
+                  </button>
+
+                  {userFilterPanelOpen && (
+                    <div className={styles.roleFilterPanel}>
+                      {/* User Type */}
+                      <div className={styles.roleFilterSection}>
+                        <span className={styles.roleFilterSectionLabel}>User Type</span>
+                        <DropdownSelect
+                          options={userTypeOptions}
+                          value={pendingUserTypeFilter}
+                          onChange={val => {
+                            setPendingUserTypeFilter((val ?? 'own') as 'own' | 'organisation' | 'franchise');
+                            setPendingUserFilterOrgId('');
+                            setPendingUserFilterFranchiseId('');
+                            setPendingUserFilterFranchises([]);
+                          }}
+                          searchable={false}
+                          clearable={false}
+                        />
+                      </div>
+
+                      {/* Organisation — super admin only */}
+                      {isSuperAdmin && (pendingUserTypeFilter === 'organisation' || pendingUserTypeFilter === 'franchise') && (
+                        <div className={styles.roleFilterSection}>
+                          <span className={styles.roleFilterSectionLabel}>Organisation</span>
+                          <DropdownSelect
+                            options={topLevelOrgs.map(o => ({ value: o.uuid, label: o.name }))}
+                            value={pendingUserFilterOrgId || null}
+                            onChange={val => { setPendingUserFilterOrgId((val as string) ?? ''); setPendingUserFilterFranchiseId(''); }}
+                            placeholder="All Organisations"
+                            searchable={true}
+                            clearable={true}
+                          />
+                        </div>
+                      )}
+
+                      {/* Franchise */}
+                      {pendingUserTypeFilter === 'franchise' && (
+                        isSuperAdmin ? (
+                          <div className={styles.roleFilterSection}>
+                            <span className={styles.roleFilterSectionLabel}>Franchise</span>
+                            <DropdownSelect
+                              options={pendingUserFilterFranchises.map(f => ({ value: f.uuid, label: f.name }))}
+                              value={pendingUserFilterFranchiseId || null}
+                              onChange={val => setPendingUserFilterFranchiseId((val as string) ?? '')}
+                              placeholder={pendingUserFilterOrgId ? 'All Franchises' : 'Select an organisation first'}
+                              disabled={!pendingUserFilterOrgId}
+                              searchable={true}
+                              clearable={true}
+                              loading={!!pendingUserFilterOrgId && pendingUserFilterFranchises.length === 0}
+                            />
+                          </div>
+                        ) : isOrgAdmin && orgAdminFranchises.length > 0 ? (
+                          <div className={styles.roleFilterSection}>
+                            <span className={styles.roleFilterSectionLabel}>Franchise</span>
+                            <DropdownSelect
+                              options={orgAdminFranchises.map(f => ({ value: f.uuid, label: f.name }))}
+                              value={pendingUserFilterFranchiseId || null}
+                              onChange={val => setPendingUserFilterFranchiseId((val as string) ?? '')}
+                              placeholder="All Franchises"
+                              searchable={true}
+                              clearable={true}
+                            />
+                          </div>
+                        ) : null
+                      )}
+
+                      {/* Divider */}
+                      <div className={styles.roleFilterDivider} />
+
+                      {/* Apply + Clear */}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className={styles.roleFilterClear} onClick={clearUserFilter}>
+                          Clear
+                        </button>
+                        <button className={styles.roleFilterApply} onClick={applyUserFilter}>
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <button className={styles.addBtn} onClick={openCreate}>
+                <Plus size={14} style={{ marginRight: 5 }} /> Add User
+              </button>
+            </div>
           </div>
 
           {usersLoading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-              <Loader2 size={22} style={{ animation: 'spin 1s linear infinite', color: '#9CA3AF' }} />
+            <div className={styles.emptyState}>
+              <Loader variant="inline" type="spinner" small text="Loading users…" />
             </div>
-          ) : users.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#9CA3AF', fontSize: 13.5 }}>
-              No users found. Click "Add User" to create one.
+          ) : visibleUsers.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '56px 24px', gap: 12 }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(51,174,149,0.10)', border: '1px solid rgba(51,174,149,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Users size={24} style={{ color: '#1a7bbd', opacity: 0.7 }} />
+              </div>
+              <span style={{ fontSize: 13.5, color: '#6B7280' }}>
+                {users.length === 0 ? 'No users found. Click "Add User" to create one.' : 'No users match the selected filter.'}
+              </span>
             </div>
           ) : (
             <>
@@ -839,7 +1064,7 @@ const UsersRoles = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.filter(u => u.roleName?.toLowerCase() !== 'client').map((u) => {
+                  {paginatedUsers.map((u) => {
                     const isActive = (u.statusId ?? 1) === 1;
                     return (
                       <tr key={u.id}>
@@ -899,8 +1124,8 @@ const UsersRoles = () => {
               <div className={styles.paginationArea}>
                 <Pagination
                   currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={total}
+                  totalPages={usersTotalPages}
+                  totalItems={visibleUsers.length}
                   pageSize={usersPageSize}
                   onPageChange={setCurrentPage}
                   onPageSizeChange={(size) => { setUsersPageSize(size); setCurrentPage(1); }}
@@ -942,80 +1167,65 @@ const UsersRoles = () => {
 
                   {filterPanelOpen && (
                     <div className={styles.roleFilterPanel}>
-                      {/* Role Type dropdown */}
+                      {/* Role Type */}
                       <div className={styles.roleFilterSection}>
                         <span className={styles.roleFilterSectionLabel}>Role Type</span>
-                        <select
-                          className={styles.roleFilterSelect}
+                        <DropdownSelect
+                          options={roleTypeOptions}
                           value={pendingTypeFilter}
-                          onChange={e => {
-                            setPendingTypeFilter(e.target.value as 'own' | 'organisation' | 'franchise');
+                          onChange={val => {
+                            setPendingTypeFilter((val ?? 'own') as 'own' | 'organisation' | 'franchise');
                             setPendingOrgId('');
                             setPendingFranchiseId('');
                             setPendingFranchises([]);
                           }}
-                        >
-                          {roleTypeOptions.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
+                          searchable={false}
+                          clearable={false}
+                        />
                       </div>
 
-                      {/* Organisation select — super admin only */}
+                      {/* Organisation — super admin only */}
                       {isSuperAdmin && (pendingTypeFilter === 'organisation' || pendingTypeFilter === 'franchise') && (
                         <div className={styles.roleFilterSection}>
                           <span className={styles.roleFilterSectionLabel}>Organisation</span>
-                          <select
-                            className={styles.roleFilterSelect}
-                            value={pendingOrgId}
-                            onChange={e => { setPendingOrgId(e.target.value); setPendingFranchiseId(''); }}
-                          >
-                            <option value=''>All Organisations</option>
-                            {topLevelOrgs.map(o => <option key={o.uuid} value={o.uuid}>{o.name}</option>)}
-                          </select>
+                          <DropdownSelect
+                            options={topLevelOrgs.map(o => ({ value: o.uuid, label: o.name }))}
+                            value={pendingOrgId || null}
+                            onChange={val => { setPendingOrgId((val as string) ?? ''); setPendingFranchiseId(''); }}
+                            placeholder="All Organisations"
+                            searchable={true}
+                            clearable={true}
+                          />
                         </div>
                       )}
 
-                      {/* Franchise select */}
+                      {/* Franchise */}
                       {pendingTypeFilter === 'franchise' && (
                         isSuperAdmin ? (
-                          pendingOrgId ? (
-                            <div className={styles.roleFilterSection}>
-                              <span className={styles.roleFilterSectionLabel}>Franchise</span>
-                              {pendingFranchises.length === 0 ? (
-                                <span style={{ fontSize: 12, color: 'var(--ip-text-muted)', fontStyle: 'italic', padding: '4px 2px' }}>
-                                  Loading franchises…
-                                </span>
-                              ) : (
-                                <select
-                                  className={styles.roleFilterSelect}
-                                  value={pendingFranchiseId}
-                                  onChange={e => setPendingFranchiseId(e.target.value)}
-                                >
-                                  <option value=''>All Franchises</option>
-                                  {pendingFranchises.map(f => <option key={f.uuid} value={f.uuid}>{f.name}</option>)}
-                                </select>
-                              )}
-                            </div>
-                          ) : (
-                            <div className={styles.roleFilterSection}>
-                              <span className={styles.roleFilterSectionLabel}>Franchise</span>
-                              <span style={{ fontSize: 12, color: 'var(--ip-text-muted)', fontStyle: 'italic', padding: '4px 2px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                                <Home size={11} style={{ opacity: 0.5 }} /> Select an organisation first
-                              </span>
-                            </div>
-                          )
+                          <div className={styles.roleFilterSection}>
+                            <span className={styles.roleFilterSectionLabel}>Franchise</span>
+                            <DropdownSelect
+                              options={pendingFranchises.map(f => ({ value: f.uuid, label: f.name }))}
+                              value={pendingFranchiseId || null}
+                              onChange={val => setPendingFranchiseId((val as string) ?? '')}
+                              placeholder={pendingOrgId ? 'All Franchises' : 'Select an organisation first'}
+                              disabled={!pendingOrgId}
+                              searchable={true}
+                              clearable={true}
+                              loading={!!pendingOrgId && pendingFranchises.length === 0}
+                            />
+                          </div>
                         ) : isOrgAdmin && orgAdminFranchises.length > 0 ? (
                           <div className={styles.roleFilterSection}>
                             <span className={styles.roleFilterSectionLabel}>Franchise</span>
-                            <select
-                              className={styles.roleFilterSelect}
-                              value={pendingFranchiseId}
-                              onChange={e => setPendingFranchiseId(e.target.value)}
-                            >
-                              <option value=''>All Franchises</option>
-                              {orgAdminFranchises.map(f => <option key={f.uuid} value={f.uuid}>{f.name}</option>)}
-                            </select>
+                            <DropdownSelect
+                              options={orgAdminFranchises.map(f => ({ value: f.uuid, label: f.name }))}
+                              value={pendingFranchiseId || null}
+                              onChange={val => setPendingFranchiseId((val as string) ?? '')}
+                              placeholder="All Franchises"
+                              searchable={true}
+                              clearable={true}
+                            />
                           </div>
                         ) : null
                       )}
@@ -1023,22 +1233,15 @@ const UsersRoles = () => {
                       {/* Divider */}
                       <div className={styles.roleFilterDivider} />
 
-                      {/* Apply + Close buttons */}
+                      {/* Apply + Clear */}
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <button className={styles.roleFilterClose} onClick={() => setFilterPanelOpen(false)}>
-                          Close
+                        <button className={styles.roleFilterClear} onClick={clearRoleFilter}>
+                          Clear
                         </button>
                         <button className={styles.roleFilterApply} onClick={applyRoleFilter}>
                           Apply
                         </button>
                       </div>
-
-                      {/* Clear all filters — only when a filter is currently applied */}
-                      {isFilterActive && (
-                        <button className={styles.roleFilterClear} onClick={clearRoleFilter}>
-                          Clear Filters
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
@@ -1051,9 +1254,8 @@ const UsersRoles = () => {
           </div>
 
           {rolesLoading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '56px 24px', gap: 12 }}>
-              <Loader2 size={28} style={{ color: '#1a7bbd', animation: 'spin 1s linear infinite' }} />
-              <span style={{ fontSize: 13, color: '#9CA3AF' }}>Loading roles…</span>
+            <div className={styles.emptyState}>
+              <Loader variant="inline" type="spinner" small text="Loading roles…" />
             </div>
           ) : visibleRoles.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '56px 24px', gap: 12 }}>
@@ -1248,9 +1450,7 @@ const UsersRoles = () => {
           </DialogHeader>
           <div className="overflow-y-auto flex-1 px-4 py-3">
             {usersModalLoading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
-                <Loader2 size={20} style={{ color: '#1a7bbd', animation: 'spin 1s linear infinite' }} />
-              </div>
+              <Loader variant="inline" type="spinner" small />
             ) : usersModalList.length === 0 ? (
               <p style={{ fontSize: 13, color: '#9CA3AF', fontStyle: 'italic', textAlign: 'center', padding: '24px 0' }}>No users assigned to this role.</p>
             ) : (
@@ -1439,9 +1639,7 @@ const UsersRoles = () => {
               </div>
 
               {modulesLoading ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
-                  <Loader2 size={20} style={{ color: '#1a7bbd', animation: 'spin 1s linear infinite' }} />
-                </div>
+                <Loader variant="inline" type="spinner" small />
               ) : (
                 <div className={styles.modulePickerList}>
                   {allModules.map((mod) => {

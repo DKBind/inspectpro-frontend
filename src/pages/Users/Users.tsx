@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Pagination from '@/components/shared-ui/Pagination/Pagination';
 import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
+import Loader from '@/components/shared-ui/Loader/Loader';
 
 import { userService } from '@/services/userService';
 import { organisationService } from '@/services/organisationService';
@@ -117,9 +118,12 @@ const Users = () => {
   const [filterRoleId, setFilterRoleId] = useState('');
   const [filterOrgId, setFilterOrgId] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterFranchiseId, setFilterFranchiseId] = useState('');
   // Pending (not applied yet)
   const [pendingRoleId, setPendingRoleId] = useState('');
   const [pendingOrgId, setPendingOrgId] = useState('');
+  const [pendingFranchiseId, setPendingFranchiseId] = useState('');
+  const [pendingFranchises, setPendingFranchises] = useState<OrganisationResponse[]>([]);
   const [pendingStatus, setPendingStatus] = useState('');
 
   // Account type for create modal (super admin only) — default: 'internal'
@@ -204,11 +208,13 @@ const Users = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [filterOpen]);
 
-  const isFilterActive = !!filterRoleId || !!filterOrgId || !!filterStatus;
+  const isFilterActive = !!filterRoleId || !!filterOrgId || !!filterFranchiseId || !!filterStatus;
 
   const openFilter = () => {
     setPendingRoleId(filterRoleId);
     setPendingOrgId(filterOrgId);
+    setPendingFranchiseId(filterFranchiseId);
+    setPendingFranchises([]);
     setPendingStatus(filterStatus);
     setFilterOpen(true);
   };
@@ -216,22 +222,36 @@ const Users = () => {
   const applyFilter = () => {
     setFilterRoleId(pendingRoleId);
     setFilterOrgId(pendingOrgId);
+    setFilterFranchiseId(pendingFranchiseId);
     setFilterStatus(pendingStatus);
     setCurrentPage(1);
     setFilterOpen(false);
   };
 
   const clearFilter = () => {
-    setFilterRoleId(''); setFilterOrgId(''); setFilterStatus('');
-    setPendingRoleId(''); setPendingOrgId(''); setPendingStatus('');
+    setFilterRoleId(''); setFilterOrgId(''); setFilterFranchiseId(''); setFilterStatus('');
+    setPendingRoleId(''); setPendingOrgId(''); setPendingFranchiseId(''); setPendingFranchises([]); setPendingStatus('');
     setCurrentPage(1);
     setFilterOpen(false);
   };
 
+  // Load franchises when org is selected in filter panel
+  useEffect(() => {
+    if (!pendingOrgId) { setPendingFranchises([]); setPendingFranchiseId(''); return; }
+    organisationService.getFranchises(0, 500, pendingOrgId)
+      .then(d => setPendingFranchises(d.content ?? []))
+      .catch(() => setPendingFranchises([]));
+  }, [pendingOrgId]);
+
   const filteredUsers = users.filter(u => {
     if (u.roleName?.toLowerCase() === 'client') return false;
     if (filterRoleId && String(u.roleId) !== filterRoleId) return false;
-    if (filterOrgId && u.orgId !== filterOrgId) return false;
+    if (filterFranchiseId && u.orgId !== filterFranchiseId) return false;
+    else if (!filterFranchiseId && filterOrgId) {
+      // filter by parent org: include users whose org is the org itself or a franchise under it
+      const userOrg = orgs.find(o => o.uuid === u.orgId);
+      if (u.orgId !== filterOrgId && userOrg?.parentOrgId !== filterOrgId) return false;
+    }
     if (filterStatus === 'active' && (u.statusId ?? 1) !== 1) return false;
     if (filterStatus === 'inactive' && (u.statusId ?? 1) === 1) return false;
     return true;
@@ -434,13 +454,55 @@ const Users = () => {
                       <DropdownSelect
                         options={[{ value: '', label: 'All Organisations' }, ...orgs.filter(o => !o.parentOrgId).map(o => ({ value: o.uuid, label: o.name }))]}
                         value={pendingOrgId || null}
-                        onChange={v => setPendingOrgId(v == null ? '' : String(v))}
+                        onChange={v => { setPendingOrgId(v == null ? '' : String(v)); setPendingFranchiseId(''); }}
                         searchable
                         clearable={false}
                         dropUp
                       />
                     </div>
                   )}
+
+                  {/* Franchise filter — super admin (requires org selected) or org admin */}
+                  {isSuperAdmin ? (
+                    pendingOrgId ? (
+                      <div className={styles.filterSection}>
+                        <span className={styles.filterSectionLabel}>Franchise</span>
+                        {pendingFranchises.length === 0 ? (
+                          <span style={{ fontSize: 12, color: 'var(--ip-text-muted)', fontStyle: 'italic', padding: '4px 2px' }}>
+                            Loading franchises…
+                          </span>
+                        ) : (
+                          <DropdownSelect
+                            options={[{ value: '', label: 'All Franchises' }, ...pendingFranchises.map(f => ({ value: f.uuid, label: f.name }))]}
+                            value={pendingFranchiseId || null}
+                            onChange={v => setPendingFranchiseId(v == null ? '' : String(v))}
+                            searchable
+                            clearable={false}
+                            dropUp
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className={styles.filterSection}>
+                        <span className={styles.filterSectionLabel}>Franchise</span>
+                        <span style={{ fontSize: 12, color: 'var(--ip-text-muted)', fontStyle: 'italic', padding: '4px 2px' }}>
+                          Select an organisation first
+                        </span>
+                      </div>
+                    )
+                  ) : isOrgAdmin && orgAdminFranchises.length > 0 ? (
+                    <div className={styles.filterSection}>
+                      <span className={styles.filterSectionLabel}>Franchise</span>
+                      <DropdownSelect
+                        options={[{ value: '', label: 'All Franchises' }, ...orgAdminFranchises.map(f => ({ value: f.uuid, label: f.name }))]}
+                        value={pendingFranchiseId || null}
+                        onChange={v => setPendingFranchiseId(v == null ? '' : String(v))}
+                        searchable
+                        clearable={false}
+                        dropUp
+                      />
+                    </div>
+                  ) : null}
                   <div className={styles.filterSection}>
                     <span className={styles.filterSectionLabel}>Status</span>
                     <DropdownSelect
@@ -476,7 +538,7 @@ const Users = () => {
         <div className={styles.panelBody}>
           {loading ? (
             <div className={styles.emptyState}>
-              <div className={styles.spinner} />
+              <Loader variant="inline" type="spinner" text="Loading users…" />
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className={styles.emptyState}>

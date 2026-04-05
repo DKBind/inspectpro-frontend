@@ -1,7 +1,7 @@
 .settingsPage {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  /* gap: 24px; */
 }
 
 .pageHeader {

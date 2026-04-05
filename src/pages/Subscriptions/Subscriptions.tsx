@@ -25,6 +25,7 @@ import { Input } from '@/components/shared-ui/Input/input';
 import styles from './Subscriptions.module.css';
 
 import { Fld, ViewRow, inputCls } from '@/components/shared-ui/form-helpers';
+import Loader from '@/components/shared-ui/Loader/Loader';
 
 const PAGE_SIZE = 10;
 
@@ -85,8 +86,7 @@ function PlanTable({
   if (loading) {
     return (
       <div className={styles.emptyState}>
-        <div className={styles.spinner} />
-        <p style={{ marginTop: 12 }}>Loading...</p>
+        <Loader variant="inline" type="spinner" small text="Loading plans…" />
       </div>
     );
   }
@@ -398,15 +398,15 @@ const Subscriptions = () => {
   return (
     <div className={styles.page}>
       {/* Header */}
-      <div className={styles.pageHeader}>
-        {/* <div>
+      {/* <div className={styles.pageHeader}>
+        <div>
           <h1 className={styles.pageTitle}>Subscriptions</h1>
-        </div> */}
-        {/* <button className={styles.createBtn} onClick={() => openCreate(activeTab)}>
+        </div>
+        <button className={styles.createBtn} onClick={() => openCreate(activeTab)}>
           <Plus style={{ display: 'inline', width: 16, height: 16, marginRight: 6, verticalAlign: 'middle' }} />
           Create Plan
-        </button> */}
-      </div>
+        </button>
+      </div> */}
 
       {/* Tabs — super admin sees both; org admin sees only Franchise tab */}
       {isSuperAdmin && (
@@ -605,9 +605,12 @@ const Subscriptions = () => {
 
               <Fld label="Features (Modules)" hint="Select which features this plan includes">
                 {modulesLoading ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0', color: '#6B7280', fontSize: 13 }}>
-                    <Loader2 size={14} className="animate-spin" /> Loading modules…
+                  <div className={styles.emptyState}>
+                    <Loader variant="inline" type="spinner" text="Loading users…" />
                   </div>
+                  // <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0', color: '#6B7280', fontSize: 13 }}>
+                  //   <Loader2 size={14} className="animate-spin" /> Loading modules…
+                  // </div>
                 ) : allDbModules.length === 0 ? (
                   <p className="text-xs text-[#6B7280] py-2">No modules available.</p>
                 ) : (
