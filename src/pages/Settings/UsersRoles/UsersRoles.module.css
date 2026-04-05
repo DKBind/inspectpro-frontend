@@ -43,8 +43,15 @@
   border-radius: 14px;
   background: var(--ip-surface);
   border: 1px solid var(--ip-border);
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--ip-shadow-sm);
+}
+
+/* Wraps the table so it clips to panel corners without clipping floating panels */
+.tableScroll {
+  overflow-x: auto;
+  border-radius: 0 0 14px 14px;
+  overflow-y: hidden;
 }
 
 .panelHeader {
@@ -899,6 +906,8 @@
   }
 }
 
+
+
 /* Each labelled section inside the panel */
 .roleFilterSection {
   display: flex;
@@ -1022,7 +1031,8 @@
 
 /* Clear all filters */
 .roleFilterClear {
-  width: 100%;
+  /* width: 100%; */
+  flex: 1;
   padding: 7px 0;
   border-radius: 8px;
   border: 1px solid rgba(239, 68, 68, 0.22);
@@ -1038,4 +1048,12 @@
 .roleFilterClear:hover {
   background: rgba(239, 68, 68, 0.09);
   border-color: rgba(239, 68, 68, 0.4);
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
 }

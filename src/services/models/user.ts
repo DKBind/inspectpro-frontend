@@ -70,6 +70,7 @@ export interface UserRequest {
 export type RoleScope = 'PLATFORM' | 'ORGANISATION' | 'FRANCHISE';
 
 export interface RoleResponse {
+  roleName: string;
   roleId: number;
   name: string;
   description?: string;

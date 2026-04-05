@@ -318,3 +318,171 @@
 .toggleOff::after {
   left: 2px;
 }
+
+/* ─── Count Badge ────────────────────────────────── */
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 20px;
+  background: var(--ip-brand-light, rgba(26,123,189,0.10));
+  color: var(--ip-brand, #1a7bbd);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ─── Filter button ──────────────────────────────── */
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid #E5E7EB;
+  background: #fff;
+  color: #4B5563;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  font-family: inherit;
+}
+
+.filterBtn:hover {
+  border-color: var(--ip-brand, #1a7bbd);
+  color: var(--ip-brand, #1a7bbd);
+  background: rgba(26,123,189,0.04);
+}
+
+.filterBtnActive {
+  border-color: var(--ip-brand, #1a7bbd);
+  color: var(--ip-brand, #1a7bbd);
+  background: rgba(26,123,189,0.06);
+  font-weight: 600;
+}
+
+.filterDot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ip-brand, #1a7bbd);
+}
+
+.filterActiveBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(26,123,189,0.10);
+  color: var(--ip-brand, #1a7bbd);
+  border: 1px solid rgba(26,123,189,0.20);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Filter panel ───────────────────────────────── */
+.filterPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 200;
+  min-width: 256px;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+  padding: 18px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: filterPanelIn 0.15s ease;
+}
+
+@keyframes filterPanelIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+.filterSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filterSectionLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #6B7280;
+}
+
+.filterDivider {
+  height: 1px;
+  background: #F3F4F6;
+  margin: 2px 0;
+}
+
+.filterApply {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: 7px;
+  border: none;
+  background: var(--ip-brand, #1a7bbd);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.filterApply:hover { background: #155f96; }
+
+.filterClose {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: 7px;
+  border: 1px solid #E5E7EB;
+  background: transparent;
+  color: #6B7280;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.filterClose:hover {
+  border-color: #D1D5DB;
+  color: #263B4F;
+}
+
+.filterClear {
+  width: 100%;
+  padding: 7px 0;
+  border-radius: 7px;
+  border: 1px solid rgba(220,38,38,0.25);
+  background: transparent;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.filterClear:hover {
+  background: rgba(220,38,38,0.06);
+  border-color: rgba(220,38,38,0.40);
+}

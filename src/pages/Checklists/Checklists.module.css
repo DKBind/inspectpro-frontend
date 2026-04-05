@@ -58,8 +58,8 @@
 }
 
 .createBtn:hover {
-  background: #2a9a84;
-  box-shadow: 0 4px 12px rgba(51, 174, 149, 0.4);
+  background: #5db0e9;
+  box-shadow: #76bcec;
 }
 
 .refreshBtn {

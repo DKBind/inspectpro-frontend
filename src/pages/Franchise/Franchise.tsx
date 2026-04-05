@@ -17,6 +17,7 @@ import {
 } from '@/components/shared-ui/Dialog/dialog';
 import { Button } from '@/components/shared-ui/Button/button';
 import styles from '@/pages/Organisation/Organisation.module.css';
+import Loader from '@/components/shared-ui/Loader/Loader';
 
 const Franchise = () => {
   const [franchises, setFranchises] = useState<OrganisationResponse[]>([]);
@@ -128,9 +129,12 @@ const Franchise = () => {
 
         <div className={styles.panelBody}>
           {loading ? (
+            // <div className={styles.emptyState}>
+            //   <div className={styles.spinner} />
+            //   <p style={{ marginTop: 12 }}>Loading...</p>
+            // </div>
             <div className={styles.emptyState}>
-              <div className={styles.spinner} />
-              <p style={{ marginTop: 12 }}>Loading...</p>
+              <Loader variant="inline" type="spinner" text="Loading franchise…" />
             </div>
           ) : franchises.length === 0 ? (
             <div className={styles.emptyState}>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -6,8 +6,10 @@ import { toast } from 'sonner';
 import {
   Users, Plus, Eye, Pencil, Trash2, Mail, Phone,
   Building2, AlertTriangle, User, Loader2,
-  Lock, Wand2, ChevronDown, GitBranch,
+  Lock, Wand2, ChevronDown, GitBranch, SlidersHorizontal,
 } from 'lucide-react';
+import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
+import Loader from '@/components/shared-ui/Loader/Loader';
 
 import { customerService } from '@/services/customerService';
 import { organisationService } from '@/services/organisationService';
@@ -94,6 +96,14 @@ const Clients = () => {
   const [statusToggleTarget, setStatusToggleTarget] = useState<CustomerResponse | null>(null);
   const [toggling, setToggling] = useState(false);
 
+  // ── Filter state ─────────────────────────────────────────────────────────
+  const filterRef = useRef<HTMLDivElement>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterOrgId, setFilterOrgId] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [pendingOrgId, setPendingOrgId] = useState('');
+  const [pendingStatus, setPendingStatus] = useState('');
+
   // ── "Who is this for?" state ────────────────────────────────────────────
   const [ownership, setOwnership] = useState<Ownership>('own');
   // Super admin lists
@@ -174,6 +184,45 @@ const Clients = () => {
     setSelectedParentOrgId('');
     setFilteredFranchises([]);
   };
+
+  // ── Filter helpers ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!filterOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setFilterOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [filterOpen]);
+
+  const isFilterActive = !!filterOrgId || !!filterStatus;
+
+  const openFilter = () => {
+    setPendingOrgId(filterOrgId);
+    setPendingStatus(filterStatus);
+    setFilterOpen(true);
+  };
+
+  const applyFilter = () => {
+    setFilterOrgId(pendingOrgId);
+    setFilterStatus(pendingStatus);
+    setCurrentPage(1);
+    setFilterOpen(false);
+  };
+
+  const clearFilter = () => {
+    setFilterOrgId(''); setFilterStatus('');
+    setPendingOrgId(''); setPendingStatus('');
+    setCurrentPage(1);
+    setFilterOpen(false);
+  };
+
+  const filteredClients = clients.filter(c => {
+    if (filterOrgId && c.franchiseId !== filterOrgId) return false;
+    if (filterStatus === 'active' && !c.isActive) return false;
+    if (filterStatus === 'inactive' && c.isActive) return false;
+    return true;
+  });
 
   const openCreate = () => { resetCreate(EMPTY_CREATE); resetOwnership(); setCreateOpen(true); };
   const openEdit = (c: CustomerResponse) => {
@@ -365,16 +414,70 @@ const Clients = () => {
           <div className={styles.panelTitle}>
             <Users style={{ width: 16, height: 16, color: '#1a7bbd' }} />
             All Clients
+            <span className={styles.countBadge}>{filteredClients.length}</span>
+            {isFilterActive && <span className={styles.filterActiveBadge}>Filtered</span>}
           </div>
-          <button className={styles.createBtn} onClick={openCreate}>
-            <Plus style={{ width: 15, height: 15 }} /> Add Client
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* <div ref={filterRef} style={{ position: 'relative' }}>
+              <button
+                className={`${styles.filterBtn} ${isFilterActive ? styles.filterBtnActive : ''}`}
+                onClick={openFilter}
+              >
+                <SlidersHorizontal size={14} />
+                Filter
+                {isFilterActive && <span className={styles.filterDot} />}
+              </button>
+              {filterOpen && (
+                <div className={styles.filterPanel}>
+                  {(isSuperAdmin || !isFranchiseAdmin) && allOrgs.length > 0 && (
+                    <div className={styles.filterSection}>
+                      <span className={styles.filterSectionLabel}>Organisation</span>
+                      <DropdownSelect
+                        options={[{ value: '', label: 'All Organisations' }, ...allOrgs.map(o => ({ value: o.uuid, label: o.name }))]}
+                        value={pendingOrgId || null}
+                        onChange={v => setPendingOrgId(v == null ? '' : String(v))}
+                        searchable
+                        clearable={false}
+                        dropUp
+                      />
+                    </div>
+                  )}
+                  <div className={styles.filterSection}>
+                    <span className={styles.filterSectionLabel}>Status</span>
+                    <DropdownSelect
+                      options={[
+                        { value: '', label: 'All Statuses' },
+                        { value: 'active', label: 'Active' },
+                        { value: 'inactive', label: 'Inactive' },
+                      ]}
+                      value={pendingStatus || null}
+                      onChange={v => setPendingStatus(v == null ? '' : String(v))}
+                      searchable={false}
+                      clearable={false}
+                      dropUp
+                    />
+                  </div>
+                  <div className={styles.filterDivider} />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className={styles.filterClose} onClick={() => setFilterOpen(false)}>Close</button>
+                    <button className={styles.filterApply} onClick={applyFilter}>Apply</button>
+                  </div>
+                  {isFilterActive && (
+                    <button className={styles.filterClear} onClick={clearFilter}>Clear Filters</button>
+                  )}
+                </div>
+              )}
+            </div> */}
+            <button className={styles.createBtn} onClick={openCreate}>
+              <Plus style={{ width: 15, height: 15 }} /> Add Client
+            </button>
+          </div>
         </div>
 
         <div className={styles.panelBody}>
           {loading ? (
             <div className={styles.emptyState}>
-              <Loader2 className={styles.spinner} /><p>Loading clients...</p>
+              <Loader variant="inline" type="spinner" small text="Loading clients…" />
             </div>
           ) : clients.length === 0 ? (
             <div className={styles.emptyState}>
