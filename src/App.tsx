@@ -23,8 +23,8 @@ import Projects from './pages/Projects/Projects';
 import ProjectDetail from './pages/Projects/ProjectDetail';
 import ProjectCreate from './pages/Projects/ProjectCreate';
 import ProjectEdit from './pages/Projects/ProjectEdit';
-import Checklists from './pages/Checklists/Checklists';
 import TemplateBuilder from './pages/Templates/TemplateBuilder';
+import TemplateList from './pages/Templates/TemplateList';
 import InspectionList from './pages/Inspections/InspectionList';
 import InspectionExecution from './pages/Inspections/InspectionExecution';
 import DefectSummary from './pages/Inspections/DefectSummary';
@@ -67,7 +67,7 @@ const AppRoutes = () => {
           <Route path={ROUTES.PROJECT_EDIT} element={<ProjectEdit />} />
           <Route path={ROUTES.INSPECTIONS} element={<InspectionList />} />
           <Route path={ROUTES.INSPECTION_EXECUTE} element={<InspectionExecution />} />
-          <Route path={ROUTES.CHECKLISTS} element={<Checklists />} />
+          <Route path={ROUTES.TEMPLATE_LIST} element={<TemplateList />} />
           <Route path={ROUTES.TEMPLATE_BUILDER} element={<TemplateBuilder />} />
           <Route path={ROUTES.DEFECTS} element={<Dashboard />} />
           <Route path={ROUTES.DEFECT_SUMMARY} element={<DefectSummary />} />
