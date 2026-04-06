@@ -8,9 +8,12 @@ import {
   FolderOpen, Folder, LayoutTemplate, Copy, ArrowUp, ArrowDown, ArrowRight,
 } from 'lucide-react';
 import { checklistService } from '@/services/checklistService';
+import { propertyTypeService } from '@/services/propertyTypeService';
 import type {
   TemplateNode, BuilderItem, BuilderPanelType, TemplateResponse,
 } from '@/services/models/checklist';
+import type { PropertyTypeResponse, PropertySubTypeResponse } from '@/services/propertyTypeService';
+import DropdownSelect from '@/components/shared-ui/DropdownSelect/DropdownSelect';
 import css from './TemplateBuilder.module.css';
 
 /* ─────────────────────────────────────────────────────────────────
@@ -27,8 +30,15 @@ const emptyFolder = (name: string): TemplateNode => ({
   id: genId(), name, type: 'FOLDER', children: [],
 });
 
-const emptyLeaf = (name: string, panelType: BuilderPanelType): TemplateNode => ({
+const emptyLeaf = (
+  name: string,
+  panelType: BuilderPanelType,
+  isProjectSpec = false,
+  projectSpecType?: 'NUMBER' | 'TEXT',
+): TemplateNode => ({
   id: genId(), name, type: 'LEAF', panelType, items: [],
+  isProjectSpec,
+  projectSpecType: isProjectSpec ? projectSpecType : undefined,
 });
 
 // ── Immutable tree helpers ──────────────────────────────────────────────────
@@ -205,6 +215,18 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [titleError, setTitleError] = useState(false);
+
+  // Property classification
+  const [propertyTypes, setPropertyTypes] = useState<PropertyTypeResponse[]>([]);
+  const [propertySubTypes, setPropertySubTypes] = useState<PropertySubTypeResponse[]>([]);
+  const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
+  const [selectedSubTypeId, setSelectedSubTypeId] = useState<number | null>(null);
+  const [subTypesLoading, setSubTypesLoading] = useState(false);
+  // Inline "Create New" for type/subtype
+  const [newTypeName, setNewTypeName] = useState('');
+  const [showNewTypeInput, setShowNewTypeInput] = useState(false);
+  const [newSubTypeName, setNewSubTypeName] = useState('');
+  const [showNewSubTypeInput, setShowNewSubTypeInput] = useState(false);
   const [nodes, setNodes] = useState<TemplateNode[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Which LEAF panel is "open" inside the selected folder (Level 2 drill-down)
@@ -245,14 +267,65 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
   // Reset focused row when entering Level 2
   useEffect(() => { if (selectedLeafId) setFocusedLeafId(null); }, [selectedLeafId]);
 
-  /* load */
+  /* Load property types once */
+  useEffect(() => {
+    propertyTypeService.listPropertyTypes()
+      .then(setPropertyTypes)
+      .catch(() => {/* non-critical */});
+  }, []);
+
+  /* Load sub-types whenever selected type changes */
+  useEffect(() => {
+    if (!selectedTypeId) { setPropertySubTypes([]); setSelectedSubTypeId(null); return; }
+    setSubTypesLoading(true);
+    propertyTypeService.listPropertySubTypes(selectedTypeId)
+      .then(setPropertySubTypes)
+      .catch(() => {/* non-critical */})
+      .finally(() => setSubTypesLoading(false));
+  }, [selectedTypeId]);
+
+  /* Inline: create new property type */
+  const handleCreateNewType = async () => {
+    const name = newTypeName.trim();
+    if (!name) return;
+    try {
+      const created = await propertyTypeService.createPropertyType({ name });
+      setPropertyTypes(prev => [...prev, created]);
+      setSelectedTypeId(created.id);
+      setNewTypeName('');
+      setShowNewTypeInput(false);
+      toast.success(`Property type "${name}" created`);
+    } catch (e: unknown) {
+      toast.error((e as Error).message || 'Failed to create property type');
+    }
+  };
+
+  /* Inline: create new property sub-type */
+  const handleCreateNewSubType = async () => {
+    const name = newSubTypeName.trim();
+    if (!name || !selectedTypeId) return;
+    try {
+      const created = await propertyTypeService.createPropertySubType({ name, propertyTypeId: selectedTypeId });
+      setPropertySubTypes(prev => [...prev, created]);
+      setSelectedSubTypeId(created.id);
+      setNewSubTypeName('');
+      setShowNewSubTypeInput(false);
+      toast.success(`Sub-type "${name}" created`);
+    } catch (e: unknown) {
+      toast.error((e as Error).message || 'Failed to create sub-type');
+    }
+  };
+
+  /* load template */
   useEffect(() => {
     if (isNew) { setLoading(false); return; }
     setLoading(true);
     checklistService.getTemplate(id!).then((tpl: TemplateResponse) => {
       setTitle(tpl.title || '');
-      setDescription((tpl as any).description || '');
+      setDescription(tpl.description || '');
       templateIdRef.current = tpl.id?.toString();
+      if (tpl.propertyTypeId) setSelectedTypeId(tpl.propertyTypeId);
+      if (tpl.propertySubTypeId) setSelectedSubTypeId(tpl.propertySubTypeId);
       // Prefer new recursive nodes, fall back to legacy sections
       const loaded = (tpl.nodes && tpl.nodes.length > 0)
         ? tpl.nodes
@@ -283,8 +356,8 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
     setExpandedIds(p => new Set([...p, '__root__', node.id]));
   };
 
-  const addRootLeaf = (type: BuilderPanelType, name?: string, reportName?: string) => {
-    const node = { ...emptyLeaf(name ?? `${type === 'SELECTION' ? 'Selection' : 'Damage'} ${nodes.length + 1}`, type), reportName };
+  const addRootLeaf = (type: BuilderPanelType, name?: string, reportName?: string, isProjectSpec?: boolean, projectSpecType?: 'NUMBER' | 'TEXT') => {
+    const node = { ...emptyLeaf(name ?? `${type === 'SELECTION' ? 'Selection' : 'Damage'} ${nodes.length + 1}`, type, isProjectSpec, projectSpecType), reportName };
     dirty(p => [...p, node]);
     setSelectedId(null); // root LEAFs not shown in workspace; stay at root view
   };
@@ -298,10 +371,10 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
     setExpandedIds(p => new Set([...p, parentId, child.id]));
   };
 
-  const addChildLeaf = (parentId: string, type: BuilderPanelType, name?: string, reportName?: string) => {
+  const addChildLeaf = (parentId: string, type: BuilderPanelType, name?: string, reportName?: string, isProjectSpec?: boolean, projectSpecType?: 'NUMBER' | 'TEXT') => {
     const parent = findNode(nodes, parentId);
     const leafCount = (parent?.children ?? []).filter(c => c.type === 'LEAF').length;
-    const child = { ...emptyLeaf(name ?? `${type === 'SELECTION' ? 'Selection' : 'Damage'} ${leafCount + 1}`, type), reportName };
+    const child = { ...emptyLeaf(name ?? `${type === 'SELECTION' ? 'Selection' : 'Damage'} ${leafCount + 1}`, type, isProjectSpec, projectSpecType), reportName };
     dirty(p => addChildTo(p, parentId, child));
     setSelectedId(parentId);   // stay in parent folder so checklist view refreshes
     setExpandedIds(p => new Set([...p, parentId]));
@@ -336,7 +409,7 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
     setNameModal({ type, leafType, parentId });
   };
 
-  const handleNameModalConfirm = (name: string, reportName?: string) => {
+  const handleNameModalConfirm = (name: string, reportName?: string, isProjectSpec?: boolean, projectSpecType?: 'NUMBER' | 'TEXT') => {
     if (!nameModal) return;
     const { type, leafType, parentId } = nameModal;
 
@@ -349,8 +422,8 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
       if (parentId) addChildFolder(parentId, name);
       else addRootFolder(name);
     } else {
-      if (parentId) addChildLeaf(parentId, leafType, name, reportName);
-      else addRootLeaf(leafType, name, reportName);
+      if (parentId) addChildLeaf(parentId, leafType, name, reportName, isProjectSpec, projectSpecType);
+      else addRootLeaf(leafType, name, reportName, isProjectSpec, projectSpecType);
     }
     setNameModal(null);
   };
@@ -470,6 +543,7 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
         title: trimmed,
         description: description.trim() || undefined,
         scope: searchParams.get('scope') || 'ORGANISATION',
+        propertySubTypeId: selectedSubTypeId ?? undefined,
         nodes: nodes as any[],
         sections: [],
       };
@@ -520,6 +594,7 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
           title={nameModal.type === 'FOLDER' ? 'New Folder' : `New ${nameModal.leafType === 'SELECTION' ? 'Selection' : 'Damage'} Panel`}
           placeholder={nameModal.type === 'FOLDER' ? 'e.g. Exterior' : 'e.g. Roof Inspection'}
           showReportName={nameModal.type === 'LEAF'}
+          showProjectSpec={nameModal.type === 'LEAF'}
           onConfirm={handleNameModalConfirm}
           onCancel={() => setNameModal(null)}
         />
@@ -630,6 +705,82 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
             placeholder="Short description (optional)"
             className={css.descInput}
           />
+
+          {/* ── Property Type / Sub-Type ── */}
+          <div className={css.propertyRow}>
+            {/* Property Type */}
+            <div className={css.propertyField}>
+              <label className={css.propertyLabel}>Property Type <span className={css.required}>*</span></label>
+              {showNewTypeInput ? (
+                <div className={css.inlineCreate}>
+                  <input
+                    autoFocus
+                    className={css.inlineInput}
+                    placeholder="New type name"
+                    value={newTypeName}
+                    onChange={e => setNewTypeName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleCreateNewType(); if (e.key === 'Escape') setShowNewTypeInput(false); }}
+                  />
+                  <button className={css.inlineConfirm} onClick={handleCreateNewType} disabled={!newTypeName.trim()}>Add</button>
+                  <button className={css.inlineCancel} onClick={() => { setShowNewTypeInput(false); setNewTypeName(''); }}>✕</button>
+                </div>
+              ) : (
+                <DropdownSelect
+                  options={[
+                    ...propertyTypes.map(t => ({ value: t.id, label: t.name })),
+                    { value: '__new__', label: '+ Create New Type' },
+                  ]}
+                  value={selectedTypeId}
+                  onChange={v => {
+                    if (v === '__new__') { setShowNewTypeInput(true); return; }
+                    setSelectedTypeId(v as number | null);
+                    setSelectedSubTypeId(null);
+                    setChanges(c => c + 1);
+                  }}
+                  placeholder="Select property type"
+                  searchable
+                  clearable
+                />
+              )}
+            </div>
+
+            {/* Property Sub-Type */}
+            <div className={css.propertyField}>
+              <label className={css.propertyLabel}>Property Sub-Type <span className={css.required}>*</span></label>
+              {showNewSubTypeInput ? (
+                <div className={css.inlineCreate}>
+                  <input
+                    autoFocus
+                    className={css.inlineInput}
+                    placeholder="New sub-type name"
+                    value={newSubTypeName}
+                    onChange={e => setNewSubTypeName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleCreateNewSubType(); if (e.key === 'Escape') setShowNewSubTypeInput(false); }}
+                  />
+                  <button className={css.inlineConfirm} onClick={handleCreateNewSubType} disabled={!newSubTypeName.trim() || !selectedTypeId}>Add</button>
+                  <button className={css.inlineCancel} onClick={() => { setShowNewSubTypeInput(false); setNewSubTypeName(''); }}>✕</button>
+                </div>
+              ) : (
+                <DropdownSelect
+                  options={[
+                    ...propertySubTypes.map(s => ({ value: s.id, label: s.name })),
+                    ...(selectedTypeId ? [{ value: '__new__', label: '+ Create New Sub-Type' }] : []),
+                  ]}
+                  value={selectedSubTypeId}
+                  onChange={v => {
+                    if (v === '__new__') { setShowNewSubTypeInput(true); return; }
+                    setSelectedSubTypeId(v as number | null);
+                    setChanges(c => c + 1);
+                  }}
+                  placeholder={selectedTypeId ? 'Select sub-type' : 'Select a type first'}
+                  disabled={!selectedTypeId}
+                  loading={subTypesLoading}
+                  searchable
+                  clearable
+                />
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1472,25 +1623,40 @@ function nodeMatchesSearch(node: TemplateNode, q: string): boolean {
   return false;
 }
 
-function NameModal({ title, placeholder, showReportName, onConfirm, onCancel }: {
+const PROJECT_SPEC_TYPE_OPTIONS = [
+  { value: 'NUMBER', label: 'Number' },
+  { value: 'TEXT',   label: 'Text' },
+];
+
+function NameModal({ title, placeholder, showReportName, showProjectSpec, onConfirm, onCancel }: {
   title: string;
   placeholder: string;
   showReportName?: boolean;
-  onConfirm: (name: string, reportName?: string) => void;
+  showProjectSpec?: boolean;
+  onConfirm: (name: string, reportName?: string, isProjectSpec?: boolean, projectSpecType?: 'NUMBER' | 'TEXT') => void;
   onCancel: () => void;
 }) {
   const [val, setVal] = useState('');
   const [useCustomReport, setUseCustomReport] = useState(false);
   const [reportName, setReportName] = useState('');
+  const [isProjectSpec, setIsProjectSpec] = useState(false);
+  const [projectSpecType, setProjectSpecType] = useState<'NUMBER' | 'TEXT' | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
+  const canSubmit = val.trim() !== '' && (!showProjectSpec || !isProjectSpec || projectSpecType !== null);
+
   const submit = () => {
+    if (!canSubmit) return;
     const trimmed = val.trim();
-    if (!trimmed) return;
     const finalReport = useCustomReport && reportName.trim() ? reportName.trim() : trimmed;
-    onConfirm(trimmed, showReportName ? finalReport : undefined);
+    onConfirm(
+      trimmed,
+      showReportName ? finalReport : undefined,
+      showProjectSpec ? isProjectSpec : undefined,
+      showProjectSpec && isProjectSpec ? (projectSpecType ?? undefined) : undefined,
+    );
   };
 
   return (
@@ -1527,9 +1693,36 @@ function NameModal({ title, placeholder, showReportName, onConfirm, onCancel }: 
             )}
           </>
         )}
+        {showProjectSpec && (
+          <>
+            <label className={css.modalCheckboxRow} style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
+              <input
+                type="checkbox"
+                checked={isProjectSpec}
+                onChange={e => {
+                  setIsProjectSpec(e.target.checked);
+                  if (!e.target.checked) setProjectSpecType(null);
+                }}
+                className={css.modalCheckbox}
+              />
+              Show in Project Spec?
+            </label>
+            {isProjectSpec && (
+              <div style={{ marginTop: 8 }}>
+                <DropdownSelect
+                  options={PROJECT_SPEC_TYPE_OPTIONS}
+                  value={projectSpecType}
+                  onChange={v => setProjectSpecType(v as 'NUMBER' | 'TEXT')}
+                  placeholder="Select value type..."
+                  clearable={false}
+                />
+              </div>
+            )}
+          </>
+        )}
         <div className={css.modalActions}>
           <button className={css.modalCancelBtn} onClick={onCancel}>Cancel</button>
-          <button className={css.modalConfirmBtn} onClick={submit} disabled={!val.trim()}>
+          <button className={css.modalConfirmBtn} onClick={submit} disabled={!canSubmit}>
             Create
           </button>
         </div>

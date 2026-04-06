@@ -1,0 +1,407 @@
+/* ─── Design tokens ──────────────────────────────────────────────────────── */
+:root {
+  --status-active:   #16a34a;
+  --status-inactive: #6b7280;
+  --status-draft:    #d97706;
+}
+
+/* Local aliases → project design tokens */
+.page { --bg-surface: var(--ip-surface); --border-color: var(--ip-border); --text-primary: var(--ip-text-primary); --text-secondary: var(--ip-text-secondary); --text-muted: var(--ip-text-muted); --bg-hover: var(--ip-surface-hover); --bg-muted: var(--ip-surface-raised); --primary: var(--ip-brand); --primary-dark: var(--ip-brand-hover); --bg-active: var(--ip-brand-light); }
+
+/* ─── Page ───────────────────────────────────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  min-height: 100%;
+}
+
+/* ─── Toolbar ────────────────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── Search ─────────────────────────────────────────────────────────────── */
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  padding: 0 10px;
+  max-width: 340px;
+  width: 100%;
+  height: 40px;
+  transition: border-color 0.15s;
+}
+.searchWrap:focus-within {
+  border-color: var(--primary, #6366f1);
+}
+.searchIcon {
+  color: var(--text-muted, #9ca3af);
+  flex-shrink: 0;
+}
+.searchInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  padding: 0 8px;
+  flex: 1;
+  color: var(--text-primary, #111827);
+}
+.clearBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted, #9ca3af);
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* ─── Icon buttons ───────────────────────────────────────────────────────── */
+.iconBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  height: 40px;
+  min-width: 44px;
+  justify-content: center;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary, #374151);
+  transition: background 0.15s, border-color 0.15s;
+}
+.iconBtn:hover {
+  background: var(--bg-hover, #f9fafb);
+  border-color: var(--text-muted, #9ca3af);
+}
+.iconBtnActive {
+  background: var(--bg-active, #eff6ff);
+  border-color: var(--primary, #6366f1);
+  color: var(--primary, #6366f1);
+}
+
+/* ─── Filter panel ───────────────────────────────────────────────────────── */
+.filterWrap {
+  position: relative;
+}
+.filterChevron {
+  transition: transform 0.2s;
+}
+.filterChevronOpen {
+  transform: rotate(180deg);
+}
+.filterPanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 10px;
+  padding: 16px;
+  min-width: 240px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  z-index: 50;
+}
+.filterLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+}
+
+/* ─── New Template button ────────────────────────────────────────────────── */
+.newBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  height: 40px;
+  min-width: 44px;
+  background: var(--primary, #6366f1);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+.newBtn:hover {
+  background: var(--primary-dark, #4f46e5);
+}
+
+/* ─── Table ──────────────────────────────────────────────────────────────── */
+.tableWrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-surface, #fff);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  background: var(--bg-muted, #f9fafb);
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #6b7280);
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  color: var(--text-primary, #111827);
+  vertical-align: middle;
+}
+
+.row:last-child td {
+  border-bottom: none;
+}
+
+.row:hover td {
+  background: var(--bg-hover, #f9fafb);
+}
+
+/* ─── Name cell ──────────────────────────────────────────────────────────── */
+.nameCell {
+  display: flex !important;
+  flex-direction: column;
+  gap: 2px;
+}
+.templateName {
+  font-weight: 500;
+  color: var(--text-primary, #111827);
+}
+.templateDesc {
+  font-size: 12px;
+  color: var(--text-muted, #9ca3af);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+/* ─── Scope tag ──────────────────────────────────────────────────────────── */
+.scopeTag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-muted, #f3f4f6);
+  color: var(--text-secondary, #374151);
+}
+.scope_Own        { background: #eff6ff; color: #1d4ed8; }
+.scope_Global     { background: #fef9c3; color: #854d0e; }
+.scope_Franchise  { background: #f0fdf4; color: #166534; }
+.scope_Organisation { background: #eff6ff; color: #1d4ed8; }
+
+/* ─── Status badge ───────────────────────────────────────────────────────── */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--badge-color) 15%, transparent);
+  color: var(--badge-color);
+  border: 1px solid color-mix(in srgb, var(--badge-color) 30%, transparent);
+  cursor: pointer;
+  transition: opacity 0.15s;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.statusBadge:hover { opacity: 0.8; }
+
+/* ─── Date / Owner cells ─────────────────────────────────────────────────── */
+.dateCell, .ownerCell {
+  white-space: nowrap;
+  color: var(--text-secondary, #4b5563);
+  font-size: 13px;
+}
+
+/* ─── Action buttons ─────────────────────────────────────────────────────── */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.actionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary, #374151);
+  transition: background 0.15s, color 0.15s;
+}
+.actionBtn:hover {
+  background: var(--bg-hover, #f3f4f6);
+}
+.actionBtnDelete:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+/* ─── Loader / empty ─────────────────────────────────────────────────────── */
+.loaderWrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 64px;
+}
+
+/* ─── Confirmation modal ─────────────────────────────────────────────────── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+
+.modal {
+  background: var(--bg-surface, #fff);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.modalIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #fef9c3;
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary, #111827);
+}
+
+.modalBody {
+  font-size: 14px;
+  color: var(--text-secondary, #4b5563);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.modalField {
+  width: 100%;
+  text-align: left;
+}
+.modalFieldLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.modalActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.cancelBtn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary, #374151);
+  transition: background 0.15s;
+}
+.cancelBtn:hover { background: var(--bg-hover, #f9fafb); }
+
+.confirmBtn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: var(--primary, #6366f1);
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.confirmBtn:hover { background: var(--primary-dark, #4f46e5); }
+.confirmBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.confirmBtnDanger { background: #dc2626; }
+.confirmBtnDanger:hover { background: #b91c1c; }

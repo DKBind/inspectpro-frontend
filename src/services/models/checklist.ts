@@ -1,6 +1,12 @@
-// ─── Scope ───────────────────────────────────────────────────────────────────
+// ─── Scope & Ownership ────────────────────────────────────────────────────────
 
 export type TemplateScope = 'GLOBAL' | 'ORGANISATION' | 'PROJECT' | 'SCRATCH';
+
+/** ownerType discriminates between org-owned ("Global") and franchise-owned templates. */
+export type OwnerType = 'ORGANISATION' | 'FRANCHISE';
+
+/** Status name values matching the status table (type = 'TEMPLATE'). */
+export type TemplateStatusName = 'DRAFT' | 'ACTIVE' | 'INACTIVE';
 
 // ─── Recursive Template Node (new unlimited-depth tree) ───────────────────────
 
@@ -18,6 +24,10 @@ export interface TemplateNode {
   items?: BuilderItem[];
   /** Child nodes — FOLDER only (self-referential, unlimited depth) */
   children?: TemplateNode[];
+  /** When true, this node's value is surfaced in the Project Spec panel (LEAF only). */
+  isProjectSpec?: boolean;
+  /** Data type for the project spec field: "NUMBER" or "TEXT" (LEAF only, required when isProjectSpec = true). */
+  projectSpecType?: 'NUMBER' | 'TEXT';
 }
 
 // ─── Template Builder Types ───────────────────────────────────────────────────
@@ -96,33 +106,73 @@ export interface TemplateResponse {
   id: string | null;               // null for the "SCRATCH" sentinel
   title: string;
   description?: string;
-  scope: TemplateScope;
+
+  // ─── Ownership ─────────────────────────────────────────────────────────────
+  ownerType?: OwnerType;
+  ownerId?: string;
+  ownerName?: string;
+  /** true when ownerType = ORGANISATION (visible to all franchises of that org) */
   isGlobal: boolean;
+
+  // ─── Property classification ────────────────────────────────────────────────
+  propertySubTypeId?: number;
+  propertySubTypeName?: string;
+  /** Derived from subType.propertyType */
+  propertyTypeId?: number;
+  propertyTypeName?: string;
+  /** Default node structure from sub-type specTemplate — offered as "Load Default" in builder */
+  defaultStructure?: Record<string, unknown>[];
+
+  // ─── Status ─────────────────────────────────────────────────────────────────
+  statusId?: number;
+  statusName?: TemplateStatusName;
+  statusColour?: string;
+
+  // ─── Legacy fields ──────────────────────────────────────────────────────────
+  scope: TemplateScope;
   isLocked: boolean;
   projectId?: string;
   projectName?: string;
   organisationId?: string;
   organisationName?: string;
-  /** Set when the template's organisation is a franchise (has a parent org). */
   parentOrgId?: string;
-  /** New recursive tree — populated for templates saved in the new format */
+
+  // ─── Tree & audit ───────────────────────────────────────────────────────────
   nodes?: TemplateNode[];
   sections: SectionInfo[];
   sectionCount: number;
-  fields: FieldInfo[];             // legacy
+  fields: FieldInfo[];
   fieldCount: number;
   createdAt?: string;
-  updatedAt?: string;
+  createdByName?: string;
 }
 
 export interface TemplateRequest {
   title: string;
   description?: string;
-  scope?: string;                  // GLOBAL | ORGANISATION | PROJECT
-  isGlobal?: boolean;              // legacy
+
+  // ─── Ownership ─────────────────────────────────────────────────────────────
+  ownerType?: string;              // ORGANISATION | FRANCHISE
+  ownerId?: string;
+
+  // ─── Property classification ────────────────────────────────────────────────
+  /** Property sub-type ID; server derives property type from subType.propertyType */
+  propertySubTypeId?: number;
+
+  // ─── Status ─────────────────────────────────────────────────────────────────
+  status?: string;                 // DRAFT | ACTIVE | INACTIVE
+
+  // ─── Copy target (Platform Admin only) ─────────────────────────────────────
+  targetOwnerId?: string;
+  targetOwnerType?: string;
+
+  // ─── Legacy ─────────────────────────────────────────────────────────────────
+  scope?: string;
+  isGlobal?: boolean;
   isLocked?: boolean;
   projectId?: string;
-  /** New recursive node tree — takes precedence over sections when present */
+
+  // ─── Node tree ───────────────────────────────────────────────────────────────
   nodes?: TemplateNode[];
   sections?: any[];
   fields?: {

@@ -34,6 +34,30 @@ export const checklistService = {
 
   // ─── Templates CRUD ─────────────────────────────────────────────────────────
 
+  /**
+   * Role-filtered, paginated template list.
+   * Server applies scope visibility based on the caller's JWT role.
+   */
+  listTemplates: async (params?: {
+    search?: string;
+    statusId?: number;
+    franchiseId?: string;
+    page?: number;
+    size?: number;
+  }): Promise<{ templates: TemplateResponse[]; totalCount: number; totalPages: number; currentPage: number }> => {
+    const q = new URLSearchParams();
+    if (params?.search) q.set('search', params.search);
+    if (params?.statusId != null) q.set('statusId', String(params.statusId));
+    if (params?.franchiseId) q.set('franchiseId', params.franchiseId);
+    if (params?.page != null) q.set('page', String(params.page));
+    if (params?.size != null) q.set('size', String(params.size));
+    const url = `/templates${q.toString() ? `?${q.toString()}` : ''}`;
+    const res = await api.get<ApiResponse<{ templates: TemplateResponse[]; totalCount: number; totalPages: number; currentPage: number }>>(url);
+    if (!res.status) throw new Error(res.message || 'Failed to fetch templates');
+    return res.object as { templates: TemplateResponse[]; totalCount: number; totalPages: number; currentPage: number };
+  },
+
+  /** @deprecated Use listTemplates() instead */
   listGlobalTemplates: async (): Promise<TemplateResponse[]> => {
     const res = await api.get<ApiResponse<TemplateResponse[]>>('/templates?global=true');
     if (!res.status) throw new Error(res.message || 'Failed to fetch templates');
@@ -67,6 +91,33 @@ export const checklistService = {
   deleteTemplate: async (id: string): Promise<void> => {
     const res = await api.delete<ApiResponse<null>>(`/templates/${id}`);
     if (!res.status) throw new Error(res.message || 'Failed to delete template');
+  },
+
+  /**
+   * PATCH /templates/{id}/status
+   * Changes template lifecycle status: DRAFT | ACTIVE | INACTIVE
+   */
+  changeTemplateStatus: async (id: string, status: string): Promise<TemplateResponse> => {
+    const res = await api.patch<ApiResponse<TemplateResponse>>(`/templates/${id}/status`, { status });
+    if (!res.status) throw new Error(res.message || 'Failed to change template status');
+    return res.object as TemplateResponse;
+  },
+
+  /**
+   * POST /templates/{id}/copy
+   * Copies a template within the caller's scope.
+   * Platform Admin must supply targetOwnerId + targetOwnerType.
+   */
+  copyTemplate: async (
+    id: string,
+    target?: { targetOwnerId: string; targetOwnerType: string }
+  ): Promise<TemplateResponse> => {
+    const res = await api.post<ApiResponse<TemplateResponse>>(
+      `/templates/${id}/copy`,
+      target ?? {}
+    );
+    if (!res.status) throw new Error(res.message || 'Failed to copy template');
+    return res.object as TemplateResponse;
   },
 
   // ─── Clone & Snapshot ───────────────────────────────────────────────────────
