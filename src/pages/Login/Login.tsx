@@ -113,7 +113,7 @@ const Login = () => {
           <div className={styles.brandLogo}>
             <Shield className={styles.brandLogoIcon} />
           </div>
-          <h1 className={styles.brandName}>InspectWisePro</h1>
+          <h1 className={styles.brandName}>InspectWise Pro</h1>
           <p className={styles.brandTagline}>Inspection & Quality Management</p>
           <p className={styles.brandDesc}>
             The enterprise platform for managing inspections, quality audits, and compliance workflows — all in one place.
@@ -140,7 +140,7 @@ const Login = () => {
         </div>
 
         <div className={styles.brandFooter}>
-          <p>© 2025 InspectWisePro. All rights reserved.</p>
+          <p>© 2025 InspectWise Pro. All rights reserved.</p>
         </div>
 
         {/* Decorative orbs */}
@@ -154,7 +154,7 @@ const Login = () => {
           {/* Mobile logo */}
           <div className={styles.mobileLogo}>
             <div className={styles.mobileLogoIcon}><Shield /></div>
-            <span className={styles.mobileLogoText}>InspectWisePro</span>
+            <span className={styles.mobileLogoText}>InspectWise Pro</span>
           </div>
 
           <div className={styles.formHeader}>

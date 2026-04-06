@@ -204,8 +204,6 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
   // Which panel row is "focused" (selected in Level 1 for toolbar actions)
   const [focusedLeafId, setFocusedLeafId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['__root__']));
-  const [globalOveralls, setGlobalOveralls] = useState<string[]>(['Satisfactory', 'Marginal', 'Poor', 'Safety', 'None-N/A']);
-  const [overallsModalOpen, setOverallsModalOpen] = useState(false);
   const [changes, setChanges] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!isNew);
@@ -284,7 +282,7 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
 
   /* load */
   useEffect(() => {
-    if (isNew) { setGlobalOveralls(['Satisfactory', 'Marginal', 'Poor', 'Safety', 'None-N/A']); setLoading(false); return; }
+    if (isNew) { setLoading(false); return; }
     setLoading(true);
     checklistService.getTemplate(id!).then((tpl: TemplateResponse) => {
       setTitle(tpl.title || '');
@@ -295,7 +293,6 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
         ? tpl.nodes
         : sectionsToNodes(tpl.sections ?? []);
       setNodes(loaded);
-      setGlobalOveralls(tpl.globalOveralls ?? ['Satisfactory', 'Marginal', 'Poor', 'Safety', 'None-N/A']);
       if (loaded.length > 0) {
         setExpandedIds(new Set(['__root__', loaded[0].id]));
       }
@@ -499,7 +496,6 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
         description: description.trim() || undefined,
         scope: searchParams.get('scope') || 'ORGANISATION',
         nodes: nodes as any[],
-        globalOveralls,
         sections: [],
       };
       if (isNew || !templateIdRef.current) {
@@ -591,14 +587,6 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
         />
       )}
 
-      {/* ═══ OVERALLS MODAL ═══ */}
-      {overallsModalOpen && (
-        <OverallsModal
-          initialOveralls={globalOveralls}
-          onConfirm={(list) => { setGlobalOveralls(list); setChanges(c => c + 1); setOverallsModalOpen(false); }}
-          onCancel={() => setOverallsModalOpen(false)}
-        />
-      )}
 
       {/* ═══ TOP NAV BAR ═══ */}
       <header className={css.header}>
@@ -653,7 +641,6 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
         <div className={css.titleCardBody}>
           <div className={css.titleCardMeta} style={{ display: 'flex', width: '100%', alignItems: 'center' }}>
             <span className={css.titleCardBadge}>{isNew ? 'New Template' : 'Editing'}</span>
-            {/* <button onClick={() => setOverallsModalOpen(true)} style={{ marginLeft: 'auto', background: 'none', border: '1px solid #E2E8F0', borderRadius: 4, padding: '4px 8px', fontSize: 11, cursor: 'pointer', color: '#64748B' }}>Configure Global Ratings</button> */}
           </div>
           <input
             autoFocus={isNew} value={title}
@@ -1506,59 +1493,6 @@ function nodeMatchesSearch(node: TemplateNode, q: string): boolean {
   if (node.type === 'FOLDER' && node.children?.some(c => nodeMatchesSearch(c, q))) return true;
   if (node.type === 'LEAF' && node.items?.some(i => i.label.toLowerCase().includes(q))) return true;
   return false;
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   Name Validation Modal
-───────────────────────────────────────────────────────────────── */
-function OverallsModal({ initialOveralls, onConfirm, onCancel }: {
-  initialOveralls: string[];
-  onConfirm: (list: string[]) => void;
-  onCancel: () => void;
-}) {
-  const [list, setList] = useState([...initialOveralls]);
-  const [val, setVal] = useState('');
-
-  const add = () => {
-    const trimmed = val.trim();
-    if (trimmed && !list.includes(trimmed)) {
-      setList([...list, trimmed]);
-      setVal('');
-    }
-  };
-
-  return (
-    <div className={css.modalOverlay} onClick={onCancel}>
-      <div className={css.modalBox} onClick={e => e.stopPropagation()} style={{ width: 400 }}>
-        <h3 className={css.modalTitle}>Global Damage Ratings</h3>
-        <p style={{ fontSize: 13, color: '#64748B', margin: 0, marginTop: -8 }}>
-          Configure the scale used at the top of every Damage panel.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8, maxHeight: 200, overflowY: 'auto' }}>
-          {list.map((item, idx) => (
-            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#F8FAFC', padding: '6px 12px', borderRadius: 6, border: '1px solid #E2E8F0' }}>
-              <span style={{ flex: 1, fontSize: 13, color: '#374151', fontWeight: 500 }}>{item}</span>
-              <button onClick={() => setList(list.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 4 }}>
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-          {list.length === 0 && <p style={{ fontSize: 13, color: '#9CA3AF' }}>No ratings configured.</p>}
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <input value={val} onChange={e => setVal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') add(); }} placeholder="Add new rating..." className={css.modalInput} style={{ flex: 1 }} />
-          <button onClick={add} disabled={!val.trim() || list.includes(val.trim())} style={{ background: '#1a7bbd', color: 'white', border: 'none', borderRadius: 8, padding: '0 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Add</button>
-        </div>
-
-        <div className={css.modalActions} style={{ marginTop: 16 }}>
-          <button className={css.modalCancelBtn} onClick={onCancel}>Cancel</button>
-          <button className={css.modalConfirmBtn} onClick={() => onConfirm(list)}>Save Changes</button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function NameModal({ title, placeholder, showReportName, onConfirm, onCancel }: {
