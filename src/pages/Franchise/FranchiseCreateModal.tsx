@@ -410,25 +410,18 @@ export function FranchiseCreateModal({ open, onOpenChange, onSuccess, editOrg }:
             <div className="px-7 py-6 space-y-6">
 
               {/* Parent Organisation — create mode only */}
-              {!isEditMode && (
+              {!isEditMode && isSuperAdmin && (
                 <Sec icon={<Building2 size={13} />} label="Parent Organisation">
                   <div className="rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-4">
                     <Fld label="Parent Organisation" required error={(errors as any).parentOrgId?.message}>
-                      {isSuperAdmin ? (
-                        <DropdownSelect
-                          options={parentOrgs.map((o) => ({ value: o.uuid, label: o.name }))}
-                          value={selectedParentId || null}
-                          onChange={(val: string | number | null) => setValue('parentOrgId', String(val ?? ''), { shouldValidate: true })}
-                          placeholder="— Select organisation —"
-                          searchable
-                          error={(errors as any).parentOrgId?.message}
-                        />
-                      ) : (
-                        <div className="h-10 rounded-md border border-[#E5E7EB] bg-white px-3 flex items-center gap-2 text-sm text-[#263B4F]">
-                          <Building2 size={14} className="text-[#6B7280]" />
-                          {authUser?.orgName ?? parentOrgs.find((o) => o.uuid === authUser?.orgId)?.name ?? '—'}
-                        </div>
-                      )}
+                      <DropdownSelect
+                        options={parentOrgs.map((o) => ({ value: o.uuid, label: o.name }))}
+                        value={selectedParentId || null}
+                        onChange={(val: string | number | null) => setValue('parentOrgId', String(val ?? ''), { shouldValidate: true })}
+                        placeholder="— Select organisation —"
+                        searchable
+                        error={(errors as any).parentOrgId?.message}
+                      />
                     </Fld>
                   </div>
                 </Sec>

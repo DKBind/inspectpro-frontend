@@ -7,6 +7,7 @@ import type { OrganisationResponse } from '@/services/models/organisation';
 import { FranchiseCreateModal } from './FranchiseCreateModal';
 import { OrganisationViewModal } from '@/pages/Organisation/OrganisationViewModal';
 import Pagination from '@/components/shared-ui/Pagination/Pagination';
+import { useAuthStore } from '@/store/useAuthStore';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,9 @@ import styles from '@/pages/Organisation/Organisation.module.css';
 import Loader from '@/components/shared-ui/Loader/Loader';
 
 const Franchise = () => {
+  const { user: authUser } = useAuthStore();
+  const isSuperAdmin = authUser?.isSuperAdmin === true || authUser?.role === 'super_admin';
+
   const [franchises, setFranchises] = useState<OrganisationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -134,7 +138,7 @@ const Franchise = () => {
             //   <p style={{ marginTop: 12 }}>Loading...</p>
             // </div>
             <div className={styles.emptyState}>
-              <Loader variant="inline" type="spinner" text="Loading franchise…" />
+              <Loader variant="inline" type="spinner" small text="Loading franchise…" />
             </div>
           ) : franchises.length === 0 ? (
             <div className={styles.emptyState}>
@@ -148,7 +152,7 @@ const Franchise = () => {
                 <thead>
                   <tr>
                     <th>Franchise</th>
-                    <th>Parent Organisation</th>
+                    {isSuperAdmin && <th>Parent Organisation</th>}
                     <th>Plan</th>
                     <th>Contact Person</th>
                     <th>Email</th>
@@ -175,12 +179,14 @@ const Franchise = () => {
                           </div>
                         </div>
                       </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <Building2 style={{ width: 13, height: 13, opacity: 0.5 }} />
-                          <span className={styles.mutedCell}>{f.parentOrgName ?? '—'}</span>
-                        </div>
-                      </td>
+                      {isSuperAdmin && (
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Building2 style={{ width: 13, height: 13, opacity: 0.5 }} />
+                            <span className={styles.mutedCell}>{f.parentOrgName ?? '—'}</span>
+                          </div>
+                        </td>
+                      )}
                       <td>
                         {f.subscriptionPlanName ? (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: 'rgba(139,92,246,0.12)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.25)' }}>

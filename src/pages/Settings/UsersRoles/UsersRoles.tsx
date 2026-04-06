@@ -1050,76 +1050,76 @@ const UsersRoles = () => {
           ) : (
             <>
               <div className={styles.tableScroll}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>User</th>
-                    <th>Employee ID</th>
-                    <th>Phone</th>
-                    <th>Email</th>
-                    <th>Organisation</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'center' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedUsers.map((u) => {
-                    const isActive = (u.statusId ?? 1) === 1;
-                    return (
-                      <tr key={u.id}>
-                        <td>
-                          <div className={styles.userName}>
-                            {[u.firstName, u.middleName, u.lastName].filter(Boolean).join(' ')}
-                          </div>
-                        </td>
-                        <td className={styles.mutedCell}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      {/* <th>Employee ID</th> */}
+                      <th>Phone</th>
+                      <th>Email</th>
+                      {/* <th>Organisation</th> */}
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'center' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedUsers.map((u) => {
+                      const isActive = (u.statusId ?? 1) === 1;
+                      return (
+                        <tr key={u.id}>
+                          <td>
+                            <div className={styles.userName}>
+                              {[u.firstName, u.middleName, u.lastName].filter(Boolean).join(' ')}
+                            </div>
+                          </td>
+                          {/* <td className={styles.mutedCell}>
                           {u.employeeId
                             ? <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: 5, background: 'rgba(51,174,149,0.08)', border: '1px solid rgba(51,174,149,0.2)', fontSize: 12, fontWeight: 600, color: '#1a7bbd', fontFamily: 'monospace' }}>{u.employeeId}</span>
                             : <span style={{ color: '#D1D5DB' }}>—</span>}
-                        </td>
-                        <td className={styles.mutedCell}>
-                          {u.phoneNumber
-                            ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <Phone size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
-                              {u.phoneNumber}
-                            </span>
-                            : <span style={{ color: '#D1D5DB' }}>—</span>}
-                        </td>
-                        <td className={styles.mutedCell}>
-                          {u.email
-                            ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                              <Mail size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
-                              {u.email}
-                            </span>
-                            : <span style={{ color: '#D1D5DB' }}>—</span>}
-                        </td>
-                        <td>{renderOrgBadge(u)}</td>
-                        <td>
-                          {u.roleName
-                            ? <span className={styles.roleBadge}>{u.roleName}</span>
-                            : <span style={{ color: '#D1D5DB', fontSize: 12.5 }}>—</span>}
-                        </td>
-                        <td>
-                          <button
-                            className={`${styles.statusToggle} ${isActive ? styles.toggleOn : styles.toggleOff}`}
-                            onClick={() => handleToggleStatus(u)}
-                            disabled={toggling}
-                            title={isActive ? 'Click to deactivate' : 'Click to activate'}
-                          />
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
-                            <button className={styles.actionBtn} title="View" onClick={() => setViewUser(u)}><Eye size={13} /></button>
-                            <button className={styles.actionBtn} title="Edit" onClick={() => openEdit(u)}><Pencil size={13} /></button>
-                            <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} title="Delete" onClick={() => setDeleteTarget(u)}><Trash2 size={13} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </td> */}
+                          <td className={styles.mutedCell}>
+                            {u.phoneNumber
+                              ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <Phone size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+                                {u.phoneNumber}
+                              </span>
+                              : <span style={{ color: '#D1D5DB' }}>—</span>}
+                          </td>
+                          <td className={styles.mutedCell}>
+                            {u.email
+                              ? <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <Mail size={12} style={{ opacity: 0.5, flexShrink: 0 }} />
+                                {u.email}
+                              </span>
+                              : <span style={{ color: '#D1D5DB' }}>—</span>}
+                          </td>
+                          {/* <td>{renderOrgBadge(u)}</td> */}
+                          <td>
+                            {u.roleName
+                              ? <span className={styles.roleBadge}>{u.roleName}</span>
+                              : <span style={{ color: '#D1D5DB', fontSize: 12.5 }}>—</span>}
+                          </td>
+                          <td>
+                            <button
+                              className={`${styles.statusToggle} ${isActive ? styles.toggleOn : styles.toggleOff}`}
+                              onClick={() => handleToggleStatus(u)}
+                              disabled={toggling}
+                              title={isActive ? 'Click to deactivate' : 'Click to activate'}
+                            />
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
+                              <button className={styles.actionBtn} title="View" onClick={() => setViewUser(u)}><Eye size={13} /></button>
+                              <button className={styles.actionBtn} title="Edit" onClick={() => openEdit(u)}><Pencil size={13} /></button>
+                              <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} title="Delete" onClick={() => setDeleteTarget(u)}><Trash2 size={13} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
               <div className={styles.paginationArea}>
                 <Pagination
@@ -1266,111 +1266,111 @@ const UsersRoles = () => {
             </div>
           ) : (
             <div className={styles.tableScroll}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Role Name</th>
-                  {showOrgColumn && <th>Organisation</th>}
-                  {showFranchiseColumns && <th>Franchise</th>}
-                  {showFranchiseColumns && <th>Parent Organisation</th>}
-                  <th>Assigned Users</th>
-                  <th>Modules</th>
-                  <th>Status</th>
-                  <th>Created By</th>
-                  <th>Created Date</th>
-                  <th style={{ textAlign: 'center', width: 100 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedRoles.map((role) => {
-                  const grouped = groupByModule(roleModules[role.roleId] ?? []);
-                  const isActive = role.isActive !== false;
-                  // Use the larger of the DB-reported count and the locally derived count
-                  const displayModuleCount = Math.max(role.moduleCount ?? 0, grouped.length);
-                  return (
-                    <tr key={role.roleId} className={styles.tableRow}>
-                      {/* Role name */}
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(51,174,149,0.10)', border: '1px solid rgba(51,174,149,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Shield size={14} style={{ color: '#1a7bbd' }} />
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Role Name</th>
+                    {showOrgColumn && <th>Organisation</th>}
+                    {showFranchiseColumns && <th>Franchise</th>}
+                    {showFranchiseColumns && <th>Parent Organisation</th>}
+                    <th>Assigned Users</th>
+                    <th>Modules</th>
+                    <th>Status</th>
+                    <th>Created By</th>
+                    <th>Created Date</th>
+                    <th style={{ textAlign: 'center', width: 100 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedRoles.map((role) => {
+                    const grouped = groupByModule(roleModules[role.roleId] ?? []);
+                    const isActive = role.isActive !== false;
+                    // Use the larger of the DB-reported count and the locally derived count
+                    const displayModuleCount = Math.max(role.moduleCount ?? 0, grouped.length);
+                    return (
+                      <tr key={role.roleId} className={styles.tableRow}>
+                        {/* Role name */}
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(51,174,149,0.10)', border: '1px solid rgba(51,174,149,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Shield size={14} style={{ color: '#1a7bbd' }} />
+                            </div>
+                            <span className={styles.userName}>{role.name}</span>
                           </div>
-                          <span className={styles.userName}>{role.name}</span>
-                        </div>
-                      </td>
-                      {/* Organisation column (super admin + organisation filter) */}
-                      {showOrgColumn && (
-                        <td className={styles.mutedCell}>
-                          {role.orgName
-                            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
-                              <Home size={11} style={{ opacity: 0.5 }} />{role.orgName}
-                            </span>
-                            : <span style={{ color: '#D1D5DB' }}>—</span>}
                         </td>
-                      )}
-                      {/* Franchise name column */}
-                      {showFranchiseColumns && (
-                        <td className={styles.mutedCell}>
-                          {role.orgName
-                            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
-                              <Home size={11} style={{ opacity: 0.5 }} />{role.orgName}
-                            </span>
-                            : <span style={{ color: '#D1D5DB' }}>—</span>}
-                        </td>
-                      )}
-                      {/* Parent organisation column */}
-                      {showFranchiseColumns && (
-                        <td className={styles.mutedCell}>
-                          {getRoleParentOrgName(role)
-                            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
-                              <Home size={11} style={{ opacity: 0.5 }} />{getRoleParentOrgName(role)}
-                            </span>
-                            : <span style={{ color: '#D1D5DB' }}>—</span>}
-                        </td>
-                      )}
-                      {/* Assigned users — clickable */}
-                      <td>
-                        <button className={styles.countBtn} onClick={() => openUsersModal(role)}>
-                          <Users size={12} style={{ opacity: 0.6 }} />
-                          {role.assignedUsersCount ?? 0}
-                        </button>
-                      </td>
-                      {/* Module count — clickable */}
-                      <td>
-                        <button className={styles.countBtn} onClick={() => openModulesModal(role)}>
-                          <Package size={12} style={{ opacity: 0.6 }} />
-                          {displayModuleCount}
-                        </button>
-                      </td>
-                      {/* Status toggle */}
-                      <td>
-                        <button
-                          className={`${styles.statusToggle} ${isActive ? styles.toggleOn : styles.toggleOff}`}
-                          onClick={() => setToggleStatusTarget(role)}
-                          disabled={roleToggling === role.roleId}
-                          title={isActive ? 'Click to deactivate' : 'Click to activate'}
-                        />
-                      </td>
-                      {/* Created by */}
-                      <td className={styles.mutedCell}>{role.createdByName ?? <span style={{ color: '#D1D5DB' }}>—</span>}</td>
-                      {/* Created date */}
-                      <td className={styles.mutedCell}>{role.createdDate ?? <span style={{ color: '#D1D5DB' }}>—</span>}</td>
-                      {/* Actions */}
-                      <td>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
-                          <button className={styles.actionBtn} title="Edit" onClick={() => openEditRole(role)}>
-                            <Pencil size={13} />
+                        {/* Organisation column (super admin + organisation filter) */}
+                        {showOrgColumn && (
+                          <td className={styles.mutedCell}>
+                            {role.orgName
+                              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
+                                <Home size={11} style={{ opacity: 0.5 }} />{role.orgName}
+                              </span>
+                              : <span style={{ color: '#D1D5DB' }}>—</span>}
+                          </td>
+                        )}
+                        {/* Franchise name column */}
+                        {showFranchiseColumns && (
+                          <td className={styles.mutedCell}>
+                            {role.orgName
+                              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
+                                <Home size={11} style={{ opacity: 0.5 }} />{role.orgName}
+                              </span>
+                              : <span style={{ color: '#D1D5DB' }}>—</span>}
+                          </td>
+                        )}
+                        {/* Parent organisation column */}
+                        {showFranchiseColumns && (
+                          <td className={styles.mutedCell}>
+                            {getRoleParentOrgName(role)
+                              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#263B4F' }}>
+                                <Home size={11} style={{ opacity: 0.5 }} />{getRoleParentOrgName(role)}
+                              </span>
+                              : <span style={{ color: '#D1D5DB' }}>—</span>}
+                          </td>
+                        )}
+                        {/* Assigned users — clickable */}
+                        <td>
+                          <button className={styles.countBtn} onClick={() => openUsersModal(role)}>
+                            <Users size={12} style={{ opacity: 0.6 }} />
+                            {role.assignedUsersCount ?? 0}
                           </button>
-                          <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} title="Delete" onClick={() => setDeleteRoleTarget(role)}>
-                            <Trash2 size={13} />
+                        </td>
+                        {/* Module count — clickable */}
+                        <td>
+                          <button className={styles.countBtn} onClick={() => openModulesModal(role)}>
+                            <Package size={12} style={{ opacity: 0.6 }} />
+                            {displayModuleCount}
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        {/* Status toggle */}
+                        <td>
+                          <button
+                            className={`${styles.statusToggle} ${isActive ? styles.toggleOn : styles.toggleOff}`}
+                            onClick={() => setToggleStatusTarget(role)}
+                            disabled={roleToggling === role.roleId}
+                            title={isActive ? 'Click to deactivate' : 'Click to activate'}
+                          />
+                        </td>
+                        {/* Created by */}
+                        <td className={styles.mutedCell}>{role.createdByName ?? <span style={{ color: '#D1D5DB' }}>—</span>}</td>
+                        {/* Created date */}
+                        <td className={styles.mutedCell}>{role.createdDate ?? <span style={{ color: '#D1D5DB' }}>—</span>}</td>
+                        {/* Actions */}
+                        <td>
+                          <div style={{ display: 'flex', justifyContent: 'center', gap: 4 }}>
+                            <button className={styles.actionBtn} title="Edit" onClick={() => openEditRole(role)}>
+                              <Pencil size={13} />
+                            </button>
+                            <button className={`${styles.actionBtn} ${styles.actionBtnDanger}`} title="Delete" onClick={() => setDeleteRoleTarget(role)}>
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
           <div className={styles.paginationArea}>
