@@ -1,21 +1,17 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useModuleStore } from '@/store/useModuleStore';
-import { moduleService } from '@/services/moduleService';
 import { authService } from '@/services/authService';
 import { ROUTES } from '@/components/Constant/Route';
 import { Shield, Eye, EyeOff, CheckCircle2, BarChart3, Users2, ClipboardList } from 'lucide-react';
 import styles from './Login.module.css';
 
 const Login = () => {
-  const { setAuth } = useAuthStore();
-  const { setAccessModules, setModules } = useModuleStore();
+  const { setTokens, setFirstLoginDone } = useAuthStore();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [accessLoading, setAccessLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -27,83 +23,23 @@ const Login = () => {
     try {
       const data = await authService.login(email.trim().toLowerCase(), password);
 
-      const user = {
-        id: data.userId,
-        email: data.email,
-        name: `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim(),
-        role: data.superAdmin ? 'super_admin' : (data.roleName ?? 'user'),
-        roleId: data.superAdmin ? undefined : data.roleId,
-        roles: (data.roles ?? []).map((r) => ({ roleId: r.roleId, roleName: r.roleName })),
-        orgId: data.orgId,
-        orgName: data.orgName,
-        isSuperAdmin: data.superAdmin,
-      };
+      // Store only tokens — useAppInit will fetch user details + my-access
+      setTokens(data.idToken, data.refreshToken);
 
-      const isFirstLogin = data.isFirstLogin ?? false;
-      setAuth(user, data.accessToken, data.refreshToken, isFirstLogin, data.idToken);
-
-      if (isFirstLogin) {
+      if (data.isFirstLogin) {
+        // Mark first login in store (in-memory only, not persisted)
         navigate(ROUTES.UPDATE_PASSWORD);
         return;
       }
 
-      setAccessLoading(true);
-      try {
-        if (data.superAdmin) {
-          // Super admin gets access to ALL modules fetched from the DB.
-          const allModules = await moduleService.listModules();
-          const orgModules = allModules
-            .filter((m) => m.active)
-            .map((m) => ({
-              moduleId: m.id,
-              name: m.name,
-              route: m.route ?? '',
-              icon: m.icon ?? '',
-              category: m.category ?? 'Other',
-            }));
-          const accessModules = orgModules.map((m) => ({
-            ...m,
-            permissions: ['READ', 'CREATE', 'UPDATE', 'DELETE'],
-          }));
-          setModules(orgModules);
-          setAccessModules(accessModules);
-        } else {
-          await Promise.all([
-            moduleService.getMyAccess(data.userId).then(setAccessModules),
-            data.orgId ? moduleService.getMyModules(data.orgId).then(setModules) : Promise.resolve(),
-          ]);
-        }
-      } catch { /* non-fatal */ } finally {
-        setAccessLoading(false);
-      }
-
+      setFirstLoginDone();
       navigate(ROUTES.DASHBOARD);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? 'Login failed. Please try again.' : 'Login failed. Please try again.');
+    } catch {
+      setError('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
-
-  if (accessLoading) {
-    return (
-      <div style={{
-        position: 'fixed', inset: 0, background: '#fff',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: 16, zIndex: 9999,
-      }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%',
-          border: '4px solid #E4E8EC', borderTopColor: '#1a7bbd',
-          animation: 'spin 0.7s linear infinite',
-        }} />
-        <p style={{ fontSize: 14, color: '#263B4F', fontWeight: 500 }}>
-          Loading your workspace…
-        </p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.authPage}>
@@ -143,7 +79,6 @@ const Login = () => {
           <p>© 2025 InspectWise Pro. All rights reserved.</p>
         </div>
 
-        {/* Decorative orbs */}
         <div className={styles.brandOrb1} />
         <div className={styles.brandOrb2} />
       </div>
@@ -151,7 +86,6 @@ const Login = () => {
       {/* Right Form Panel */}
       <div className={styles.formPanel}>
         <div className={styles.formCard}>
-          {/* Mobile logo */}
           <div className={styles.mobileLogo}>
             <div className={styles.mobileLogoIcon}><Shield /></div>
             <span className={styles.mobileLogoText}>InspectWise Pro</span>
@@ -205,11 +139,7 @@ const Login = () => {
               </div>
             </div>
 
-            {error && (
-              <div className={styles.errorMsg}>
-                {error}
-              </div>
-            )}
+            {error && <div className={styles.errorMsg}>{error}</div>}
 
             <button type="submit" className={styles.submitBtn} disabled={loading}>
               {loading ? (

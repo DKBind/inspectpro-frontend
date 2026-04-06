@@ -103,21 +103,13 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
 
   const handleLogout = async () => {
     setLoggingOut(true);
-    try {
-      await authService.logout();
-      clearAuth();
-      clearModules();
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout failed', error);
-      // Fallback: clear local state anyway
-      clearAuth();
-      clearModules();
-      navigate('/login');
-    } finally {
-      setLoggingOut(false);
-      setShowLogoutModal(false);
-    }
+    // Fire Cognito sign-out in the background — don't block on it
+    authService.logout().catch(() => {});
+    clearAuth();   // calls localStorage.clear() + resets in-memory state
+    clearModules();// resets in-memory module store
+    setLoggingOut(false);
+    setShowLogoutModal(false);
+    navigate(ROUTES.LOGIN);
   };
 
   const hasMultipleRoles = (user?.roles?.length ?? 0) > 1;
@@ -162,7 +154,9 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
             <div className={styles.avatar}>
               {switching
                 ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />
-                : getInitials(user?.name, user?.email)
+                : user?.imageUrl
+                  ? <img src={user.imageUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                  : getInitials(user?.name, user?.email)
               }
             </div>
             <div className={styles.userInfo}>
@@ -184,7 +178,10 @@ const Header = ({ onMenuToggle, onSidebarToggle, sidebarCollapsed }: HeaderProps
             <div className={styles.roleDropdown}>
               <div className={styles.rdUserCard}>
                 <div className={styles.rdAvatar}>
-                  {getInitials(user?.name, user?.email)}
+                  {user?.imageUrl
+                    ? <img src={user.imageUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                    : getInitials(user?.name, user?.email)
+                  }
                 </div>
                 <div className={styles.rdUserInfo}>
                   <div className={styles.rdUserName}>{user?.name || user?.email || 'User'}</div>

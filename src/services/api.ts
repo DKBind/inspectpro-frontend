@@ -1,4 +1,5 @@
 import { useAuthStore } from '../store/useAuthStore';
+import { decodeEmailFromJwt } from '../lib/utils';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
@@ -7,7 +8,6 @@ interface RequestConfig extends RequestInit {
 }
 
 class ApiClient {
-
   private baseUrl: string;
 
   constructor(baseUrl: string) {
@@ -15,9 +15,7 @@ class ApiClient {
   }
 
   private getAuthToken(): string | null {
-    const { idToken, accessToken } = useAuthStore.getState();
-    // ID token carries email + custom claims; fall back to accessToken if idToken absent
-    return idToken || accessToken || null;
+    return useAuthStore.getState().idToken || null;
   }
 
   private buildUrl(endpoint: string, params?: Record<string, string>): string {
@@ -45,29 +43,25 @@ class ApiClient {
       headers,
     });
 
-    // Handle 401 Unauthorized - attempt token refresh
+    // Handle 401 — attempt silent token refresh
     if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh-token')) {
       try {
-        const { refreshToken } = useAuthStore.getState();
+        const { refreshToken, idToken, refreshIdToken } = useAuthStore.getState();
 
         if (refreshToken) {
-          // Attempt to refresh tokens via the backend
+          const email = idToken ? decodeEmailFromJwt(idToken) : null;
           const refreshRes = await fetch(this.buildUrl('/auth/refresh-token'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
+            body: JSON.stringify({ refreshToken, email }),
           });
 
           if (refreshRes.ok) {
             const refreshData = await refreshRes.json();
-            if (refreshData.status && refreshData.object) {
-              const { accessToken, idToken } = refreshData.object;
-
-              // Update Zustand store (also persists to localStorage via middleware)
-              useAuthStore.getState().setTokens(accessToken, idToken);
-
-              // Retry with ID token (has email + custom claims)
-              headers['Authorization'] = `Bearer ${idToken || accessToken}`;
+            if (refreshData.status && refreshData.object?.idToken) {
+              const { idToken } = refreshData.object;
+              refreshIdToken(idToken);
+              headers['Authorization'] = `Bearer ${idToken}`;
               response = await fetch(this.buildUrl(endpoint, params), {
                 ...fetchConfig,
                 headers,
@@ -75,13 +69,12 @@ class ApiClient {
             }
           }
         }
-      } catch (error) {
-        console.error('Token refresh failed', error);
+      } catch {
+        // ignore refresh errors, fall through to 401 handling below
       }
 
-      // If still 401 after refresh attempt, clear auth and redirect to login
       if (response.status === 401) {
-        useAuthStore.getState().clearAuth();
+        useAuthStore.getState().clearAuth(); // calls localStorage.clear()
         window.location.href = '/login';
       }
     }
@@ -91,7 +84,6 @@ class ApiClient {
       throw new Error(error.message || `HTTP Error ${response.status}`);
     }
 
-    // Handle 204 No Content
     if (response.status === 204) {
       return {} as T;
     }

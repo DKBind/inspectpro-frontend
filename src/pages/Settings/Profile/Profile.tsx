@@ -16,7 +16,7 @@ const GENDER_OPTIONS = [
 ];
 
 const Profile = () => {
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
 
   // Profile state
   const [profile, setProfile]         = useState<UserResponse | null>(null);
@@ -144,13 +144,16 @@ const Profile = () => {
                 currentUrl={avatarUrl}
                 initials={getInitials()}
                 userId={user?.id}
-                onUploadComplete={(url) => setAvatarUrl(url)}
+                onUploadComplete={(url) => {
+                  setAvatarUrl(url);
+                  updateUser({ imageUrl: url });
+                }}
                 onError={(msg) => toast.error(msg)}
               />
             </div>
             <div className={styles.avatarInfo}>
               <h3>{fullName || 'Admin User'}</h3>
-              <p>{profile?.orgName || 'InspectPro Internal'}</p>
+              <p>Org Name: {profile?.orgName || 'InspectPro Internal'}</p>
             </div>
           </div>
 
