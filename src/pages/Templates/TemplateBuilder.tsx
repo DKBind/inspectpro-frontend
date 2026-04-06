@@ -26,8 +26,10 @@ const emptyItem = (): BuilderItem => ({
   options: [], commonComments: [], required: false, conditionalLogic: null,
 });
 
-const emptyFolder = (name: string): TemplateNode => ({
+const emptyFolder = (name: string, isProjectSpec = false, projectSpecType?: 'NUMBER' | 'TEXT'): TemplateNode => ({
   id: genId(), name, type: 'FOLDER', children: [],
+  isProjectSpec,
+  projectSpecType: isProjectSpec ? projectSpecType : undefined,
 });
 
 const emptyLeaf = (
@@ -345,12 +347,12 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
     setExpandedIds(p => { const n = new Set(p); n.has(nodeId) ? n.delete(nodeId) : n.add(nodeId); return n; });
 
   /* ── Node CRUD ── */
-  const addRootFolder = (name?: string) => {
+  const addRootFolder = (name?: string, isProjectSpec?: boolean, projectSpecType?: 'NUMBER' | 'TEXT') => {
     if (nodes.filter(n => n.type === 'FOLDER').length >= 1) {
       toast.error('Only one main root section is allowed.');
       return;
     }
-    const node = emptyFolder(name ?? `Section ${nodes.length + 1}`);
+    const node = emptyFolder(name ?? `Section ${nodes.length + 1}`, isProjectSpec, projectSpecType);
     dirty(p => [...p, node]);
     setSelectedId(node.id);
     setExpandedIds(p => new Set([...p, '__root__', node.id]));
@@ -362,10 +364,10 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
     setSelectedId(null); // root LEAFs not shown in workspace; stay at root view
   };
 
-  const addChildFolder = (parentId: string, name?: string) => {
+  const addChildFolder = (parentId: string, name?: string, isProjectSpec?: boolean, projectSpecType?: 'NUMBER' | 'TEXT') => {
     const parent = findNode(nodes, parentId);
     const childCount = parent?.children?.length ?? 0;
-    const child = emptyFolder(name ?? `Group ${childCount + 1}`);
+    const child = emptyFolder(name ?? `Group ${childCount + 1}`, isProjectSpec, projectSpecType);
     dirty(p => addChildTo(p, parentId, child));
     setSelectedId(child.id);
     setExpandedIds(p => new Set([...p, parentId, child.id]));
@@ -419,8 +421,8 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
     }
 
     if (type === 'FOLDER') {
-      if (parentId) addChildFolder(parentId, name);
-      else addRootFolder(name);
+      if (parentId) addChildFolder(parentId, name, isProjectSpec, projectSpecType);
+      else addRootFolder(name, isProjectSpec, projectSpecType);
     } else {
       if (parentId) addChildLeaf(parentId, leafType, name, reportName, isProjectSpec, projectSpecType);
       else addRootLeaf(leafType, name, reportName, isProjectSpec, projectSpecType);
@@ -593,8 +595,8 @@ export default function TemplateBuilder({ id: propId, onFinish, isSubComponent }
         <NameModal
           title={nameModal.type === 'FOLDER' ? 'New Folder' : `New ${nameModal.leafType === 'SELECTION' ? 'Selection' : 'Damage'} Panel`}
           placeholder={nameModal.type === 'FOLDER' ? 'e.g. Exterior' : 'e.g. Roof Inspection'}
-          showReportName={nameModal.type === 'LEAF'}
-          showProjectSpec={nameModal.type === 'LEAF'}
+          showReportName={nameModal.type === 'FOLDER'}
+          showProjectSpec
           onConfirm={handleNameModalConfirm}
           onCancel={() => setNameModal(null)}
         />
